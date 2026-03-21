@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum SessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED_BY_STUDENT
+  CANCELLED_BY_ADMIN
+  NO_SHOW_STUDENT
+  NO_SHOW_ADMIN
+  INTERRUPTED
+  RESCHEDULE_PENDING
+}
+
+enum CreditType {
+  SINGLE
+  PACK_5
+  PACK_10
+  MONTHLY
+  PROMO
+  MANUAL
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+}
+
+enum SupportedLanguage {
+  PT_BR
+  EN_US
+  ES_ES
+  IT_IT
+}
+
+enum ContentType {
+  VIDEO_GRAMMAR
+  VIDEO_VOCABULARY
+  VIDEO_PRONUNCIATION
+}
+
+model User {
+  id                   String            @id @default(uuid())
+  email                String            @unique
+  passwordHash         String
+  name                 String
+  role                 UserRole          @default(STUDENT)
+  country              String?
+  timezone             String
+  emailConfirmed       Boolean           @default(false)
+  emailConfirmToken    String?
+  emailConfirmExpires  DateTime?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  maxFutureSessions    Int               @default(5)
+  isFirstPurchase      Boolean           @default(true)
+  preferredLanguage    SupportedLanguage @default(EN_US)
+  onboardingCompletedAt DateTime?
+  termsAcceptedAt      DateTime
+  termsVersion         String            @default("1.0") @db.VarChar(10)
+  marketingOptIn       Boolean           @default(false)
+  deletionRequestedAt  DateTime?
+  tokenVersion         Int               @default(0)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  creditBatches     CreditBatch[]
+  sessions          Session[]
+  payments          Payment[]
+  subscription      Subscription?
+  recurringPatterns RecurringPattern[]
+  cookieConsent     CookieConsent?
+
+  @@index([role])
+  @@index([emailConfirmToken])
+  @@index([resetPasswordToken])
+  @@index([deletionRequestedAt])
+}
+
+model CreditBatch {
+  id                    String     @id @default(uuid())
+  userId                String
+  type                  CreditType
+  totalCredits          Int
+  usedCredits           Int        @default(0)
+  expiresAt             DateTime?
+  stripePaymentIntentId String?    @unique
+  reason                String?    @db.VarChar(500)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  sessions Session[]
+  payment  Payment?
+
+  @@index([userId, expiresAt])
+}
+
+model AvailabilitySlot {
+  id        String   @id @default(uuid())
+  startAt   DateTime
+  endAt     DateTime
+  isBlocked Boolean  @default(false)
+  version   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session Session?
+
+  @@index([startAt])
+  @@index([startAt, isBlocked])
+}
+
+model RecurringPattern {
+  id        String   @id @default(uuid())
+  studentId String
+  dayOfWeek Int
+  startTime String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student  User      @relation(fields: [studentId], references: [id])
+  sessions Session[]
+
+  @@index([studentId, isActive])
+}
+
+model Session {
+  id                 String        @id @default(uuid())
+  studentId          String
+  availabilitySlotId String        @unique
+  startAt            DateTime
+  endAt              DateTime
+  status             SessionStatus @default(SCHEDULED)
+  creditBatchId      String
+  isRecurring        Boolean       @default(false)
+  recurringPatternId String?
+  cancelledAt        DateTime?
+  cancelledBy        UserRole?
+  completedAt        DateTime?
+  extendedBy         Int?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  student          User              @relation(fields: [studentId], references: [id])
+  availabilitySlot AvailabilitySlot  @relation(fields: [availabilitySlotId], references: [id])
+  creditBatch      CreditBatch       @relation(fields: [creditBatchId], references: [id])
+  recurringPattern RecurringPattern? @relation(fields: [recurringPatternId], references: [id])
+  feedback         Feedback?
+  document         SessionDocument?
+
+  @@index([studentId, status])
+  @@index([startAt])
+  @@index([status])
+}
+
+model Feedback {
+  id              String   @id @default(uuid())
+  sessionId       String   @unique
+  listeningScore  Int
+  speakingScore   Int
+  writingScore    Int
+  vocabularyScore Int
+  generalComment  String   @db.Text
+  strengths       String?  @db.Text
+  improvements    String?  @db.Text
+  topicsCovered   String?  @db.Text
+  recommendations String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  userId                String
+  stripePaymentIntentId String        @unique
+  stripeEventId         String        @unique
+  amount                Int
+  currency              String        @default("usd")
+  status                PaymentStatus
+  creditBatchId         String?       @unique
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id])
+  creditBatch CreditBatch? @relation(fields: [creditBatchId], references: [id])
+
+  @@index([userId])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String             @unique
+  stripeSubscriptionId String             @unique
+  status               SubscriptionStatus
+  weeklyFrequency      Int
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelledAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model SessionDocument {
+  id                String   @id @default(uuid())
+  sessionId         String   @unique
+  yjsState          Bytes?   @db.LongBlob
+  plainTextSnapshot String?  @db.LongText
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id])
+}
+
+model Content {
+  id          String            @id @default(uuid())
+  title       String
+  type        ContentType
+  youtubeUrl  String            @db.VarChar(500)
+  description String?           @db.Text
+  transcript  String?           @db.Text
+  language    SupportedLanguage
+  isPublished Boolean           @default(false)
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([isPublished, sortOrder])
+}
+
+model CookieConsent {
+  id                 String   @id @default(uuid())
+  userId             String?  @unique
+  sessionFingerprint String?
+  essentialAccepted  Boolean  @default(true)
+  analyticsAccepted  Boolean  @default(false)
+  marketingAccepted  Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+}
