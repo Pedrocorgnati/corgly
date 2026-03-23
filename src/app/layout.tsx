@@ -4,6 +4,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/shared/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider } from '@/hooks/useAuth';
+import { CookieBanner } from '@/components/ui/cookie-banner';
 
 const inter = Inter({
   variable: '--font-sans',
@@ -40,25 +42,25 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        /* @ASSET_PLACEHOLDER
-        name: og-image-corgly
-        type: image
-        extension: jpg
-        format: 1200:630
-        dimensions: 1200x630
-        description: Imagem de preview para compartilhamento nas redes sociais. Fundo indigo escuro (#312E81) com logo Corgly branco centralizado. Tagline "Aprenda português com professores nativos" em Inter Medium branco. Elementos decorativos sutis nas bordas.
-        context: Meta tags Open Graph, compartilhamento social
-        style: Alto contraste, limpo, legível em thumbnail pequeno
-        mood: Profissional, confiável, premium
-        colors: Background #312E81, texto #FFFFFF, decorações #4F46E5 com 20% opacity
-        avoid: Fotos, muitos elementos, texto pequeno, cores claras de fundo
-        */
         url: '/images/og-image-corgly.jpg',
         width: 1200,
         height: 630,
         alt: 'Corgly — Aprenda Português com Professor Nativo',
       },
     ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Corgly — Aprenda Português com Professor Nativo',
+    description: 'Aulas 1:1 ao vivo de português brasileiro com Pedro. Primeira aula 50% OFF.',
+    images: ['/opengraph-image'],
+    creator: '@corgly',
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    other: {
+      'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || '',
+    },
   },
   icons: {
     icon: '/favicon.ico',
@@ -82,10 +84,13 @@ export default function RootLayout({
           Pular para o conteúdo principal
         </a>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+          </AuthProvider>
           <Toaster position="top-right" richColors />
+          <CookieBanner />
         </ThemeProvider>
       </body>
     </html>
