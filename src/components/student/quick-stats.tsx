@@ -13,15 +13,15 @@ export function QuickStats({ total, completedPercent, streak, className }: Quick
       <p className="text-sm font-medium text-muted-foreground mb-4">Seu histórico</p>
       <div className="grid grid-cols-3 gap-4 text-center">
         <div>
-          <p className="text-2xl font-bold text-[#6366F1]">{total}</p>
+          <p className="text-2xl font-bold text-secondary">{total}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Total de aulas</p>
         </div>
         <div>
-          <p className="text-2xl font-bold text-[#059669]">{completedPercent}%</p>
+          <p className="text-2xl font-bold text-success">{completedPercent}%</p>
           <p className="text-xs text-muted-foreground mt-0.5">Concluídas</p>
         </div>
         <div>
-          <p className="text-2xl font-bold text-[#D97706]">{streak}</p>
+          <p className="text-2xl font-bold text-warning">{streak}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Sequência (sem.)</p>
         </div>
       </div>

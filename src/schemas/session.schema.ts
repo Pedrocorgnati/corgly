@@ -19,9 +19,9 @@ export const BulkCancelSchema = z.object({
 });
 
 export const SignalSchema = z.object({
-  type: z.enum(['offer', 'answer', 'candidate', 'bye']),
-  sdp: z.string().optional(),
-  candidate: z.unknown().optional(),
+  type: z.enum(['offer', 'answer', 'candidate']),
+  payload: z.record(z.unknown()),  // RTCSdpInit | RTCIceCandidateInit
+  from: z.string().optional(),     // preenchido pelo servidor
 });
 
 export type BookSessionInput = z.infer<typeof BookSessionSchema>;

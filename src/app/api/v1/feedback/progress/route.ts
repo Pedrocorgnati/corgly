@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { feedbackService } from '@/services/feedback.service';
+import { UserRole } from '@/lib/constants/enums';
+import { requireAuth } from '@/lib/auth-guard';
 import { apiResponse } from '@/lib/auth';
+import { feedbackService } from '@/services/feedback.service';
 
-/** GET /api/v1/feedback/progress?studentId=X */
+/**
+ * GET /api/v1/feedback/progress?studentId=X
+ * Returns progress data: average scores, trend, last 3 feedbacks.
+ * Admin can query any student via ?studentId=. Students always see their own.
+ */
 export async function GET(request: NextRequest) {
-  const userId = request.headers.get('x-user-id')!;
-  const role = request.headers.get('x-user-role')!;
+  const auth = await requireAuth(request);
+  if (auth instanceof NextResponse) return auth;
+
   const { searchParams } = request.nextUrl;
 
   const targetStudentId =
-    role === 'ADMIN' && searchParams.get('studentId')
+    auth.role === UserRole.ADMIN && searchParams.get('studentId')
       ? searchParams.get('studentId')!
-      : userId;
+      : auth.id;
 
   try {
     const progress = await feedbackService.getProgress(targetStudentId);

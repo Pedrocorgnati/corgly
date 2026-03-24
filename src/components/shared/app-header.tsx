@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Menu, Bell } from 'lucide-react';
 import { ROUTES } from '@/lib/constants/routes';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import type { UserRole } from '@/lib/constants/enums';
+import { UserRole } from '@/lib/constants/enums';
 
 interface AppHeaderProps {
   user: { name: string; email: string; role: UserRole; creditBalance: number };
@@ -25,7 +26,8 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
-  const isAdmin = user.role === 'ADMIN';
+  const t = useTranslations('nav');
+  const isAdmin = user.role === UserRole.ADMIN;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -37,23 +39,11 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
             size="icon"
             className="lg:hidden h-9 w-9"
             onClick={onMenuClick}
-            aria-label="Abrir menu"
+            aria-label={t('aria.openMenu')}
           >
             <Menu className="h-5 w-5" />
           </Button>
           <Link href={isAdmin ? ROUTES.ADMIN_DASHBOARD : ROUTES.DASHBOARD} className="flex items-center gap-2">
-            {/* @ASSET_PLACEHOLDER
-            name: logo-corgly
-            type: image
-            extension: svg
-            format: 120x32
-            dimensions: 120x32
-            description: Logo Corgly com símbolo de corgi estilizado à esquerda e wordmark "Corgly" à direita. Corgi minimalista com orelhas pontiagudas. Wordmark usa Inter Bold.
-            context: App header autenticado (student e admin)
-            style: Minimalista, vetorial
-            colors: Primary (#4F46E5) símbolo, Text (#111827) wordmark
-            avoid: Realismo, sombras, gradientes
-            */}
             <Image src="/images/logo.svg" alt="Corgly" width={100} height={28} className="dark:hidden" />
             <Image src="/images/logo-dark.svg" alt="Corgly" width={100} height={28} className="hidden dark:block" />
           </Link>
@@ -69,7 +59,7 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
               ADMIN
             </Badge>
           )}
-          <Button variant="ghost" size="icon" className="h-9 w-9 relative" aria-label="Notificações">
+          <Button variant="ghost" size="icon" className="h-9 w-9 relative" aria-label={t('notifications')}>
             <Bell className="h-4 w-4" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
           </Button>
@@ -78,7 +68,7 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
             <DropdownMenuTrigger>
               <button
                 className="flex items-center gap-2 rounded-full p-1 hover:bg-muted transition-colors"
-                aria-label="Menu do usuário"
+                aria-label={t('aria.userMenu')}
               >
                 <AvatarInitials name={user.name} size="sm" />
               </button>
@@ -92,11 +82,11 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer">
-                <Link href={ROUTES.ACCOUNT}>Configurações</Link>
+                <Link href={ROUTES.ACCOUNT}>{t('settings')}</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive focus:text-destructive">
-                Sair
+                {t('logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

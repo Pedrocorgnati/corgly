@@ -40,16 +40,18 @@ export type CreditStatus = (typeof CreditStatus)[keyof typeof CreditStatus];
 
 export const PaymentStatus = {
   PENDING: 'PENDING',
-  COMPLETED: 'COMPLETED',
+  SUCCEEDED: 'SUCCEEDED',
   FAILED: 'FAILED',
   REFUNDED: 'REFUNDED',
 } as const;
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 
 export const SubscriptionStatus = {
+  TRIAL: 'TRIAL',
   ACTIVE: 'ACTIVE',
   CANCELLED: 'CANCELLED',
   PAST_DUE: 'PAST_DUE',
+  PAUSED: 'PAUSED',
 } as const;
 export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
 
@@ -79,25 +81,53 @@ export const SupportedLanguage = {
 export type SupportedLanguage = (typeof SupportedLanguage)[keyof typeof SupportedLanguage];
 
 export const ContentType = {
-  VIDEO_GRAMMAR: 'VIDEO_GRAMMAR',
-  VIDEO_VOCABULARY: 'VIDEO_VOCABULARY',
-  VIDEO_PRONUNCIATION: 'VIDEO_PRONUNCIATION',
+  VIDEO: 'VIDEO',
+  ARTICLE: 'ARTICLE',
 } as const;
 export type ContentType = (typeof ContentType)[keyof typeof ContentType];
 
+export const CreditEventType = {
+  PURCHASE: 'PURCHASE',
+  CONSUMED: 'CONSUMED',
+  REFUNDED: 'REFUNDED',
+  EXPIRED: 'EXPIRED',
+  MANUAL_ADJUSTMENT: 'MANUAL_ADJUSTMENT',
+} as const;
+export type CreditEventType = (typeof CreditEventType)[keyof typeof CreditEventType];
+
 export const EmailType = {
   CONFIRM_EMAIL: 'CONFIRM_EMAIL',
-  RESET_PASSWORD: 'RESET_PASSWORD',
   BOOKING_CONFIRMED: 'BOOKING_CONFIRMED',
   BOOKING_CANCELLED: 'BOOKING_CANCELLED',
-  REMINDER_24H: 'REMINDER_24H',
-  REMINDER_1H: 'REMINDER_1H',
+  BOOKING_REMINDER_24H: 'BOOKING_REMINDER_24H',
+  BOOKING_REMINDER_1H: 'BOOKING_REMINDER_1H',
+  PASSWORD_RESET: 'PASSWORD_RESET',
+  CREDIT_EXPIRY_WARNING: 'CREDIT_EXPIRY_WARNING',
+  PAYMENT_RECEIPT: 'PAYMENT_RECEIPT',
+  SUBSCRIPTION_CANCELLED: 'SUBSCRIPTION_CANCELLED',
+  BULK_CANCEL_NOTIFICATION: 'BULK_CANCEL_NOTIFICATION',
+  // Added by NOTIFICATION-SPEC (Module 2 gap)
+  PURCHASE_CONFIRMED: 'PURCHASE_CONFIRMED',
+  SUBSCRIPTION_PAYMENT_FAILED: 'SUBSCRIPTION_PAYMENT_FAILED',
+  SESSION_INTERRUPTED: 'SESSION_INTERRUPTED',
+  RECURRING_BOOKING_FAILED: 'RECURRING_BOOKING_FAILED',
+  ACCOUNT_DELETION_REQUESTED: 'ACCOUNT_DELETION_REQUESTED',
+  DATA_EXPORT_READY: 'DATA_EXPORT_READY',
+  // Added by module-9-integration (CONTRACT-02 gap)
   FEEDBACK_AVAILABLE: 'FEEDBACK_AVAILABLE',
-  CREDITS_EXPIRING_30D: 'CREDITS_EXPIRING_30D',
-  CREDITS_EXPIRING_7D: 'CREDITS_EXPIRING_7D',
+  // Added by module-9-integration ST008 (reagendamento aprovado)
   BOOKING_RESCHEDULED: 'BOOKING_RESCHEDULED',
 } as const;
 export type EmailType = (typeof EmailType)[keyof typeof EmailType];
+
+export const PackageType = {
+  SINGLE: 'SINGLE',
+  PACK_5: 'PACK_5',
+  PACK_10: 'PACK_10',
+  MONTHLY: 'MONTHLY',
+  PROMO: 'PROMO',
+} as const;
+export type PackageType = (typeof PackageType)[keyof typeof PackageType];
 
 // ── Status Maps (status → label + cor) ──
 

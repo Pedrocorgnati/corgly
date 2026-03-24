@@ -1,54 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CreateFeedbackSchema } from '@/schemas/feedback.schema';
-import { feedbackService } from '@/services/feedback.service';
+import { requireAuth } from '@/lib/auth-guard';
 import { apiResponse } from '@/lib/auth';
+import { feedbackService } from '@/services/feedback.service';
 
-/** GET /api/v1/feedback?sessionId=X */
+/**
+ * GET /api/v1/feedback?page=1&limit=10&sessionId=X
+ * Lists feedbacks for the authenticated student (paginated).
+ * Admin route: /api/v1/admin/feedback (see admin/feedback).
+ */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (auth instanceof NextResponse) return auth;
+
   const { searchParams } = request.nextUrl;
-  const sessionId = searchParams.get('sessionId');
-
-  if (!sessionId) {
-    return NextResponse.json(apiResponse(null, 'sessionId obrigatório.'), { status: 400 });
-  }
+  const page      = Math.max(1, Number(searchParams.get('page')  ?? 1));
+  const limit     = Math.min(50, Math.max(1, Number(searchParams.get('limit') ?? 10)));
+  const sessionId = searchParams.get('sessionId') ?? undefined;
 
   try {
-    const feedback = await feedbackService.getBySession(sessionId);
-    return NextResponse.json(apiResponse(feedback));
+    const result = await feedbackService.listForStudent(auth.id, page, limit, sessionId);
+    return NextResponse.json(apiResponse(result));
   } catch {
-    return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
-  }
-}
-
-/** POST /api/v1/feedback (ADMIN only) */
-export async function POST(request: NextRequest) {
-  const userId = request.headers.get('x-user-id')!;
-  const role = request.headers.get('x-user-role');
-  if (role !== 'ADMIN') {
-    return NextResponse.json(apiResponse(null, 'Acesso restrito a administradores.'), { status: 403 });
-  }
-
-  try {
-    const body = await request.json();
-    const parsed = CreateFeedbackSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        apiResponse(null, 'Dados inválidos.', parsed.error.issues[0]?.message ?? null),
-        { status: 400 },
-      );
-    }
-
-    const feedback = await feedbackService.create(userId, parsed.data);
-    return NextResponse.json(apiResponse(feedback, null, 'Feedback registrado.'), { status: 201 });
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      if (err.message === 'SESSION_NOT_COMPLETED')
-        return NextResponse.json(apiResponse(null, 'Sessão não concluída.'), { status: 400 });
-      if (err.message === 'FEEDBACK_WINDOW_EXPIRED')
-        return NextResponse.json(apiResponse(null, 'Janela de feedback de 48h expirada.'), { status: 400 });
-      if (err.message === 'FEEDBACK_EXISTS')
-        return NextResponse.json(apiResponse(null, 'Feedback já registrado para esta sessão.'), { status: 409 });
-    }
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
 }

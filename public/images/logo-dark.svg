@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" width="120" height="32" role="img" aria-label="Corgly">
+  <rect x="0" y="4" width="24" height="18" rx="5" fill="#818CF8"/>
+  <path d="M4 26 L8 22 L4 22 Z" fill="#818CF8"/>
+  <text x="12" y="17" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="white" text-anchor="middle">PT</text>
+  <text x="30" y="22" font-family="Inter, -apple-system, sans-serif" font-size="17" font-weight="700" fill="#F9FAFB" letter-spacing="-0.5">Corgly</text>
+</svg>

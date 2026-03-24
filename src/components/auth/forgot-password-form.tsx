@@ -3,34 +3,39 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Loader2, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { API } from '@/lib/constants/routes';
+import { apiClient, ApiError } from '@/lib/api-client';
+import { ForgotPasswordSchema } from '@/schemas/auth.schema';
 
-const schema = z.object({
-  email: z.string().email('Informe um email válido'),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = { email: string };
 
 export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(ForgotPasswordSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
   });
 
-  const onSubmit = async (_data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implementar backend — POST /api/v1/auth/forgot-password
-      await new Promise((r) => setTimeout(r, 500));
+      await apiClient.post(API.AUTH.FORGOT_PASSWORD, { email: data.email });
       setSent(true);
-    } catch {
-      // error handled
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 429) {
+        toast.error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+      } else {
+        // Always show success to prevent user enumeration
+        setSent(true);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -39,10 +44,11 @@ export function ForgotPasswordForm() {
   if (sent) {
     return (
       <div className="text-center space-y-3 py-4">
-        <CheckCircle2 className="h-10 w-10 text-[#059669] mx-auto" />
-        <h2 className="text-base font-semibold text-foreground">Email enviado!</h2>
+        <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
+        <h2 className="text-base font-semibold text-foreground">Verifique seu email</h2>
         <p className="text-sm text-muted-foreground">
-          Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.
+          Se o email estiver cadastrado, você receberá um link de recuperação.
+          Verifique também sua pasta de spam.
         </p>
       </div>
     );
@@ -58,11 +64,12 @@ export function ForgotPasswordForm() {
           placeholder="seu@email.com"
           autoComplete="email"
           disabled={isLoading}
-          className={errors.email ? 'border-destructive' : ''}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? 'forgot-email-error' : undefined}
           {...register('email')}
         />
         {errors.email && (
-          <p className="text-xs text-destructive" role="alert">{errors.email.message}</p>
+          <p id="forgot-email-error" className="text-xs text-destructive" role="alert">{errors.email.message}</p>
         )}
       </div>
       <Button type="submit" className="w-full min-h-[44px]" disabled={isLoading}>

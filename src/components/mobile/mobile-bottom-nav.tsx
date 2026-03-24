@@ -2,27 +2,33 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, CalendarDays, TrendingUp, User } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { LayoutDashboard, CalendarDays, TrendingUp, User, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants/routes';
 
-const TABS = [
-  { href: ROUTES.DASHBOARD, label: 'Início', icon: LayoutDashboard },
-  { href: ROUTES.SCHEDULE, label: 'Agendar', icon: CalendarDays },
-  { href: ROUTES.PROGRESS, label: 'Progresso', icon: TrendingUp },
-  { href: ROUTES.ACCOUNT, label: 'Conta', icon: User },
-];
+function useTabs() {
+  const t = useTranslations('bottomNav');
+  return [
+    { href: ROUTES.DASHBOARD, label: t('home'), icon: LayoutDashboard },
+    { href: ROUTES.SCHEDULE, label: t('schedule'), icon: CalendarDays },
+    { href: ROUTES.CREDITS, label: t('buy'), icon: ShoppingCart },
+    { href: ROUTES.PROGRESS, label: t('progress'), icon: TrendingUp },
+    { href: ROUTES.ACCOUNT, label: t('account'), icon: User },
+  ];
+}
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const tabs = useTabs();
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-sm safe-bottom"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-sm safe-bottom"
       aria-label="Navegação principal"
     >
       <div className="flex items-stretch h-14">
-        {TABS.map(({ href, label, icon: Icon }) => {
+        {tabs.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sessionService } from '@/services/session.service';
 import { apiResponse } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth-guard';
 
 /** GET /api/v1/admin/sessions?status=X&hasFeedback=false */
 export async function GET(request: NextRequest) {
-  const role = request.headers.get('x-user-role');
-  if (role !== 'ADMIN') {
-    return NextResponse.json(apiResponse(null, 'Acesso restrito a administradores.'), { status: 403 });
-  }
+  const auth = await requireAdmin(request);
+  if (auth instanceof NextResponse) return auth;
 
   const { searchParams } = request.nextUrl;
   const status = searchParams.get('status') ?? undefined;

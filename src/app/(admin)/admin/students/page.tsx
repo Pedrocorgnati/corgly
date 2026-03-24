@@ -1,84 +1,186 @@
 import type { Metadata } from 'next';
-import { Users, Search } from 'lucide-react';
+import { PAGINATION } from '@/lib/constants';
+import Link from 'next/link';
+import { Suspense } from 'react';
+import { Users } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { StudentSearchInput } from '@/components/admin/StudentSearchInput';
+import { getAdminStudents } from '@/actions/admin-students';
+import { ROUTES } from '@/lib/constants/routes';
+import { formatDatePtBR } from '@/lib/format-datetime';
+import { PageWrapper } from '@/components/shared';
 
 export const metadata: Metadata = {
   title: 'Admin — Alunos',
 };
 
-// TODO: Implementar backend — GET /api/v1/admin/students
-const MOCK_STUDENTS: Array<{
-  id: string;
-  name: string;
-  email: string;
-  credits: number;
-  totalSessions: number;
-  lastSession: string | null;
-}> = [];
+interface Props {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}
 
-export default function AdminStudentsPage() {
+async function StudentsTable({ searchParams }: Props) {
+  const params = await searchParams;
+  const search = params.search ?? '';
+  const page = Math.max(1, Number(params.page) || 1);
+
+  const { data, error } = await getAdminStudents({
+    search: search || undefined,
+    page,
+    limit: PAGINATION.ADMIN_STUDENTS,
+  });
+
+  if (error) {
+    return (
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center">
+        <p className="text-sm text-destructive">Erro ao carregar alunos: {error}</p>
+      </div>
+    );
+  }
+
+  if (!data || data.items.length === 0) {
+    return (
+      <EmptyState
+        icon={Users}
+        title={search ? 'Nenhum aluno encontrado' : 'Nenhum aluno ainda'}
+        description={
+          search
+            ? `Nenhum resultado para "${search}". Tente outro termo.`
+            : 'Os alunos cadastrados na plataforma aparecerão aqui.'
+        }
+      />
+    );
+  }
+
+  const totalPages = Math.ceil(data.total / data.limit);
+
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8 max-w-6xl mx-auto">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Alunos</h1>
-          <p className="text-sm text-muted-foreground mt-1">{MOCK_STUDENTS.length} aluno(s) cadastrado(s)</p>
-        </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar aluno..." className="pl-9" />
+    <>
+      <p className="text-sm text-muted-foreground mb-4">
+        {data.total} aluno(s) cadastrado(s)
+      </p>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
+                  Aluno
+                </th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">
+                  Créditos
+                </th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">
+                  Último login
+                </th>
+                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((student) => (
+                <tr
+                  key={student.id}
+                  className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors"
+                >
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`${ROUTES.ADMIN_STUDENTS}/${student.id}`}
+                      className="block group"
+                    >
+                      <p className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
+                        {student.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{student.email}</p>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-foreground hidden sm:table-cell">
+                    {student.creditBalance}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden md:table-cell">
+                    {formatDatePtBR(student.lastLoginAt)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge
+                      variant="outline"
+                      className={
+                        student.isActive
+                          ? 'text-success border-green-200 bg-green-50'
+                          : 'text-muted-foreground border-border'
+                      }
+                    >
+                      {student.isActive ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {MOCK_STUDENTS.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="Nenhum aluno ainda"
-          description="Os alunos cadastrados na plataforma aparecerão aqui."
-        />
-      ) : (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Aluno</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Créditos</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Sessões</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Última aula</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_STUDENTS.map((student) => (
-                  <tr key={student.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-sm text-foreground">{student.name}</p>
-                        <p className="text-xs text-muted-foreground">{student.email}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-foreground">{student.credits}</td>
-                    <td className="px-4 py-3 text-sm text-foreground">{student.totalSessions}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{student.lastSession ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className={
-                        student.credits > 0
-                          ? 'text-[#059669] border-green-200 bg-green-50'
-                          : 'text-muted-foreground border-border'
-                      }>
-                        {student.credits > 0 ? 'Ativo' : 'Sem créditos'}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs text-muted-foreground">
+            Página {page} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <Link
+                href={`${ROUTES.ADMIN_STUDENTS}?${new URLSearchParams({
+                  ...(search ? { search } : {}),
+                  page: String(page - 1),
+                }).toString()}`}
+                className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                Anterior
+              </Link>
+            )}
+            {page < totalPages && (
+              <Link
+                href={`${ROUTES.ADMIN_STUDENTS}?${new URLSearchParams({
+                  ...(search ? { search } : {}),
+                  page: String(page + 1),
+                }).toString()}`}
+                className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                Próxima
+              </Link>
+            )}
           </div>
         </div>
       )}
-    </div>
+    </>
+  );
+}
+
+export default async function AdminStudentsPage(props: Props) {
+  return (
+    <PageWrapper>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl font-bold text-foreground">Alunos</h1>
+        <Suspense fallback={<div className="h-10 w-64 bg-muted rounded-lg animate-pulse" />}>
+          <StudentSearchInput />
+        </Suspense>
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm animate-pulse">
+            <div className="h-4 bg-muted rounded w-1/4 mb-4" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-10 bg-muted rounded" />
+              ))}
+            </div>
+          </div>
+        }
+      >
+        <StudentsTable searchParams={props.searchParams} />
+      </Suspense>
+    </PageWrapper>
   );
 }

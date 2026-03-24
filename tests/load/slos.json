@@ -1,0 +1,91 @@
+{
+  "_comment": "SLOs derivados do PRD.md + SLO-SPEC.md. Health check importado de SLO-SPEC.md.",
+  "_source": "PRD.md: p95 API < 2s | LCP landing < 3s | SLO-SPEC.md",
+  "_generated_by": "/load-test-create (complementar)",
+  "_updated_at": "2026-03-22",
+  "global": {
+    "error_rate_max": 0.01,
+    "http_failure_max": 0.05
+  },
+  "scenarios": {
+    "homepage": {
+      "description": "Landing page — GET /",
+      "p95_ms": 3000,
+      "p99_ms": 5000,
+      "type": "pagina-estatica"
+    },
+    "login": {
+      "description": "POST /api/v1/auth/login",
+      "p95_ms": 800,
+      "p99_ms": 2000,
+      "type": "autenticacao"
+    },
+    "availability": {
+      "description": "GET /api/v1/availability — listar slots",
+      "p95_ms": 400,
+      "p99_ms": 800,
+      "type": "api-leitura"
+    },
+    "book-session": {
+      "description": "POST /api/v1/sessions — agendar aula",
+      "p95_ms": 2000,
+      "p99_ms": 4000,
+      "type": "api-escrita"
+    },
+    "credits": {
+      "description": "GET /api/v1/credits — saldo",
+      "p95_ms": 400,
+      "p99_ms": 800,
+      "type": "api-leitura"
+    },
+    "sessions": {
+      "description": "GET /api/v1/sessions — listar aulas",
+      "p95_ms": 400,
+      "p99_ms": 800,
+      "type": "api-leitura"
+    },
+    "content": {
+      "description": "GET /api/v1/content — conteúdo gratuito (público)",
+      "p95_ms": 400,
+      "p99_ms": 800,
+      "type": "api-leitura"
+    },
+    "checkout": {
+      "description": "POST /api/v1/checkout — Stripe Checkout (pacote avulso)",
+      "p95_ms": 2000,
+      "p99_ms": 5000,
+      "type": "api-escrita"
+    },
+    "health-check": {
+      "description": "GET /api/health/detail — health check detalhado",
+      "p95_ms": 200,
+      "p99_ms": 500,
+      "type": "health-check",
+      "_source": "SLO-SPEC.md #09"
+    },
+    "feedback": {
+      "description": "GET /api/v1/feedback — listar feedbacks do aluno",
+      "p95_ms": 400,
+      "p99_ms": 800,
+      "type": "api-leitura"
+    },
+    "subscriptions": {
+      "description": "GET /api/v1/subscriptions — assinatura ativa",
+      "p95_ms": 400,
+      "p99_ms": 800,
+      "type": "api-leitura"
+    },
+    "profile": {
+      "description": "PATCH /api/v1/profile — atualizar perfil",
+      "p95_ms": 800,
+      "p99_ms": 2000,
+      "type": "api-escrita"
+    },
+    "admin-dashboard": {
+      "description": "GET /api/v1/admin/dashboard — painel admin (query pesada)",
+      "p95_ms": 2000,
+      "p99_ms": 5000,
+      "type": "operacao-pesada"
+    }
+  }
+}

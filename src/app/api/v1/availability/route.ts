@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GenerateSlotsSchema } from '@/schemas/availability.schema';
 import { availabilityService } from '@/services/availability.service';
 import { apiResponse } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth-guard';
 
 /** GET /api/v1/availability?date=YYYY-MM-DD[&weeks=N] */
 export async function GET(request: NextRequest) {
@@ -25,10 +26,9 @@ export async function GET(request: NextRequest) {
 
 /** POST /api/v1/availability — admin: generate slots */
 export async function POST(request: NextRequest) {
-  const role = request.headers.get('x-user-role');
-  if (role !== 'ADMIN') {
-    return NextResponse.json(apiResponse(null, 'Acesso restrito a administradores.'), { status: 403 });
-  }
+  // RESOLVED: Auth bypass
+  const auth = await requireAdmin(request);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await request.json();

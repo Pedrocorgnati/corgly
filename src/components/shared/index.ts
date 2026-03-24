@@ -1,3 +1,5 @@
+export { PageWrapper } from './page-wrapper';
+export { AuthPageWrapper } from './auth-page-wrapper';
 export { AppHeader } from './app-header';
 export { PublicHeader } from './public-header';
 export { PublicFooter } from './public-footer';

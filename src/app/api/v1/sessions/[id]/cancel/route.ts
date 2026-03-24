@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CancelSessionSchema } from '@/schemas/session.schema';
 import { sessionService } from '@/services/session.service';
 import { apiResponse } from '@/lib/auth';
+import { AppError } from '@/lib/errors';
 
 /** PATCH /api/v1/sessions/[id]/cancel */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,14 +17,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json(apiResponse(null, 'Dados inválidos.'), { status: 400 });
     }
 
-    await sessionService.cancel(id, userId, role, parsed.data);
-    return NextResponse.json(apiResponse(null, null, 'Aula cancelada.'));
+    const session = await sessionService.cancel(id, userId, role, parsed.data);
+    return NextResponse.json(apiResponse(session, null, 'Aula cancelada.'));
   } catch (err: unknown) {
-    if (err instanceof Error && err.message === 'LATE_CANCELLATION') {
-      return NextResponse.json(
-        apiResponse(null, null, 'Cancelamento tardio: crédito não devolvido.'),
-        { status: 200 },
-      );
+    if (err instanceof AppError) {
+      return NextResponse.json(apiResponse(null, err.message), { status: err.status });
     }
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }

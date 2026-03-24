@@ -5,11 +5,22 @@ import {
 } from '@/schemas/checkout.schema';
 import { stripeService } from '@/services/stripe.service';
 import { authService } from '@/services/auth.service';
+import { requireStudent } from '@/lib/auth-guard';
 import { apiResponse } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { AppError } from '@/lib/errors';
 
 /** POST /api/v1/checkout */
 export async function POST(request: NextRequest) {
-  const userId = request.headers.get('x-user-id')!;
+  const authResult = await requireStudent(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const userId = authResult.id;
+
+  // Rate limit: 10 req/min por userId
+  const rl = checkRateLimit(`checkout:${userId}`, { maxRequests: 10, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json(apiResponse(null, 'Muitas requisições. Tente novamente em breve.'), { status: 429 });
+  }
 
   try {
     const body = await request.json();
@@ -39,7 +50,10 @@ export async function POST(request: NextRequest) {
     const isFirstPurchase = (user as { isFirstPurchase?: boolean } | null)?.isFirstPurchase ?? false;
     const result = await stripeService.createCheckoutSession(userId, isFirstPurchase, parsed.data);
     return NextResponse.json(apiResponse(result));
-  } catch {
+  } catch (err) {
+    if (err instanceof AppError) {
+      return NextResponse.json(apiResponse(null, err.message), { status: err.status });
+    }
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
 }

@@ -1,0 +1,63 @@
+# ============================================================
+# Corgly — Docker Compose (Desenvolvimento Local)
+# Uso: docker compose up
+# Hot reload habilitado via volume mount
+# ============================================================
+
+services:
+  # ── Next.js App ─────────────────────────────────────────
+  app:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - app_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    command: sh -c "npm install --legacy-peer-deps && npm run dev"
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Hocuspocus WebSocket Server ─────────────────────────
+  hocuspocus:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - app_node_modules:/app/node_modules
+    ports:
+      - "1234:1234"
+    # Aguarda app (que faz npm ci e disponibiliza node_modules)
+    command: sh -c "until [ -d /app/node_modules/.bin ]; do sleep 2; done && node --import tsx/esm --watch hocuspocus/server.ts"
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── MySQL 8.4 ────────────────────────────────────────────
+  db:
+    image: mysql:8.4
+    env_file:
+      - .env.docker
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  app_node_modules:
+  db_data:

@@ -1,154 +1,207 @@
 'use client';
+import { API } from '@/lib/constants/routes';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Star, Loader2, CheckCircle2 } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { StarRating } from '@/components/feedback/StarRating';
 import { ROUTES } from '@/lib/constants/routes';
+import { apiClient, ApiError } from '@/lib/api-client';
+import { submitFeedbackSchema, type SubmitFeedbackInput } from '@/schemas/feedback.schema';
 import { cn } from '@/lib/utils';
 
 const DIMENSIONS = [
-  { key: 'clarity', label: 'Claridade das explicações' },
-  { key: 'didactics', label: 'Qualidade didática' },
-  { key: 'punctuality', label: 'Pontualidade' },
-  { key: 'engagement', label: 'Engajamento' },
-] as const;
-
-type DimensionKey = typeof DIMENSIONS[number]['key'];
-
-function StarRating({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  disabled: boolean;
-}) {
-  const [hovered, setHovered] = useState(0);
-
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(star)}
-          onMouseEnter={() => setHovered(star)}
-          onMouseLeave={() => setHovered(0)}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center disabled:cursor-not-allowed"
-          aria-label={`${star} estrela${star > 1 ? 's' : ''}`}
-        >
-          <Star
-            className={cn(
-              'h-6 w-6 transition-colors',
-              (hovered || value) >= star
-                ? 'fill-[#D97706] text-[#D97706]'
-                : 'text-muted-foreground',
-            )}
-          />
-        </button>
-      ))}
-    </div>
-  );
-}
+  { key: 'listening' as const,  label: 'Escuta e Compreensão',    feedbackKey: 'listeningFeedback' as const },
+  { key: 'speaking' as const,   label: 'Fala e Pronúncia',        feedbackKey: 'speakingFeedback' as const },
+  { key: 'writing' as const,    label: 'Escrita',                 feedbackKey: 'writingFeedback' as const },
+  { key: 'vocabulary' as const, label: 'Vocabulário',             feedbackKey: 'vocabularyFeedback' as const },
+];
 
 interface FeedbackFormProps {
   sessionId: string;
+  /** Whether the feedback window has expired */
+  isWindowExpired?: boolean;
+  /** Pre-existing feedback (readonly mode) */
+  existingFeedback?: SubmitFeedbackInput | null;
 }
 
-export function FeedbackForm({ sessionId }: FeedbackFormProps) {
+export function FeedbackForm({
+  sessionId,
+  isWindowExpired = false,
+  existingFeedback = null,
+}: FeedbackFormProps) {
   const router = useRouter();
-  const [ratings, setRatings] = useState<Record<DimensionKey, number>>({
-    clarity: 0,
-    didactics: 0,
-    punctuality: 0,
-    engagement: 0,
-  });
-  const [comment, setComment] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const allRated = Object.values(ratings).every(v => v > 0);
+  const isReadonly = isWindowExpired || !!existingFeedback;
+
+  const {
+    control,
+    register,
+    watch,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SubmitFeedbackInput>({
+    resolver: zodResolver(submitFeedbackSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
+    defaultValues: existingFeedback ?? {
+      scores: {
+        listening: 0,
+        speaking: 0,
+        writing: 0,
+        vocabulary: 0,
+      },
+      overallFeedback: undefined,
+    },
+  });
+
 
   if (sent) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 text-center shadow-sm space-y-4">
-        <CheckCircle2 className="h-12 w-12 text-[#059669] mx-auto" />
+        <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
         <h2 className="text-xl font-bold text-foreground">Avaliação enviada!</h2>
         <p className="text-sm text-muted-foreground">
           Obrigada pelo seu feedback. Ele nos ajuda a melhorar continuamente.
         </p>
-        <Link href={ROUTES.DASHBOARD} className={cn(buttonVariants(), 'w-full text-center')}>← Voltar ao dashboard</Link>
+        <Link href={ROUTES.DASHBOARD} className={cn(buttonVariants(), 'w-full text-center')}>
+          ← Voltar ao dashboard
+        </Link>
       </div>
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!allRated) {
-      toast.error('Avalie todas as dimensões para continuar.');
-      return;
-    }
-    setIsLoading(true);
+  const onSubmit = async (data: SubmitFeedbackInput) => {
     try {
-      // TODO: Implementar backend — POST /api/v1/sessions/{id}/feedback
-      await new Promise((r) => setTimeout(r, 500));
-      toast.error('Não implementado — execute /auto-flow execute');
-    } catch {
-      toast.error('Erro ao enviar avaliação. Tente novamente.');
-    } finally {
-      setIsLoading(false);
+      await apiClient.post(API.SESSION_FEEDBACK(sessionId), {
+        scores:             data.scores,
+        overallFeedback:    data.overallFeedback || undefined,
+        listeningFeedback:  data.listeningFeedback || undefined,
+        speakingFeedback:   data.speakingFeedback || undefined,
+        writingFeedback:    data.writingFeedback || undefined,
+        vocabularyFeedback: data.vocabularyFeedback || undefined,
+      });
+
+      toast.success('Obrigado pela sua avaliação!');
+      setSent(true);
+      router.push(ROUTES.DASHBOARD);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('Erro ao enviar avaliação. Tente novamente.');
+      }
     }
   };
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-      <h1 className="text-xl font-bold text-foreground mb-6">Avaliar sua aula</h1>
+      <h1 className="text-xl font-bold text-foreground mb-6">
+        {existingFeedback ? 'Sua avaliação' : 'Avaliar sua aula'}
+      </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {isWindowExpired && !existingFeedback && (
+        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-6">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            O prazo para avaliar esta aula expirou.
+          </p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {DIMENSIONS.map((dim) => (
-          <div key={dim.key}>
-            <p className="text-sm font-medium text-foreground mb-1">{dim.label}</p>
-            <StarRating
-              value={ratings[dim.key]}
-              onChange={(v) => setRatings(prev => ({ ...prev, [dim.key]: v }))}
-              disabled={isLoading}
-            />
-            <p className="text-xs text-muted-foreground mt-1">1 = Ruim | 3 = Bom | 5 = Excelente</p>
-          </div>
+          <Controller
+            key={dim.key}
+            name={`scores.${dim.key}`}
+            control={control}
+            render={({ field, fieldState }) => (
+              <StarRating
+                dimension={dim.key}
+                label={dim.label}
+                value={field.value}
+                onChange={field.onChange}
+                disabled={isSubmitting || isReadonly}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
         ))}
 
+        {DIMENSIONS.map((dim) => {
+          const val = watch(dim.feedbackKey as keyof SubmitFeedbackInput) as string | undefined;
+          const len = val?.length ?? 0;
+          return (
+            <div key={dim.feedbackKey}>
+              <label className="text-sm font-medium text-foreground mb-1 block" htmlFor={dim.feedbackKey}>
+                Comentário sobre {dim.label} (opcional)
+              </label>
+              <Textarea
+                id={dim.feedbackKey}
+                {...register(dim.feedbackKey)}
+                placeholder={`O que observou sobre ${dim.label.toLowerCase()}?`}
+                rows={2}
+                maxLength={300}
+                disabled={isSubmitting || isReadonly}
+                className="resize-none"
+              />
+              <p className={`text-xs mt-0.5 text-right ${len > 270 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {len}/300
+              </p>
+            </div>
+          );
+        })}
+
         <div>
-          <label className="text-sm font-medium text-foreground mb-1 block" htmlFor="comment">
-            Comentário (opcional)
+          <label className="text-sm font-medium text-foreground mb-1 block" htmlFor="overallFeedback">
+            Comentário geral (opcional, mínimo 20 caracteres)
           </label>
-          <textarea
-            id="comment"
-            value={comment}
-            onChange={(e) => setComment(e.target.value.slice(0, 500))}
-            placeholder="Compartilhe sua experiência..."
+          <Textarea
+            id="overallFeedback"
+            {...register('overallFeedback')}
+            placeholder="Compartilhe sua experiência geral..."
             rows={4}
-            disabled={isLoading}
-            className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary disabled:opacity-50"
+            maxLength={500}
+            disabled={isSubmitting || isReadonly}
+            className="resize-none text-base"
+            aria-invalid={!!errors.overallFeedback}
+            aria-describedby={errors.overallFeedback ? 'overallFeedback-error' : undefined}
           />
-          <p className="text-xs text-muted-foreground text-right mt-0.5">{comment.length}/500</p>
+          <div className="flex justify-between mt-0.5">
+            {errors.overallFeedback ? (
+              <p id="overallFeedback-error" className="text-xs text-destructive" role="alert">{errors.overallFeedback.message}</p>
+            ) : (
+              <span />
+            )}
+            <p className={`text-xs ${(watch('overallFeedback')?.length ?? 0) > 450 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {watch('overallFeedback')?.length ?? 0}/500
+            </p>
+          </div>
         </div>
 
-        <Button
-          type="submit"
-          disabled={isLoading || !allRated}
-          className="w-full h-12"
-        >
-          {isLoading ? (
-            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Enviando...</>
-          ) : (
-            'Enviar avaliação'
-          )}
-        </Button>
+        {!isReadonly && (
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-12"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Enviando...
+              </>
+            ) : (
+              'Enviar avaliação'
+            )}
+          </Button>
+        )}
       </form>
     </div>
   );

@@ -1,0 +1,23 @@
+version: "3.8"
+
+# Banco de dados exclusivo para testes de integração
+# Uso: docker compose -f docker-compose.test.yml up -d
+
+services:
+  mysql-test:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: corgly_test
+      MYSQL_USER: corgly_test
+      MYSQL_PASSWORD: corgly_test
+    ports:
+      - "3307:3306" # Porta diferente do banco de dev (3306) para evitar conflito
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    tmpfs:
+      - /var/lib/mysql # Em memória — mais rápido e sem persistência entre runs
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "corgly_test", "-pcorgly_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

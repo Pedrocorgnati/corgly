@@ -16,10 +16,10 @@ export function CreditBadge({ balance, className, showIcon = true }: CreditBadge
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium',
         isEmpty
-          ? 'bg-[#FEE2E2] text-[#DC2626] dark:bg-[#4C0519]/30 dark:text-[#FB7185]'
+          ? 'bg-destructive/10 text-destructive'
           : isLow
-          ? 'bg-[#FEF3C7] text-[#D97706] dark:bg-[#78350F]/30 dark:text-[#FBBF24]'
-          : 'bg-[#EEF2FF] text-[#4F46E5] dark:bg-[#312E81]/30 dark:text-[#818CF8]',
+          ? 'bg-warning/10 text-warning'
+          : 'bg-primary/10 text-primary',
         className
       )}
       title={`${balance} crédito${balance !== 1 ? 's' : ''} disponível${balance !== 1 ? 'is' : ''}`}

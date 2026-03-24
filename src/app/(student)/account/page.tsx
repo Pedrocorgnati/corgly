@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CreditCard } from 'lucide-react';
-import { ProfileForm } from '@/components/student/profile-form';
+import { ProfileForm } from '@/components/auth/profile-form';
+import { LgpdSection } from '@/components/auth/lgpd-section';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants/routes';
+import { PageWrapper } from '@/components/shared';
 
 export const metadata: Metadata = {
   title: 'Configurações',
@@ -11,12 +13,17 @@ export const metadata: Metadata = {
 
 export default function AccountPage() {
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8 max-w-2xl mx-auto">
+    <PageWrapper className="max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
         <p className="text-sm text-muted-foreground mt-1">Gerencie seu perfil e preferências</p>
       </div>
       <ProfileForm />
+
+      {/* LGPD section */}
+      <div className="mt-6">
+        <LgpdSection />
+      </div>
 
       {/* Quick link to billing */}
       <div className="mt-6 pt-6 border-t border-border">
@@ -33,6 +40,6 @@ export default function AccountPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }

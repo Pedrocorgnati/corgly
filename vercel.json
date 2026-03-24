@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/v1/cron/credit-expiration",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/v1/cron/auto-confirm",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/v1/cron/reminders",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/v1/cron/recurring-bookings",
+      "schedule": "0 23 * * 0"
+    }
+  ]
+}

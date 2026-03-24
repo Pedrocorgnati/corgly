@@ -2,15 +2,17 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants/routes';
 import { LoginForm } from '@/components/auth/login-form';
+import { AuthPageWrapper } from '@/components/shared';
 
 export const metadata: Metadata = {
   title: 'Entrar',
   description: 'Faça login na sua conta Corgly.',
+  robots: { index: false, follow: false },
 };
 
 export default function LoginPage() {
   return (
-    <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
+    <AuthPageWrapper>
       <div className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
           <div className="mb-6">
@@ -26,6 +28,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthPageWrapper>
   );
 }

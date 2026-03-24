@@ -1,29 +1,35 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Menu } from 'lucide-react';
 import { ROUTES } from '@/lib/constants/routes';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from './theme-toggle';
 import { LanguageSelector } from './language-selector';
 
+const NAV_LINKS = [
+  { key: 'method' as const, href: ROUTES.HOME },
+  { key: 'pricing' as const, href: ROUTES.PRICING },
+  { key: 'content' as const, href: ROUTES.CONTENT },
+];
+
 export function PublicHeader() {
+  const t = useTranslations('landing.header');
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="max-w-[1200px] mx-auto h-full flex items-center justify-between px-4 md:px-6">
         {/* Logo */}
         <Link href={ROUTES.HOME} className="flex items-center gap-2 flex-shrink-0">
-          {/* @ASSET_PLACEHOLDER
-          name: logo-corgly
-          type: image
-          extension: svg
-          format: 180x40
-          dimensions: 180x40
-          description: Logo Corgly com símbolo de corgi estilizado à esquerda e wordmark "Corgly" à direita. Corgi minimalista com orelhas pontiagudas, expressão amigável, formas geométricas. Wordmark usa Inter Bold.
-          context: Header público, navbar, landing page
-          style: Minimalista, vetorial, sem gradientes, funciona em 32px
-          mood: Profissional, amigável, confiável
-          colors: Primary (#4F46E5) para símbolo, Text Primary (#111827) para wordmark
-          avoid: Realismo, sombras, gradientes, mais de 2 cores
-          */}
           <Image
             src="/images/logo.svg"
             alt="Corgly"
@@ -43,39 +49,79 @@ export function PublicHeader() {
         </Link>
 
         {/* Nav links (desktop) */}
-        <nav className="hidden lg:flex items-center gap-6">
-          <Link
-            href={ROUTES.HOME}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-[120ms]"
-          >
-            Início
-          </Link>
-          <Link
-            href={ROUTES.PRICING}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-[120ms]"
-          >
-            Preços
-          </Link>
-          <Link
-            href={ROUTES.CONTENT}
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-[120ms]"
-          >
-            Conteúdo
-          </Link>
+        <nav className="hidden lg:flex items-center gap-6" aria-label={t('nav_aria')}>
+          {NAV_LINKS.map(({ key, href }) => (
+            <Link
+              key={key}
+              href={href}
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-[120ms]"
+            >
+              {t(`nav.${key}`)}
+            </Link>
+          ))}
         </nav>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        {/* Mobile menu */}
+        <Sheet>
+          <SheetTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                aria-label={t('menuOpen')}
+              />
+            }
+          >
+            <Menu className="h-5 w-5" />
+          </SheetTrigger>
+          <SheetContent side="right" className="w-72 p-0">
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <nav className="flex flex-col gap-1 px-4 pt-12" aria-label={t('nav_aria')}>
+              {NAV_LINKS.map(({ key, href }) => (
+                <Link
+                  key={key}
+                  href={href}
+                  className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                >
+                  {t(`nav.${key}`)}
+                </Link>
+              ))}
+            </nav>
+            <Separator className="my-3" />
+            <div className="flex flex-col gap-2 px-4">
+              <Link href={ROUTES.LOGIN}>
+                <Button variant="ghost" className="w-full justify-start">
+                  {t('login')}
+                </Button>
+              </Link>
+              <Link href={ROUTES.REGISTER}>
+                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                  {t('register')}
+                </Button>
+              </Link>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Actions (desktop) */}
+        <div className="hidden lg:flex items-center gap-2">
           <LanguageSelector />
           <ThemeToggle />
           <Link href={ROUTES.LOGIN}>
-            <Button variant="ghost" size="sm">Entrar</Button>
+            <Button variant="ghost" size="sm">{t('login')}</Button>
           </Link>
           <Link href={ROUTES.REGISTER}>
             <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-              Criar conta
+              {t('register')}
             </Button>
           </Link>
+        </div>
+
+        {/* Mobile actions (theme + language always visible) */}
+        <div className="flex lg:hidden items-center gap-1">
+          <LanguageSelector />
+          <ThemeToggle />
         </div>
       </div>
     </header>

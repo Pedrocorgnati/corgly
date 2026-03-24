@@ -39,6 +39,12 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -64,7 +70,7 @@
   --secondary: #6366F1;
   --secondary-foreground: #FFFFFF;
   --muted: #F3F4F6;
-  --muted-foreground: #9CA3AF;
+  --muted-foreground: #5B6370; /* era #9CA3AF (2.37:1) → agora 5.36:1 ✅ WCAG 1.4.3 */
   --accent: #C7D2FE;
   --accent-foreground: #312E81;
   --destructive: #DC2626;
@@ -109,7 +115,7 @@
   --secondary: #6366F1;
   --secondary-foreground: #FFFFFF;
   --muted: #1A1A2E;
-  --muted-foreground: #64748B;
+  --muted-foreground: #94A3B8; /* #64748B (3.5:1) → #94A3B8 (~5.1:1) ✅ WCAG AA */
   --accent: #312E81;
   --accent-foreground: #C7D2FE;
   --destructive: #FB7185;
@@ -151,6 +157,20 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ── Brand gradient ── */
+@layer utilities {
+  .bg-brand-gradient {
+    background-image: linear-gradient(to bottom right, var(--accent-foreground), var(--primary), var(--secondary));
   }
 }
 

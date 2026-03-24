@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { RescheduleSessionSchema } from '@/schemas/session.schema';
 import { sessionService } from '@/services/session.service';
 import { apiResponse } from '@/lib/auth';
+import { AppError } from '@/lib/errors';
 
 /** PATCH /api/v1/sessions/[id]/reschedule */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,11 +23,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const result = await sessionService.reschedule(id, userId, role, parsed.data);
     return NextResponse.json(apiResponse(result, null, 'Reagendamento solicitado.'));
   } catch (err: unknown) {
-    if (err instanceof Error && err.message === 'LATE_RESCHEDULE') {
-      return NextResponse.json(
-        apiResponse(null, 'Reagendamento só é possível com mais de 12h de antecedência.'),
-        { status: 400 },
-      );
+    if (err instanceof AppError) {
+      return NextResponse.json(apiResponse(null, err.message), { status: err.status });
+    }
+    if (err instanceof Error && err.message === 'SLOT_NOT_FOUND') {
+      return NextResponse.json(apiResponse(null, 'Slot não encontrado.'), { status: 404 });
+    }
+    if (err instanceof Error && err.message === 'SLOT_UNAVAILABLE') {
+      return NextResponse.json(apiResponse(null, 'Horário não disponível.'), { status: 409 });
     }
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }

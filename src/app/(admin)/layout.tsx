@@ -1,27 +1,20 @@
-import { AdminSidebar } from '@/components/shared/admin-sidebar';
-import { AppHeader } from '@/components/shared/app-header';
+import { redirect } from 'next/navigation';
+import { AdminAppShell } from '@/components/shared/admin-app-shell';
+import { ROUTES } from '@/lib/constants/routes';
+import { getAuthUser } from '@/lib/data/auth';
 
-// TODO: Replace with real auth session from cookie
-const MOCK_ADMIN = {
-  name: 'Pedro Corgnati',
-  email: 'pedro@corgly.app',
-  role: 'ADMIN' as const,
-  creditBalance: 0,
-};
+export const dynamic = 'force-dynamic';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const user = await getAuthUser();
+
+  if (!user || user.role !== 'ADMIN') {
+    redirect(ROUTES.LOGIN);
+  }
+
   return (
-    <div className="min-h-dvh bg-background">
-      <AppHeader user={MOCK_ADMIN} />
-      <AdminSidebar user={MOCK_ADMIN} />
-      <main
-        id="main-content"
-        className="pt-16 lg:ml-60 min-h-dvh"
-      >
-        <div className="p-4 md:p-6">
-          {children}
-        </div>
-      </main>
-    </div>
+    <AdminAppShell user={user}>
+      {children}
+    </AdminAppShell>
   );
 }

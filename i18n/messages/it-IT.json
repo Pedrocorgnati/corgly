@@ -1,0 +1,572 @@
+{
+  "nav": {
+    "home": "Home",
+    "pricing": "Prezzi",
+    "content": "Contenuti",
+    "login": "Accedi",
+    "register": "Crea account",
+    "dashboard": "Pannello",
+    "profile": "Profilo",
+    "logout": "Esci",
+    "notifications": "Notifiche",
+    "settings": "Impostazioni",
+    "aria": {
+      "openMenu": "Apri menu",
+      "closeMenu": "Chiudi menu",
+      "userMenu": "Menu utente"
+    }
+  },
+  "sidebar": {
+    "student": {
+      "dashboard": "Pannello",
+      "schedule": "Prenota lezione",
+      "progress": "I miei progressi",
+      "history": "Cronologia",
+      "buy": "Acquista crediti",
+      "settings": "Impostazioni",
+      "creditsBalance": "Saldo: {count} crediti"
+    },
+    "admin": {
+      "dashboard": "Pannello",
+      "schedule": "Agenda",
+      "students": "Studenti",
+      "sessions": "Sessioni",
+      "credits": "Crediti",
+      "reports": "Report",
+      "content": "Contenuti",
+      "phase1Label": "Fase 1"
+    }
+  },
+  "darkMode": {
+    "switchToLight": "Passa alla modalità chiara",
+    "switchToDark": "Passa alla modalità scura"
+  },
+  "bottomNav": {
+    "home": "Home",
+    "schedule": "Prenota",
+    "progress": "Progressi",
+    "account": "Account"
+  },
+  "footer": {
+    "copyright": "© {year} Corgly. Tutti i diritti riservati.",
+    "privacy": "Informativa sulla Privacy",
+    "terms": "Termini di Utilizzo",
+    "cookies": "Cookie",
+    "languageLabel": "Lingua"
+  },
+  "creditBadge": {
+    "credits": "{count} crediti",
+    "expiringSoon": "In scadenza",
+    "buy": "Acquista"
+  },
+  "sessionCard": {
+    "status": {
+      "upcoming": "Programmata",
+      "inProgress": "In corso",
+      "completed": "Completata",
+      "cancelled": "Annullata"
+    },
+    "actions": {
+      "enter": "Entra",
+      "cancel": "Annulla",
+      "reschedule": "Riprogramma"
+    },
+    "enterAvailableIn": "Disponibile tra {minutes} min"
+  },
+  "modal": {
+    "confirm": {
+      "defaultConfirmText": "Conferma",
+      "defaultCancelText": "Annulla",
+      "loadingText": "Elaborazione..."
+    }
+  },
+  "emptyState": {
+    "sessions": {
+      "title": "Nessuna sessione trovata",
+      "description": "Prenota la tua prima lezione per iniziare.",
+      "cta": "Prenota lezione"
+    },
+    "credits": {
+      "title": "Nessun credito disponibile",
+      "description": "Acquista crediti per prenotare le tue lezioni.",
+      "cta": "Acquista crediti"
+    },
+    "search": {
+      "title": "Nessun risultato trovato",
+      "description": "Prova a modificare la ricerca."
+    }
+  },
+  "errorState": {
+    "defaultMessage": "Errore inatteso. Per favore, riprova.",
+    "retry": "Riprova",
+    "errorCode": "Codice errore: {code}"
+  },
+  "loading": {
+    "message": "Caricamento...",
+    "aria": "Caricamento contenuto"
+  },
+  "pagination": {
+    "showing": "Visualizzazione",
+    "of": "di",
+    "results": "risultati",
+    "prev": "Precedente",
+    "next": "Successiva",
+    "aria": {
+      "page": "Pagina {page}"
+    },
+    "perPage": "per pagina"
+  },
+  "cookieBanner": {
+    "title": "Questo sito utilizza i cookie",
+    "description": "Utilizziamo i cookie per migliorare la tua esperienza. Continuando, accetti la nostra",
+    "privacy_link": "Informativa sulla Privacy",
+    "accept_all": "Accetta tutto",
+    "reject": "Solo essenziali",
+    "customize": "Personalizza",
+    "aria": "Preferenze cookie",
+    "dialog_title": "Personalizza i cookie",
+    "dialog_description": "Scegli quali tipi di cookie consentire. I cookie essenziali sono sempre attivi.",
+    "essential_label": "Essenziali",
+    "essential_description": "Necessari per il funzionamento del sito",
+    "analytics_label": "Analytics",
+    "analytics_description": "Ci aiutano a migliorare il sito",
+    "marketing_label": "Marketing",
+    "marketing_description": "Permettono di personalizzare i contenuti",
+    "save_preferences": "Salva preferenze"
+  },
+  "privacy": {
+    "title": "Informativa sulla Privacy",
+    "lastUpdated": "Ultimo aggiornamento: marzo 2026",
+    "s1Title": "1. Dati che Raccogliamo",
+    "s1Text": "Raccogliamo le informazioni che ci fornisci direttamente, come nome, email, paese e fuso orario al momento della creazione del tuo account. Durante l'utilizzo del servizio, raccogliamo dati sulle tue sessioni di lezione, feedback e storico dei pagamenti.",
+    "s2Title": "2. Utilizzo dei Dati",
+    "s2Text": "Utilizziamo i tuoi dati per: fornire e migliorare il servizio, elaborare pagamenti, inviare notifiche sulle tue lezioni e comunicazioni di marketing (previo consenso).",
+    "s3Title": "3. Condivisione dei Dati",
+    "s3Text": "Non vendiamo i tuoi dati personali. Condividiamo i dati solo con fornitori necessari: Stripe per i pagamenti (titolare autonomo per i dati della carta — i dati della carta non transitano mai sui nostri server; vedi stripe.com/privacy), Resend per le email transazionali e un provider TURN per il relay delle chiamate. I trasferimenti negli USA avvengono tramite Clausole Contrattuali Standard (SCC). La nostra infrastruttura è ospitata in Lituania (UE), coperta dalla decisione di adeguatezza del GDPR.",
+    "s4Title": "4. Cookie",
+    "s4Text": "Utilizziamo cookie essenziali per mantenere la tua sessione autenticata e cookie analitici (previo consenso) per capire come viene utilizzata la piattaforma. Puoi gestire le tue preferenze sui cookie in qualsiasi momento.",
+    "s5Title": "5. I Tuoi Diritti (LGPD/GDPR)",
+    "s5Text": "Hai il diritto di: accedere ai tuoi dati, correggere informazioni inesatte, richiedere la cancellazione del tuo account, esportare i tuoi dati e revocare i consensi. Per esercitare i tuoi diritti, accedi alle impostazioni del tuo account o contatta il supporto.",
+    "s6Title": "6. Sicurezza",
+    "s6Text": "Implementiamo misure tecniche e organizzative per proteggere i tuoi dati, tra cui crittografia in transito (HTTPS) e a riposo, e autenticazione JWT con token a breve durata.",
+    "s7Title": "7. Contatto",
+    "s7Text": "Per questioni di privacy, per esercitare i tuoi diritti (GDPR Artt. 15-22) o per segnalare un incidente, contattaci: privacy@corgly.app. Rispondiamo entro 1 mese (GDPR). In caso di violazione dei dati personali, notificheremo l'autorità competente entro 72 ore.",
+    "s8Title": "8. Diritti dell'Interessato",
+    "s8Text": "Ai sensi della LGPD (Art. 18) e del GDPR, hai il diritto di: conferma dell'esistenza del trattamento, accesso ai tuoi dati, correzione di dati incompleti o non aggiornati, anonimizzazione o blocco di dati non necessari, portabilità dei dati a un altro fornitore, cancellazione dei dati trattati con consenso, informazioni sulla condivisione e revoca del consenso. Per esercitare qualsiasi di questi diritti, accedi alle impostazioni del tuo account o contatta il nostro Responsabile della Protezione dei Dati.",
+    "s9Title": "9. Cookie e Tecnologie",
+    "s9Text": "Utilizziamo cookie e tecnologie simili per operare la piattaforma. I cookie essenziali sono necessari per l'autenticazione e la sicurezza. I cookie di analytics (previo consenso) ci aiutano a comprendere i modelli di utilizzo. I cookie di marketing (previo consenso) consentono la personalizzazione dei contenuti. Puoi gestire le tue preferenze in qualsiasi momento tramite il banner dei cookie o nelle impostazioni del browser.",
+    "s10Title": "10. Contatto del DPO",
+    "s10Text": "Per questioni relative alla protezione dei dati personali, contatta il nostro Responsabile della Protezione dei Dati (DPO) all'email: privacy@corgly.app. Rispondiamo a tutte le richieste entro 15 giorni lavorativi, come previsto dalla LGPD.",
+    "linkTerms": "Termini di Utilizzo",
+    "linkBack": "Torna alla home"
+  },
+  "terms": {
+    "title": "Termini di Utilizzo",
+    "lastUpdated": "Ultimo aggiornamento: marzo 2026",
+    "s1Title": "1. Accettazione dei Termini",
+    "s1Text": "Accedendo e utilizzando la piattaforma Corgly, accetti di rispettare ed essere vincolato a questi Termini di Utilizzo. Se non sei d'accordo con qualsiasi parte di questi termini, non potrai accedere al servizio.",
+    "s2Title": "2. Descrizione del Servizio",
+    "s2Text": "Corgly è una piattaforma di apprendimento del portoghese brasiliano con insegnante madrelingua, che offre lezioni individuali dal vivo in videoconferenza. I crediti acquistati sono validi per 6 mesi dalla data di acquisto.",
+    "s3Title": "3. Account Utente",
+    "s3Text": "Sei responsabile del mantenimento della riservatezza del tuo account e della tua password e della limitazione dell'accesso al tuo computer. Accetti la responsabilità per tutte le attività che si verificano sotto il tuo account.",
+    "s4Title": "4. Politica di Cancellazione",
+    "s4Text": "Le cancellazioni devono essere effettuate con un minimo di 24 ore di anticipo. Le cancellazioni con meno di 24 ore comporteranno la detrazione del credito corrispondente. Non sarà effettuato alcun rimborso di crediti per sessioni non cancellate in anticipo.",
+    "s5Title": "5. Pagamenti e Rimborsi",
+    "s5Text": "Tutti i pagamenti vengono elaborati in modo sicuro tramite Stripe. I crediti non sono rimborsabili dopo l'acquisto, salvo in caso di errori di fatturazione comprovati. I crediti scadono 6 mesi dopo la data di acquisto.",
+    "s6Title": "6. Condotta dell'Utente",
+    "s6Text": "Accetti di utilizzare il servizio solo per scopi legali e in modo da non violare i diritti di terzi. È vietato registrare le lezioni senza il consenso esplicito dell'insegnante.",
+    "s7Title": "7. Contatto",
+    "s7Text": "Per domande su questi Termini di Utilizzo, contattaci attraverso il supporto disponibile nella piattaforma.",
+    "s8Title": "8. Privacy e Dati",
+    "s8Text": "Il trattamento dei tuoi dati personali è regolato dalla nostra Informativa sulla Privacy, che è parte integrante di questi Termini di Utilizzo. Accettando questi termini, dichiari di aver letto e accettato l'Informativa sulla Privacy.",
+    "s9Title": "9. Modifiche dei Termini",
+    "s9Text": "Ci riserviamo il diritto di modificare questi Termini di Utilizzo in qualsiasi momento. Le modifiche significative saranno comunicate con un preavviso minimo di 30 giorni via email e/o notifica sulla piattaforma. L'uso continuato del servizio dopo la data di entrata in vigore delle modifiche costituisce accettazione dei nuovi termini.",
+    "s10Title": "10. Legge Applicabile",
+    "s10Text": "Questi Termini di Utilizzo sono regolati dalle leggi della Repubblica Federativa del Brasile. Il foro della Comarca di São Paulo, Stato di São Paulo, è eletto come competente per risolvere qualsiasi controversia derivante da questi termini, con rinuncia a qualsiasi altro, per quanto privilegiato possa essere.",
+    "s11Title": "11. Contatto",
+    "s11Text": "Per domande, suggerimenti o reclami su questi Termini di Utilizzo o sul servizio, contattaci all'email: support@corgly.app. Il nostro team risponderà entro 5 giorni lavorativi.",
+    "linkPrivacy": "Informativa sulla Privacy",
+    "linkBack": "Torna alla home"
+  },
+  "landing": {
+    "header": {
+      "login": "Accedi",
+      "register": "Crea account",
+      "nav": {
+        "method": "Metodo",
+        "pricing": "Prezzi",
+        "content": "Contenuti",
+        "contact": "Contatto"
+      },
+      "nav_aria": "Navigazione principale",
+      "menuOpen": "Apri menu"
+    },
+    "hero": {
+      "title": "Impara il portoghese brasiliano con un insegnante madrelingua",
+      "subtitle": "Lezioni 1:1 dal vivo con il Metodo Corgly. Progressi misurabili, supporto reale.",
+      "cta_primary": "Crea account gratuito",
+      "cta_secondary": "Vedi prezzi",
+      "cta_primary_aria": "Crea un account gratuito su Corgly",
+      "cta_secondary_aria": "Vedi piani e prezzi di Corgly",
+      "first_lesson_badge": "Prima lezione 50% SCONTO — solo $12.50",
+      "professor_alt": "Pedro Corgnati, insegnante di portoghese brasiliano, sorridente nel suo ufficio",
+      "professor_name": "Pedro Corgnati"
+    },
+    "professor": {
+      "badge": "Insegnante Madrelingua",
+      "title": "Conosci Pedro",
+      "subtitle": "Insegnante madrelingua di portoghese brasiliano con metodologia propria",
+      "bio": "Sono Pedro Corgnati, insegnante madrelingua di portoghese brasiliano con anni di esperienza nell'insegnamento a studenti internazionali di tutti i livelli. Ho sviluppato il Metodo Corgly per garantire progressi misurabili in ogni ciclo di lezioni.",
+      "image_alt": "Pedro Corgnati, insegnante di portoghese brasiliano, sorridente nel suo ufficio",
+      "credentials": {
+        "international": "Esperienza con studenti di 20+ paesi",
+        "method": "Creatore del Metodo Corgly",
+        "live": "Disponibile per lezioni 1:1 dal vivo",
+        "feedback": "Feedback strutturato dopo ogni lezione"
+      }
+    },
+    "method": {
+      "badge": "Metodologia",
+      "title": "Il Metodo Corgly",
+      "subtitle": "Una metodologia sviluppata per garantire progressi reali e misurabili nel portoghese brasiliano.",
+      "pillars": {
+        "commitment": {
+          "title": "Commitment",
+          "description": "Impegno verso obiettivi chiari e responsabilità reciproca tra studente e insegnante."
+        },
+        "time_boxed": {
+          "title": "Time-Boxed",
+          "description": "Cicli di apprendimento con tempi definiti per concentrazione e progressi costanti."
+        },
+        "cycle_based": {
+          "title": "Cycle-Based",
+          "description": "Struttura a cicli che integra pratica, feedback e consolidamento dell'apprendimento."
+        },
+        "shared_context": {
+          "title": "Shared Context",
+          "description": "Contesto condiviso tra le lezioni per continuità ed evoluzione reale."
+        },
+        "feedback_loop": {
+          "title": "Feedback Loop",
+          "description": "Feedback costante e strutturato per la correzione e il miglioramento continuo."
+        }
+      }
+    },
+    "pricing": {
+      "badge": "Piani",
+      "title": "Investi nel tuo portoghese",
+      "subtitle": "Scegli il piano più adatto alla tua routine",
+      "discount_banner": "★ La tua prima lezione ha il 50% di sconto — solo $12.50!",
+      "most_popular": "PIÙ POPOLARE",
+      "per_lesson_suffix": "/lezione",
+      "lesson_suffix": "lezione",
+      "lessons_suffix": "lezioni",
+      "packages": {
+        "single": {
+          "name": "Singola",
+          "cta": "Inizia ora",
+          "features": [
+            "1 lezione di 55 min",
+            "Feedback strutturato",
+            "Sala virtuale con doc collaborativo",
+            "Supporto via email"
+          ]
+        },
+        "pack5": {
+          "name": "Pack 5",
+          "cta": "Acquista Pack 5",
+          "features": [
+            "5 lezioni di 55 min",
+            "Feedback strutturato",
+            "Sala virtuale con doc collaborativo",
+            "Progressi e grafici",
+            "Supporto prioritario"
+          ]
+        },
+        "pack10": {
+          "name": "Pack 10",
+          "cta": "Acquista Pack 10",
+          "features": [
+            "10 lezioni di 55 min",
+            "Feedback strutturato",
+            "Sala virtuale con doc collaborativo",
+            "Progressi e grafici",
+            "Storico completo",
+            "Supporto prioritario",
+            "Accesso ai contenuti P1"
+          ]
+        },
+        "monthly": {
+          "name": "Mensile",
+          "cta": "Abbonati Mensile",
+          "features": [
+            "8 lezioni al mese",
+            "Feedback strutturato",
+            "Sala virtuale con doc collaborativo",
+            "Progressi e grafici",
+            "Rinnovo automatico",
+            "Supporto prioritario"
+          ]
+        }
+      }
+    },
+    "content_preview": {
+      "badge": "Contenuto Gratuito",
+      "title": "Prossimamente: lezioni gratuite",
+      "subtitle": "Stiamo preparando contenuti gratuiti di grammatica, vocabolario e pronuncia. Registrati per essere avvisato quando lanceremo.",
+      "cta": "Vedi tutti i contenuti"
+    },
+    "testimonials": {
+      "title": "Cosa dicono gli studenti",
+      "subtitle": "Risultati reali da studenti di tutto il mondo",
+      "items": {
+        "maria": {
+          "name": "Maria Chen",
+          "country": "Stati Uniti",
+          "text": "In 3 mesi con Pedro, sono riuscita a comunicare con la famiglia brasiliana di mio marito per la prima volta. Il Metodo Corgly è incredibile!"
+        },
+        "giulia": {
+          "name": "Giulia Rossi",
+          "country": "Italia",
+          "text": "Le lezioni 1:1 hanno fatto tutta la differenza. Il feedback strutturato dopo ogni sessione mi aiuta a concentrarmi su ciò che deve davvero migliorare."
+        },
+        "james": {
+          "name": "James O'Brien",
+          "country": "Irlanda",
+          "text": "Ho provato diverse app di lingue prima e nessuna ha funzionato come le lezioni dal vivo con Pedro. Lo consiglio senza esitazione."
+        }
+      }
+    },
+    "faq": {
+      "title": "Domande Frequenti",
+      "items": {
+        "how_it_works": {
+          "q": "Come funzionano le lezioni?",
+          "a": "Le lezioni sono 1:1 dal vivo in videoconferenza, della durata di 50 minuti. Prenoti all'orario che preferisci e ricevi il link di accesso via email."
+        },
+        "duration": {
+          "q": "Quanto dura ogni lezione?",
+          "a": "50 minuti all'inizio dell'ora."
+        },
+        "cancel": {
+          "q": "Posso cancellare?",
+          "a": "Sì, fino a 24 ore prima senza perdere il credito. Le cancellazioni con meno di 24 ore di anticipo comportano la detrazione del credito."
+        },
+        "timezone": {
+          "q": "Come funziona il fuso orario?",
+          "a": "Puoi prenotare in qualsiasi fuso orario. Il sistema converte automaticamente al tuo orario locale."
+        },
+        "credits_expire": {
+          "q": "I crediti scadono?",
+          "a": "Sì, i crediti scadono 6 mesi dopo la data di acquisto."
+        },
+        "first_lesson": {
+          "q": "Come funziona lo sconto sulla prima lezione?",
+          "a": "$12.50 (50% SCONTO) — valido una volta per account per i nuovi studenti."
+        }
+      }
+    },
+    "cta": {
+      "title": "Pronto per imparare il portoghese sul serio?",
+      "subtitle": "Prima lezione con il 50% di sconto. Nessun impegno a lungo termine.",
+      "button": "Crea account ora",
+      "button_secondary": "Vedi Piani"
+    },
+    "footer": {
+      "copyright": "© 2026 Corgly. Tutti i diritti riservati.",
+      "links": {
+        "terms": "Termini di Utilizzo",
+        "privacy": "Privacy",
+        "contact": "Contatto"
+      }
+    }
+  },
+  "content": {
+    "pageTitle": "Contenuto Gratuito",
+    "pageDescription": "Lezioni gratuite di portoghese brasiliano per esercitarti al tuo ritmo.",
+    "filterAll": "Tutti",
+    "filterLabel": "Filtra per categoria",
+    "emptyFilter": "Nessun contenuto corrisponde a questo filtro.",
+    "videoUnavailable": "Questo video non è al momento disponibile.",
+    "notesTitle": "I Miei Appunti",
+    "notesPlaceholder": "Scrivi i tuoi appunti su questa lezione...",
+    "notesSaving": "Salvataggio...",
+    "notesSaved": "Salvato",
+    "notesError": "Errore nel salvataggio",
+    "notesAutoSave": "Salvataggio automatico",
+    "notesLoginCta": "Crea un account per salvare i tuoi appunti",
+    "notesRegisterButton": "Crea account per salvare appunti"
+  },
+  "onboarding": {
+    "slide1": {
+      "title": "Benvenuto su Corgly!",
+      "description": "Il tuo account è pronto. Vediamo come funziona?"
+    },
+    "slide2": {
+      "title": "Il Corgly Method",
+      "description": "5 pilastri per un'evoluzione rapida e misurabile",
+      "pillars": [
+        "Commitment",
+        "Time-Boxed",
+        "Cycle-Based",
+        "Shared Context",
+        "Feedback Loop"
+      ]
+    },
+    "slide3": {
+      "title": "Come funziona il ciclo",
+      "description": "Un ciclo completo di apprendimento",
+      "steps": [
+        "Prenota la tua lezione",
+        "Partecipa alla sessione dal vivo",
+        "Ricevi feedback strutturato",
+        "Segui la tua evoluzione"
+      ]
+    },
+    "slide4": {
+      "title": "La tua prima lezione",
+      "description": "Inizia ora con il 50% di sconto",
+      "cta": "Acquista prima lezione — $12.50",
+      "price": "$12.50",
+      "original_price": "$25.00"
+    },
+    "skip": "Salta",
+    "next": "Avanti",
+    "prev": "Indietro",
+    "progress": "Slide {current} di {total}",
+    "completing": "Completamento..."
+  },
+  "credits": {
+    "page": {
+      "title": "Acquista Crediti",
+      "subtitle": "Scegli il pacchetto ideale per te"
+    },
+    "billing": {
+      "title": "Fatturazione",
+      "subtitle": "Gestisci pagamenti, abbonamenti e crediti",
+      "tabs": {
+        "history": "Cronologia",
+        "subscription": "Abbonamento",
+        "credits": "Crediti"
+      }
+    },
+    "pricing": {
+      "singleTitle": "Lezione singola",
+      "singleDesc": "1 credito",
+      "pack5Title": "Pack 5 lezioni",
+      "pack5Desc": "5 crediti",
+      "pack5Badge": "Più popolare",
+      "pack10Title": "Pack 10 lezioni",
+      "pack10Desc": "10 crediti",
+      "pack10Badge": "Miglior rapporto qualità-prezzo",
+      "monthlyTitle": "Mensile",
+      "monthlyDesc": "8 crediti/mese",
+      "buyBtn": "Acquista",
+      "subscribing": "Abbonamento in corso...",
+      "buying": "Acquisto in corso...",
+      "perLesson": "/lezione",
+      "perMonth": "/mese"
+    },
+    "discount": {
+      "title": "Primo acquisto",
+      "message": "Ottieni {discount}% di sconto sulla tua prima lezione singola!",
+      "dismiss": "Chiudi promozione"
+    },
+    "history": {
+      "title": "Cronologia Pagamenti",
+      "date": "Data",
+      "amount": "Importo",
+      "status": "Stato",
+      "empty": "Nessun pagamento ancora",
+      "emptyDesc": "I tuoi pagamenti appariranno qui dopo il primo acquisto.",
+      "buyAction": "Acquista crediti",
+      "statusPending": "In attesa",
+      "statusSucceeded": "Approvato",
+      "statusFailed": "Fallito",
+      "statusRefunded": "Rimborsato"
+    },
+    "subscription": {
+      "title": "Abbonamento Mensile",
+      "active": "Attivo",
+      "cancelled": "Cancellato",
+      "renewsAt": "Rinnova il {date}",
+      "endsAt": "Termina il {date}",
+      "frequency": "Frequenza: {count}x/settimana",
+      "cancel": "Cancella abbonamento",
+      "cancelling": "Cancellazione...",
+      "cancelTitle": "Cancella abbonamento",
+      "cancelMsg": "Il tuo abbonamento continuerà fino alla fine del periodo attuale. Vuoi continuare?",
+      "cancelConfirm": "Sì, cancella",
+      "updateFrequency": "Cambia frequenza",
+      "updating": "Aggiornamento...",
+      "updateTitle": "Cambia frequenza",
+      "updateMsg": "Cambiare frequenza a {count}x a settimana?",
+      "updateConfirm": "Conferma",
+      "empty": "Nessun abbonamento attivo",
+      "emptyDesc": "Abbonati per rinnovare i crediti automaticamente ogni mese."
+    },
+    "breakdown": {
+      "title": "Dettaglio Crediti",
+      "balance": "Saldo totale",
+      "available": "Disponibili",
+      "used": "Usati",
+      "expired": "Scaduti",
+      "empty": "Nessun credito acquistato",
+      "emptyDesc": "Acquista il tuo primo pacchetto per iniziare.",
+      "buyAction": "Acquista crediti",
+      "expiresAt": "Scade il {date}",
+      "urgent": "In scadenza"
+    },
+    "expiryAlert": {
+      "message": "{count, plural, one {# credito scade} other {# crediti scadono}} tra {days, plural, one {# giorno} other {# giorni}}.",
+      "buyNow": "Acquista ora",
+      "dismiss": "Chiudi avviso scadenza crediti"
+    },
+    "admin": {
+      "title": "Gestione Crediti",
+      "subtitle": "Regolazione manuale crediti per studente",
+      "adjust": {
+        "title": "Regolazione Manuale",
+        "userId": "ID Studente",
+        "userIdPlaceholder": "UUID dello studente",
+        "credits": "Crediti ({min}–{max})",
+        "creditsPlaceholder": "Es: 5",
+        "reason": "Motivo (min. {min} caratteri)",
+        "reasonPlaceholder": "Descrivi il motivo della regolazione...",
+        "submit": "Aggiungi Crediti",
+        "submitting": "Aggiunta in corso...",
+        "success": "Crediti aggiunti con successo",
+        "errorRequired": "Inserisci l'ID dello studente",
+        "errorCreditsMin": "Minimo {min} credito",
+        "errorCreditsMax": "Massimo {max} crediti",
+        "errorReasonMin": "Il motivo deve avere almeno {min} caratteri"
+      },
+      "log": {
+        "title": "Cronologia Operazioni",
+        "status": "Stato",
+        "amount": "Importo",
+        "batchId": "Batch ID",
+        "date": "Data",
+        "filterManual": "Manuale",
+        "filterRefund": "Rimborso",
+        "filterPromo": "Promozione",
+        "empty": "Nessun record trovato",
+        "emptyFiltered": "Nessun record per i filtri selezionati."
+      }
+    },
+    "checkoutSuccess": "Acquisto completato! I tuoi crediti sono stati aggiunti."
+  },
+  "errors": {
+    "notFound": {
+      "title": "Pagina non trovata",
+      "description": "La pagina che stai cercando non esiste o è stata spostata.",
+      "backHome": "Torna alla home",
+      "goDashboard": "Vai alla Dashboard"
+    },
+    "serverError": {
+      "title": "Qualcosa è andato storto",
+      "description": "Si è verificato un errore imprevisto. Il nostro team è stato avvisato.",
+      "retry": "Riprova"
+    }
+  }
+}

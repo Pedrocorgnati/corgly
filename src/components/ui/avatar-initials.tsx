@@ -3,14 +3,14 @@
 import { cn } from '@/lib/utils';
 
 const COLORS = [
-  'bg-[#4F46E5] text-white',
-  'bg-[#059669] text-white',
-  'bg-[#D97706] text-white',
-  'bg-[#0284C7] text-white',
-  'bg-[#DC2626] text-white',
-  'bg-[#6366F1] text-white',
-  'bg-[#0891B2] text-white',
-  'bg-[#7C3AED] text-white',
+  'bg-indigo-600 text-white',
+  'bg-emerald-600 text-white',
+  'bg-amber-600 text-white',
+  'bg-sky-600 text-white',
+  'bg-red-600 text-white',
+  'bg-indigo-500 text-white',
+  'bg-cyan-600 text-white',
+  'bg-violet-600 text-white',
 ];
 
 const SIZE_MAP = {
@@ -48,13 +48,6 @@ export function AvatarInitials({ name, size = 'md', className, src }: AvatarInit
   if (src) {
     return (
       <div className={cn('rounded-full overflow-hidden flex-shrink-0', sizeClass, className)}>
-        {/* @ASSET_PLACEHOLDER
-        name: user-avatar
-        type: image
-        extension: jpg
-        description: Avatar do usuário. Foto de perfil circular.
-        context: Header, sidebar, cards de sessão
-        */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt={name} className="h-full w-full object-cover" />
       </div>

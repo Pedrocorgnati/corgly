@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UpdateProfileSchema } from '@/schemas/auth.schema';
 import { authService } from '@/services/auth.service';
 import { apiResponse } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-guard';
 
 /** PATCH /api/v1/profile */
 export async function PATCH(request: NextRequest) {
-  const userId = request.headers.get('x-user-id');
-  if (!userId) {
-    return NextResponse.json(apiResponse(null, 'Não autorizado.'), { status: 401 });
-  }
+  // RESOLVED: Auth bypass — usar requireAuth em vez de header check direto
+  const auth = await requireAuth(request);
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await request.json();
@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updated = await authService.updateProfile(userId, parsed.data);
+    const updated = await authService.updateProfile(auth.id, parsed.data);
     return NextResponse.json(apiResponse(updated));
   } catch {
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });

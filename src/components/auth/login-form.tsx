@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,14 +10,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ROUTES } from '@/lib/constants/routes';
+import { ROUTES, API } from '@/lib/constants/routes';
+import { apiClient, ApiError } from '@/lib/api-client';
+import { LoginSchema } from '@/schemas/auth.schema';
 
-const loginSchema = z.object({
-  email: z.string().email('Informe um email válido'),
-  password: z.string().min(1, 'A senha é obrigatória'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+type LoginFormData = { email: string; password: string };
 
 export function LoginForm() {
   const router = useRouter();
@@ -27,17 +23,46 @@ export function LoginForm() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(LoginSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
   });
 
-  const onSubmit = async (_data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setAuthError(null);
     try {
-      // TODO: Implementar backend — chamar POST /api/v1/auth/login
-      throw new Error('Not implemented - run /auto-flow execute');
-    } catch {
-      setAuthError('Email ou senha incorretos. Verifique seus dados e tente novamente.');
+      const result = await apiClient.post<{
+        data: {
+          user: {
+            id: string;
+            name: string;
+            role: string;
+            onboardingCompletedAt: string | null;
+          };
+          token: string;
+        };
+      }>(API.AUTH.LOGIN, { email: data.email, password: data.password });
+
+      toast.success('Login realizado com sucesso!');
+
+      if (!result.data.user.onboardingCompletedAt) {
+        router.push(ROUTES.ONBOARDING);
+      } else {
+        router.push(ROUTES.DASHBOARD);
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 403) {
+          setAuthError('Confirme seu email antes de fazer login.');
+        } else if (err.status === 429) {
+          setAuthError('Muitas tentativas. Aguarde um momento e tente novamente.');
+        } else {
+          setAuthError('Email ou senha incorretos. Verifique seus dados e tente novamente.');
+        }
+      } else {
+        setAuthError('Erro de conexão. Verifique sua internet e tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -54,11 +79,12 @@ export function LoginForm() {
           placeholder="email@exemplo.com"
           autoComplete="email"
           disabled={isLoading}
-          className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? 'email-error' : undefined}
           {...register('email')}
         />
         {errors.email && (
-          <p className="text-xs text-destructive" role="alert">{errors.email.message}</p>
+          <p id="email-error" className="text-xs text-destructive" role="alert">{errors.email.message}</p>
         )}
       </div>
 
@@ -79,7 +105,9 @@ export function LoginForm() {
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             disabled={isLoading}
-            className={`pr-10 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+            className="pr-10"
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? 'password-error' : undefined}
             {...register('password')}
           />
           <button
@@ -92,7 +120,7 @@ export function LoginForm() {
           </button>
         </div>
         {errors.password && (
-          <p className="text-xs text-destructive" role="alert">{errors.password.message}</p>
+          <p id="password-error" className="text-xs text-destructive" role="alert">{errors.password.message}</p>
         )}
       </div>
 

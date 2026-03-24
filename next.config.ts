@@ -3,10 +3,12 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-// unsafe-eval necessário para Next.js HMR em dev; removido em produção
+// unsafe-eval necessário para Next.js HMR em dev; removido em produção.
+// unsafe-inline removido em produção — Next.js 15 não requer scripts inline.
+// Se um terceiro exigir inline, use nonce ou hash em vez de unsafe-inline.
 const scriptSrc = isDev
   ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-  : "script-src 'self' 'unsafe-inline'";
+  : "script-src 'self'";
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -42,9 +44,21 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
   output: 'standalone',
+  // Removes X-Powered-By header to prevent technology fingerprinting (A05)
+  poweredByHeader: false,
   // SEO: No trailing slash — /about vs /about/
   trailingSlash: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.corgly.app',
+      },
+    ],
+    formats: ['image/avif', 'image/webp'],
+  },
   async headers() {
     return [
       {

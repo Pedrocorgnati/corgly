@@ -69,6 +69,17 @@ const CONTENT_MAP: Record<
   },
 };
 
+// Pre-generate all known content pages at build time
+export async function generateStaticParams() {
+  return Object.keys(CONTENT_MAP).map((id) => ({ id }));
+}
+
+// 404 for slugs not in the map — no on-demand generation
+export const dynamicParams = false;
+
+// Static forever — content is hardcoded
+export const revalidate = false;
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }

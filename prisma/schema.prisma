@@ -36,7 +36,7 @@ enum CreditType {
 
 enum PaymentStatus {
   PENDING
-  COMPLETED
+  SUCCEEDED
   FAILED
   REFUNDED
 }
@@ -45,6 +45,8 @@ enum SubscriptionStatus {
   ACTIVE
   CANCELLED
   PAST_DUE
+  PAUSED
+  TRIAL
 }
 
 enum SupportedLanguage {
@@ -54,10 +56,43 @@ enum SupportedLanguage {
   IT_IT
 }
 
+enum CreditEventType {
+  PURCHASE
+  CONSUMED
+  REFUNDED
+  EXPIRED
+  MANUAL_ADJUSTMENT
+}
+
+enum EmailType {
+  CONFIRM_EMAIL
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REMINDER_24H
+  BOOKING_REMINDER_1H
+  PASSWORD_RESET
+  CREDIT_EXPIRY_WARNING
+  PAYMENT_RECEIPT
+  SUBSCRIPTION_CANCELLED
+  BULK_CANCEL_NOTIFICATION
+  PURCHASE_CONFIRMED
+  SUBSCRIPTION_PAYMENT_FAILED
+  SESSION_INTERRUPTED
+  RECURRING_BOOKING_FAILED
+  ACCOUNT_DELETION_REQUESTED
+  DATA_EXPORT_READY
+  BOOKING_RESCHEDULED
+}
+
+enum PackageType {
+  SINGLE
+  PACK_5
+  PACK_10
+}
+
 enum ContentType {
-  VIDEO_GRAMMAR
-  VIDEO_VOCABULARY
-  VIDEO_PRONUNCIATION
+  VIDEO
+  ARTICLE
 }
 
 model User {
@@ -77,25 +112,31 @@ model User {
   isFirstPurchase      Boolean           @default(true)
   preferredLanguage    SupportedLanguage @default(EN_US)
   onboardingCompletedAt DateTime?
-  termsAcceptedAt      DateTime
+  termsAcceptedAt      DateTime?
   termsVersion         String            @default("1.0") @db.VarChar(10)
   marketingOptIn       Boolean           @default(false)
   deletionRequestedAt  DateTime?
   tokenVersion         Int               @default(0)
+  lastLoginAt                   DateTime?
+  deletionCancellationToken     String?
+  deletionCancellationExpires   DateTime?
+  stripeCustomerId     String?           @unique
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
 
-  creditBatches     CreditBatch[]
-  sessions          Session[]
-  payments          Payment[]
-  subscription      Subscription?
-  recurringPatterns RecurringPattern[]
-  cookieConsent     CookieConsent?
+  creditBatches      CreditBatch[]
+  sessions           Session[]
+  payments           Payment[]
+  subscriptions      Subscription[]
+  recurringPatterns  RecurringPattern[]
+  cookieConsents     CookieConsent[]
+  feedbacksAsAdmin   Feedback[]         @relation("FeedbackAdmin")
 
   @@index([role])
   @@index([emailConfirmToken])
   @@index([resetPasswordToken])
   @@index([deletionRequestedAt])
+  @@map("users")
 }
 
 model CreditBatch {
@@ -107,6 +148,7 @@ model CreditBatch {
   expiresAt             DateTime?
   stripePaymentIntentId String?    @unique
   reason                String?    @db.VarChar(500)
+  lastExpiryEmailSent   DateTime?
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
 
@@ -115,21 +157,22 @@ model CreditBatch {
   payment  Payment?
 
   @@index([userId, expiresAt])
+  @@map("credit_batches")
 }
 
 model AvailabilitySlot {
   id        String   @id @default(uuid())
-  startAt   DateTime
+  startAt   DateTime @unique // UNIQUE_slot_startAt — um slot por horário
   endAt     DateTime
   isBlocked Boolean  @default(false)
-  version   Int      @default(0)
+  version   Int      @default(0) // lock otimista CAS
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  session Session?
+  sessions Session[]
 
-  @@index([startAt])
-  @@index([startAt, isBlocked])
+  @@index([startAt, isBlocked], name: "IDX_availability_startAt_isBlocked")
+  @@map("availability_slots")
 }
 
 model RecurringPattern {
@@ -145,28 +188,32 @@ model RecurringPattern {
   sessions Session[]
 
   @@index([studentId, isActive])
+  @@map("recurring_patterns")
 }
 
 model Session {
-  id                 String        @id @default(uuid())
-  studentId          String
-  availabilitySlotId String        @unique
-  startAt            DateTime
-  endAt              DateTime
-  status             SessionStatus @default(SCHEDULED)
-  creditBatchId      String
-  isRecurring        Boolean       @default(false)
-  recurringPatternId String?
-  cancelledAt        DateTime?
-  cancelledBy        UserRole?
-  completedAt        DateTime?
-  extendedBy         Int?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id                      String        @id @default(uuid())
+  studentId               String
+  availabilitySlotId      String        @unique // UNIQUE_session_slot — um slot por sessão
+  startAt                 DateTime
+  endAt                   DateTime
+  status                  SessionStatus @default(SCHEDULED)
+  creditBatchId           String?
+  isRecurring             Boolean       @default(false)
+  recurringPatternId      String?
+  cancelledAt             DateTime?
+  cancelledBy             UserRole?
+  completedAt             DateTime?
+  interruptedAt           DateTime?
+  extendedBy              Int?
+  reminderSentAt          Json?         // { "24h": ISO, "1h": ISO } — idempotência do cron
+  rescheduleRequestSlotId String?       // slot proposto em RESCHEDULE_PENDING
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
 
   student          User              @relation(fields: [studentId], references: [id])
   availabilitySlot AvailabilitySlot  @relation(fields: [availabilitySlotId], references: [id])
-  creditBatch      CreditBatch       @relation(fields: [creditBatchId], references: [id])
+  creditBatch      CreditBatch?      @relation(fields: [creditBatchId], references: [id])
   recurringPattern RecurringPattern? @relation(fields: [recurringPatternId], references: [id])
   feedback         Feedback?
   document         SessionDocument?
@@ -174,31 +221,40 @@ model Session {
   @@index([studentId, status])
   @@index([startAt])
   @@index([status])
+  @@map("sessions")
 }
 
 model Feedback {
-  id              String   @id @default(uuid())
-  sessionId       String   @unique
-  listeningScore  Int
-  speakingScore   Int
-  writingScore    Int
-  vocabularyScore Int
-  generalComment  String   @db.Text
-  strengths       String?  @db.Text
-  improvements    String?  @db.Text
-  topicsCovered   String?  @db.Text
-  recommendations String?  @db.Text
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  sessionId           String    @unique
+  listeningScore      Int
+  speakingScore       Int
+  writingScore        Int
+  vocabularyScore     Int
+  overallFeedback     String?   @db.Text
+  listeningFeedback   String?   @db.Text
+  speakingFeedback    String?   @db.Text
+  writingFeedback     String?   @db.Text
+  vocabularyFeedback  String?   @db.Text
+  adminId             String?
+  privateNote         String?   @db.Text
+  reviewed            Boolean   @default(false)
+  reviewedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   session Session @relation(fields: [sessionId], references: [id])
+  admin   User?   @relation("FeedbackAdmin", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@map("feedbacks")
 }
 
 model Payment {
   id                    String        @id @default(uuid())
   userId                String
   stripePaymentIntentId String        @unique
-  stripeEventId         String        @unique
+  stripeEventId         String?       @unique
   amount                Int
   currency              String        @default("usd")
   status                PaymentStatus
@@ -210,11 +266,12 @@ model Payment {
   creditBatch CreditBatch? @relation(fields: [creditBatchId], references: [id])
 
   @@index([userId])
+  @@map("payments")
 }
 
 model Subscription {
   id                   String             @id @default(uuid())
-  userId               String             @unique
+  userId               String
   stripeSubscriptionId String             @unique
   status               SubscriptionStatus
   weeklyFrequency      Int
@@ -225,6 +282,9 @@ model Subscription {
   updatedAt            DateTime           @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("subscriptions")
 }
 
 model SessionDocument {
@@ -236,13 +296,15 @@ model SessionDocument {
   updatedAt         DateTime @updatedAt
 
   session Session @relation(fields: [sessionId], references: [id])
+
+  @@map("session_documents")
 }
 
 model Content {
   id          String            @id @default(uuid())
   title       String
   type        ContentType
-  youtubeUrl  String            @db.VarChar(500)
+  youtubeUrl  String?           @db.VarChar(500)
   description String?           @db.Text
   transcript  String?           @db.Text
   language    SupportedLanguage
@@ -252,11 +314,12 @@ model Content {
   updatedAt   DateTime          @updatedAt
 
   @@index([isPublished, sortOrder])
+  @@map("contents")
 }
 
 model CookieConsent {
   id                 String   @id @default(uuid())
-  userId             String?  @unique
+  userId             String?
   sessionFingerprint String?
   essentialAccepted  Boolean  @default(true)
   analyticsAccepted  Boolean  @default(false)
@@ -265,4 +328,20 @@ model CookieConsent {
   updatedAt          DateTime @updatedAt
 
   user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("cookie_consents")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  adminId      String
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@map("audit_logs")
 }

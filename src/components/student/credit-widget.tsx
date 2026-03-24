@@ -14,11 +14,16 @@ interface CreditWidgetProps {
 
 export function CreditWidget({ balance, expiringCount = 0, expiringDays = 0 }: CreditWidgetProps) {
   const isEmpty = balance === 0;
+  const isExpiring = expiringCount > 0;
 
   return (
     <div className={cn(
       'bg-card border rounded-xl p-5 shadow-sm',
-      isEmpty ? 'border-2 border-destructive' : 'border-border',
+      isEmpty
+        ? 'border-2 border-destructive'
+        : isExpiring
+          ? 'border-2 border-warning'
+          : 'border-border border-l-4 border-l-success',
     )}>
       <p className="text-sm font-medium text-muted-foreground mb-3">Créditos Corgly</p>
       <div className="text-center mb-4">
@@ -29,8 +34,8 @@ export function CreditWidget({ balance, expiringCount = 0, expiringDays = 0 }: C
       </div>
 
       {expiringCount > 0 && (
-        <div className="mb-4 border-l-4 border-[#D97706] bg-amber-50 dark:bg-amber-950/20 p-3 rounded-r-lg">
-          <p className="text-sm text-[#D97706] font-medium flex items-center gap-1.5">
+        <div className="mb-4 border-l-4 border-warning bg-amber-50 dark:bg-amber-950/20 p-3 rounded-r-lg">
+          <p className="text-sm text-warning font-medium flex items-center gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
             {expiringCount} crédito{expiringCount > 1 ? 's' : ''} expira{expiringCount > 1 ? 'm' : ''} em {expiringDays} dia{expiringDays > 1 ? 's' : ''}
           </p>

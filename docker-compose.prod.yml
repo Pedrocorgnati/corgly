@@ -1,0 +1,78 @@
+# ============================================================
+# Corgly — Docker Compose (Produção / Self-hosted VPS)
+# Uso: docker compose -f docker-compose.prod.yml up -d
+# Requer: .env.production com variáveis reais
+# ============================================================
+
+services:
+  # ── Next.js App ─────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Hocuspocus WebSocket Server ─────────────────────────
+  hocuspocus:
+    build:
+      context: .
+      dockerfile: hocuspocus/Dockerfile
+    ports:
+      - "1234:1234"
+    env_file:
+      - .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:1234 2>&1 | grep -q '' || exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── Nginx Reverse Proxy ──────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - app
+      - hocuspocus
+    restart: always
+
+  # ── MySQL 8.4 ────────────────────────────────────────────
+  db:
+    image: mysql:8.4
+    env_file:
+      - .env.production
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  db_data:

@@ -1,52 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ManualCreditSchema } from '@/schemas/credit.schema';
+import { UserRole } from '@/lib/constants/enums';
 import { creditService } from '@/services/credit.service';
+import { requireAuth } from '@/lib/auth-guard';
 import { apiResponse } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
-/** GET /api/v1/credits — student credit balance */
+/** GET /api/v1/credits — retorna saldo + breakdown de créditos do usuário */
 export async function GET(request: NextRequest) {
-  const userId = request.headers.get('x-user-id');
-  const role = request.headers.get('x-user-role');
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const userId = authResult.id;
+
+  // Admin pode consultar qualquer usuário via ?userId=
   const { searchParams } = request.nextUrl;
-
-  // Admin can query any user's balance
   const targetUserId =
-    role === 'ADMIN' && searchParams.get('userId')
-      ? searchParams.get('userId')!
-      : userId!;
-
-  if (!targetUserId) {
-    return NextResponse.json(apiResponse(null, 'Não autorizado.'), { status: 401 });
-  }
+    authResult.role === UserRole.ADMIN && searchParams.get('userId') ? searchParams.get('userId')! : userId;
 
   try {
-    const balance = await creditService.getBalance(targetUserId);
-    return NextResponse.json(apiResponse(balance));
-  } catch {
-    return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
-  }
-}
+    // Paralelo: p95 < 200ms
+    const [balance, breakdown] = await Promise.all([
+      creditService.getBalance(targetUserId),
+      creditService.getBreakdown(targetUserId),
+    ]);
 
-/** POST /api/v1/credits — admin: add manual credits */
-export async function POST(request: NextRequest) {
-  const role = request.headers.get('x-user-role');
-  if (role !== 'ADMIN') {
-    return NextResponse.json(apiResponse(null, 'Acesso restrito a administradores.'), { status: 403 });
-  }
-
-  try {
-    const body = await request.json();
-    const parsed = ManualCreditSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        apiResponse(null, 'Dados inválidos.', parsed.error.issues[0]?.message ?? null),
-        { status: 400 },
-      );
-    }
-
-    await creditService.addManualCredits(parsed.data);
-    return NextResponse.json(apiResponse(null, null, 'Créditos adicionados com sucesso.'), { status: 201 });
-  } catch {
+    return NextResponse.json(apiResponse({ balance, breakdown }));
+  } catch (err) {
+    logger.error('GET /api/v1/credits', { action: 'credits.get', userId: targetUserId }, err);
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
 }

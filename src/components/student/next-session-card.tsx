@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Calendar } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -15,6 +16,7 @@ interface Session {
 
 interface NextSessionCardProps {
   session: Session | null;
+  canEnter?: boolean;
 }
 
 function Countdown({ targetDate }: { targetDate: string }) {
@@ -40,13 +42,15 @@ function Countdown({ targetDate }: { targetDate: string }) {
   const isLive = timeLeft === 'Sessão ao vivo!';
 
   return (
-    <p className={isLive ? 'text-[#059669] font-semibold animate-pulse text-center' : 'text-2xl font-mono text-primary text-center'}>
+    <p className={isLive ? 'text-success font-semibold animate-pulse text-center' : 'text-2xl font-mono text-primary text-center'}>
       {timeLeft}
     </p>
   );
 }
 
-export function NextSessionCard({ session }: NextSessionCardProps) {
+export function NextSessionCard({ session, canEnter = true }: NextSessionCardProps) {
+  const router = useRouter();
+
   if (!session) {
     return (
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm flex flex-col">
@@ -68,10 +72,27 @@ export function NextSessionCard({ session }: NextSessionCardProps) {
       <Countdown targetDate={`${session.date}T${session.time}`} />
       <p className="text-xs text-muted-foreground text-center mb-4">até a aula</p>
       <div className="flex gap-2">
-        <Button variant="ghost" size="sm" className="flex-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex-1"
+          onClick={() => router.push(`/schedule?cancel=${session.sessionId}`)}
+        >
           Cancelar
         </Button>
-        <Link href={ROUTES.SESSION(session.sessionId)} className={cn(buttonVariants({ size: 'sm' }), 'flex-1')}>Entrar →</Link>
+        {canEnter ? (
+          <Link href={ROUTES.SESSION(session.sessionId)} className={cn(buttonVariants({ size: 'sm' }), 'flex-1')}>
+            Entrar &rarr;
+          </Link>
+        ) : (
+          <span
+            role="link"
+            aria-disabled="true"
+            className={cn(buttonVariants({ size: 'sm' }), 'flex-1 opacity-50 cursor-not-allowed pointer-events-none')}
+          >
+            Entrar &rarr;
+          </span>
+        )}
       </div>
     </div>
   );

@@ -13,7 +13,9 @@ import { buttonVariants } from '@/components/ui/button-variants';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ROUTES } from '@/lib/constants/routes';
+import { ROUTES, API } from '@/lib/constants/routes';
+import { apiClient, ApiError } from '@/lib/api-client';
+import { AuthPageWrapper } from '@/components/shared';
 
 const schema = z.object({
   password: z
@@ -41,11 +43,13 @@ function ResetPasswordContent() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
   });
 
   if (!token) {
     return (
-      <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
+      <AuthPageWrapper>
         <div className="w-full max-w-[384px]">
           <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
@@ -56,16 +60,16 @@ function ResetPasswordContent() {
             <Link href={ROUTES.FORGOT_PASSWORD} className={cn(buttonVariants(), 'w-full')}>Solicitar novo link</Link>
           </div>
         </div>
-      </div>
+      </AuthPageWrapper>
     );
   }
 
   if (done) {
     return (
-      <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
+      <AuthPageWrapper>
         <div className="w-full max-w-[384px]">
           <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
-            <CheckCircle2 className="h-10 w-10 text-[#059669] mx-auto" />
+            <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Senha redefinida!</h1>
             <p className="text-sm text-muted-foreground">
               Sua senha foi alterada com sucesso. Faça login com a nova senha.
@@ -73,17 +77,25 @@ function ResetPasswordContent() {
             <Link href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>Ir para o login</Link>
           </div>
         </div>
-      </div>
+      </AuthPageWrapper>
     );
   }
 
-  const onSubmit = async (_data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implementar backend — POST /api/v1/auth/reset-password
-      throw new Error('Not implemented - run /auto-flow execute');
-    } catch {
-      toast.error('Token inválido ou expirado. Solicite um novo link.');
+      await apiClient.post(API.AUTH.RESET_PASSWORD, {
+        token,
+        password: data.password,
+      });
+      toast.success('Senha redefinida com sucesso!');
+      setDone(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        toast.error('Token inválido ou expirado. Solicite um novo link.');
+      } else {
+        toast.error('Ocorreu um erro. Tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +121,9 @@ function ResetPasswordContent() {
                   placeholder="Mínimo 8 caracteres"
                   autoComplete="new-password"
                   disabled={isLoading}
-                  className={`pr-10 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  className="pr-10"
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'reset-password-error' : undefined}
                   {...register('password')}
                 />
                 <button
@@ -122,7 +136,7 @@ function ResetPasswordContent() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs text-destructive" role="alert">{errors.password.message}</p>
+                <p id="reset-password-error" className="text-xs text-destructive" role="alert">{errors.password.message}</p>
               )}
             </div>
 
@@ -135,7 +149,9 @@ function ResetPasswordContent() {
                   placeholder="Digite a nova senha novamente"
                   autoComplete="new-password"
                   disabled={isLoading}
-                  className={`pr-10 ${errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  className="pr-10"
+                  aria-invalid={!!errors.confirmPassword}
+                  aria-describedby={errors.confirmPassword ? 'reset-confirmPassword-error' : undefined}
                   {...register('confirmPassword')}
                 />
                 <button
@@ -148,7 +164,7 @@ function ResetPasswordContent() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-xs text-destructive" role="alert">{errors.confirmPassword.message}</p>
+                <p id="reset-confirmPassword-error" className="text-xs text-destructive" role="alert">{errors.confirmPassword.message}</p>
               )}
             </div>
 

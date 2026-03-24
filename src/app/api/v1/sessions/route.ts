@@ -12,17 +12,18 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') ?? undefined;
 
   try {
+    const page = Number(searchParams.get('page') ?? '1');
+    const limit = Number(searchParams.get('limit') ?? '20');
+    const from = searchParams.get('from') ?? undefined;
+    const to = searchParams.get('to') ?? undefined;
+
     if (role === 'ADMIN') {
-      const hasFeedback = searchParams.get('hasFeedback');
-      const result = await sessionService.listAll({
-        status,
-        hasFeedback: hasFeedback !== null ? hasFeedback === 'true' : undefined,
-      });
+      const result = await sessionService.listAll({ status, page, limit, from, to });
       return NextResponse.json(apiResponse(result));
     }
 
-    const sessions = await sessionService.listByStudent(userId, status);
-    return NextResponse.json(apiResponse(sessions));
+    const result = await sessionService.listByStudent(userId, { status, page, limit, from, to });
+    return NextResponse.json(apiResponse(result));
   } catch {
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
