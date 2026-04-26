@@ -6,6 +6,7 @@ import { TodayWidget } from '@/components/admin/TodayWidget';
 import { PendingFeedbackWidget } from '@/components/admin/PendingFeedbackWidget';
 import { ExpiringCreditsWidget } from '@/components/admin/ExpiringCreditsWidget';
 import { StudentGrowthWidget } from '@/components/admin/StudentGrowthWidget';
+import { MetricsPanel } from '@/components/admin/MetricsPanel';
 
 export const metadata: Metadata = {
   title: 'Admin — Dashboard',
@@ -33,6 +34,9 @@ export default async function AdminDashboardPage() {
         <h1 className="text-2xl font-bold text-foreground">Dashboard Admin</h1>
         <p className="text-sm text-muted-foreground mt-1">Visão geral da plataforma</p>
       </div>
+
+      {/* Metricas de periodo (cards dinamicos) */}
+      <MetricsPanel />
 
       {/* Row 1: Today + Pending Feedbacks */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

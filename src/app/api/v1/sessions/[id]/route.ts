@@ -4,9 +4,13 @@ import { apiResponse } from '@/lib/auth'
 import { canEnter } from '@/lib/session/canEnter'
 import { getIceServers } from '@/lib/iceServers'
 import { SessionStatus, UserRole } from '@/lib/constants/enums'
+import { withApiHandler } from '@/lib/api-handler'
 
 /** GET /api/v1/sessions/:id — retorna sessão com iceServers quando canEnter() === true */
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withApiHandler(async (
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) => {
   const userId = request.headers.get('x-user-id')!
   const role = request.headers.get('x-user-role')!
 
@@ -28,10 +32,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   } catch {
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 })
   }
-}
+})
 
 /** PATCH /api/v1/sessions/:id — extend (ADMIN only) or mark COMPLETED */
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withApiHandler(async (
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) => {
   const userId = request.headers.get('x-user-id')!
   const role = request.headers.get('x-user-role')!
 
@@ -133,4 +140,4 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } catch {
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 })
   }
-}
+})

@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { packageType, weeklyFrequency, isSubscription } = body;
+    const { packageType, weeklyFrequency, isSubscription, currency } = body;
 
     if (isSubscription) {
-      const parsed = CreateSubscriptionCheckoutSchema.safeParse({ weeklyFrequency });
+      const parsed = CreateSubscriptionCheckoutSchema.safeParse({ weeklyFrequency, currency });
       if (!parsed.success) {
         return NextResponse.json(
           apiResponse(null, 'Dados inválidos.', parsed.error.issues[0]?.message ?? null),
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(apiResponse(result));
     }
 
-    const parsed = CreateCheckoutSchema.safeParse({ packageType });
+    const parsed = CreateCheckoutSchema.safeParse({ packageType, currency });
     if (!parsed.success) {
       return NextResponse.json(
         apiResponse(null, 'Dados inválidos.', parsed.error.issues[0]?.message ?? null),

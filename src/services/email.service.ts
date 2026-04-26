@@ -12,6 +12,36 @@
 import { z } from 'zod';
 import { EmailType, SupportedLanguage } from '@/types/enums';
 import { getCircuitBreaker } from '@/lib/circuit-breaker';
+import { prisma } from '@/lib/prisma';
+import { signUnsubscribeToken } from '@/lib/email/unsubscribe-token';
+
+// ── Email categories: 'marketing' exige opt-in + footer de unsubscribe (LGPD/CAN-SPAM).
+// Atualmente todos os 17 templates sao transacionais; quando adicionar marketing, registrar aqui.
+export type EmailCategory = 'marketing' | 'transactional';
+
+const EMAIL_CATEGORIES: Record<EmailType, EmailCategory> = {
+  [EmailType.CONFIRM_EMAIL]: 'transactional',
+  [EmailType.BOOKING_CONFIRMED]: 'transactional',
+  [EmailType.BOOKING_CANCELLED]: 'transactional',
+  [EmailType.BOOKING_REMINDER_24H]: 'transactional',
+  [EmailType.BOOKING_REMINDER_1H]: 'transactional',
+  [EmailType.PASSWORD_RESET]: 'transactional',
+  [EmailType.CREDIT_EXPIRY_WARNING]: 'transactional',
+  [EmailType.PAYMENT_RECEIPT]: 'transactional',
+  [EmailType.SUBSCRIPTION_CANCELLED]: 'transactional',
+  [EmailType.BULK_CANCEL_NOTIFICATION]: 'transactional',
+  [EmailType.PURCHASE_CONFIRMED]: 'transactional',
+  [EmailType.SUBSCRIPTION_PAYMENT_FAILED]: 'transactional',
+  [EmailType.SESSION_INTERRUPTED]: 'transactional',
+  [EmailType.RECURRING_BOOKING_FAILED]: 'transactional',
+  [EmailType.ACCOUNT_DELETION_REQUESTED]: 'transactional',
+  [EmailType.DATA_EXPORT_READY]: 'transactional',
+  [EmailType.BOOKING_RESCHEDULED]: 'transactional',
+};
+
+export function getEmailCategory(type: EmailType): EmailCategory {
+  return EMAIL_CATEGORIES[type];
+}
 
 // ── Concurrency limiter (inline, sem dependência p-limit/ESM) ──
 
@@ -54,6 +84,7 @@ const SendEmailParamsSchema = z.object({
   type: z.string().refine((v) => VALID_EMAIL_TYPES.has(v as EmailType), { message: 'EmailType inválido.' }),
   data: z.record(z.string(), z.unknown()),
   locale: z.string().refine((v) => VALID_LOCALES.has(v as SupportedLanguage), { message: 'Locale inválido.' }).optional(),
+  userId: z.string().optional(),
 });
 
 export type SendEmailParams = {
@@ -61,7 +92,11 @@ export type SendEmailParams = {
   type: EmailType;
   data: Record<string, unknown>;
   locale?: SupportedLanguage;
+  /** Obrigatorio para emails de categoria 'marketing' — usado para checar opt-in e gerar token de unsubscribe. */
+  userId?: string;
 };
+
+export type SendEmailResult = { sent: true } | { sent: false; skipped: 'marketing_opt_out' | 'user_not_found' };
 
 // ── Template definitions ──
 
@@ -432,12 +467,33 @@ class ResendProvider implements IEmailProvider {
 // ── EmailService ──
 
 export interface IEmailService {
-  send(params: SendEmailParams): Promise<void>;
+  send(params: SendEmailParams): Promise<SendEmailResult>;
   renderTemplate(
     type: EmailType,
     data: Record<string, unknown>,
     locale: SupportedLanguage,
   ): TemplateLocaleContent;
+}
+
+/**
+ * Renderiza footer de unsubscribe multilingue para emails marketing.
+ * Link aponta para /unsubscribe?token=<JWT>, que chama o endpoint
+ * /api/v1/email/unsubscribe para flipar marketingOptIn=false.
+ */
+function renderUnsubscribeFooter(token: string, locale: SupportedLanguage, baseUrl: string): string {
+  const url = `${baseUrl}/unsubscribe?token=${encodeURIComponent(token)}`;
+  const labels: Record<SupportedLanguage, { line: string; link: string }> = {
+    PT_BR: { line: 'Você está recebendo este email porque autorizou comunicações de marketing.', link: 'Descadastrar' },
+    EN_US: { line: 'You are receiving this email because you opted in to marketing communications.', link: 'Unsubscribe' },
+    ES_ES: { line: 'Recibes este correo porque aceptaste recibir comunicaciones de marketing.', link: 'Darse de baja' },
+    IT_IT: { line: 'Ricevi questa email perché hai accettato le comunicazioni di marketing.', link: 'Annulla iscrizione' },
+  };
+  const l = labels[locale];
+  return `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;">
+    ${l.line}
+    <br/>
+    <a href="${url}" style="color:#2563eb;text-decoration:underline;">${l.link}</a>
+  </div>`;
 }
 
 const DEFAULT_FROM = process.env.EMAIL_FROM ?? 'Corgly <no-reply@corgly.app>';
@@ -480,7 +536,7 @@ export class EmailService implements IEmailService {
     return renderer(data, locale);
   }
 
-  async send(params: SendEmailParams): Promise<void> {
+  async send(params: SendEmailParams): Promise<SendEmailResult> {
     // Validar params
     const parsed = SendEmailParamsSchema.safeParse(params);
     if (!parsed.success) {
@@ -488,12 +544,41 @@ export class EmailService implements IEmailService {
     }
 
     const locale = params.locale ?? SupportedLanguage.EN_US;
-    const { subject, html } = this.renderTemplate(params.type, params.data, locale);
+    const category = EMAIL_CATEGORIES[params.type];
+
+    let { html, subject } = this.renderTemplate(params.type, params.data, locale);
+
+    // LGPD/CAN-SPAM: emails de marketing exigem opt-in e unsubscribe footer.
+    if (category === 'marketing') {
+      if (!params.userId) {
+        throw new Error('EmailService.send: emails marketing requerem userId.');
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: params.userId },
+        select: { marketingOptIn: true },
+      });
+
+      if (!user) {
+        return { sent: false, skipped: 'user_not_found' };
+      }
+      if (!user.marketingOptIn) {
+        console.info('[EmailService] Skipping marketing email: opt-out', { userId: params.userId, type: params.type });
+        return { sent: false, skipped: 'marketing_opt_out' };
+      }
+
+      const token = signUnsubscribeToken(params.userId);
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://corgly.app';
+      const footer = renderUnsubscribeFooter(token, locale, baseUrl);
+      // Injeta footer dentro do .content do layout padrao.
+      html = html.replace('</div>\n    <div class="footer">', `${footer}</div>\n    <div class="footer">`);
+    }
 
     // EMAIL_OVERRIDE: redirecionar em dev/test
     const to = process.env.EMAIL_OVERRIDE ?? params.to;
 
     await limiter.run(() => this.sendWithRetry({ to, subject, html }));
+    return { sent: true };
   }
 
   private async sendWithRetry(params: {

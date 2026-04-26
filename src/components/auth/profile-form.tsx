@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { AvatarInitials } from '@/components/ui/avatar-initials';
 import { DeleteAccountModal } from '@/components/auth/delete-account-modal';
 import { apiClient } from '@/lib/api-client';
@@ -36,6 +37,8 @@ export function ProfileForm() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [isSavingOptIn, setIsSavingOptIn] = useState(false);
 
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -56,8 +59,28 @@ export function ProfileForm() {
         timezone: user.timezone ?? 'America/Sao_Paulo',
         preferredLanguage: (user as { preferredLanguage?: string }).preferredLanguage ?? 'pt-BR',
       });
+      setMarketingOptIn(Boolean((user as { marketingOptIn?: boolean }).marketingOptIn));
     }
   }, [user, reset]);
+
+  const handleMarketingToggle = async (next: boolean) => {
+    const previous = marketingOptIn;
+    setMarketingOptIn(next);
+    setIsSavingOptIn(true);
+    try {
+      await apiClient.put(API.PROFILE_MARKETING_OPT_IN, { optIn: next });
+      toast.success(
+        next
+          ? 'Você receberá emails de marketing.'
+          : 'Você não receberá mais emails de marketing.'
+      );
+    } catch {
+      setMarketingOptIn(previous);
+      toast.error('Não foi possível salvar sua preferência. Tente novamente.');
+    } finally {
+      setIsSavingOptIn(false);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
@@ -157,6 +180,26 @@ export function ProfileForm() {
             {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</> : 'Salvar alterações'}
           </Button>
         </form>
+
+        <div className="mt-6 pt-6 border-t border-border">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <Label htmlFor="marketing-opt-in" className="text-sm font-medium">
+                Receber emails de marketing
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Novidades, promoções e dicas. Você pode sair a qualquer momento.
+              </p>
+            </div>
+            <Switch
+              id="marketing-opt-in"
+              checked={marketingOptIn}
+              onCheckedChange={(value) => handleMarketingToggle(Boolean(value))}
+              disabled={isSavingOptIn}
+              aria-label="Receber emails de marketing"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Danger zone */}

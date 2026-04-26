@@ -80,4 +80,28 @@ const nextConfig: NextConfig = {
 };
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
-export default withNextIntl(nextConfig);
+
+// ─── Sentry (producao apenas) ─────────────────────────────────────────────
+// withSentryConfig tenta ler manifestos de build que nao existem em dev,
+// o que quebra o HMR. Por isso aplicamos o wrapper apenas quando nao e dev.
+// Require() e guardado em try/catch para permitir que o projeto funcione
+// antes do `npm i @sentry/nextjs` (ver PENDING-ACTIONS.md).
+let finalConfig = withNextIntl(nextConfig);
+if (!isDev && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  try {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const { withSentryConfig } = require('@sentry/nextjs');
+    finalConfig = withSentryConfig(finalConfig, {
+      silent: true,
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      hideSourceMaps: true,
+      disableLogger: true,
+    });
+  } catch {
+    // @sentry/nextjs nao instalado — produz build sem monitoramento ate instalar
+  }
+}
+
+export default finalConfig;

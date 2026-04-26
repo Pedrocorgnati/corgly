@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { buildAlternates } from '@/lib/seo/metadata';
 import { ThemeProvider } from '@/components/shared/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/hooks/useAuth';
 import { CookieBanner } from '@/components/ui/cookie-banner';
+import { AnalyticsProvider } from '@/components/shared/AnalyticsProvider';
 
 const inter = Inter({
   variable: '--font-sans',
@@ -36,6 +38,7 @@ export const metadata: Metadata = {
   },
   description: 'Aulas 1:1 ao vivo de português brasileiro com Pedro. Agende, aprenda e evolua com o Corgly Method.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://corgly.app'),
+  alternates: buildAlternates('/'),
   openGraph: {
     title: 'Corgly — Aprenda Português com Professor Nativo',
     description: 'Aulas 1:1 ao vivo de português brasileiro com Pedro.',
@@ -66,6 +69,7 @@ export const metadata: Metadata = {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
   },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -92,6 +96,7 @@ export default function RootLayout({
           </AuthProvider>
           <Toaster position="top-right" richColors />
           <CookieBanner />
+          <AnalyticsProvider />
         </ThemeProvider>
       </body>
     </html>

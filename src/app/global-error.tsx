@@ -10,8 +10,26 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    // Integrar Sentry aqui quando NEXT_PUBLIC_SENTRY_DSN estiver configurado
-    console.error('[global-error]', { digest: error.digest, message: error.message });
+    // Log estruturado local para captura em containers/PM2.
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        msg: 'global_error',
+        digest: error.digest,
+        message: error.message,
+        stack: error.stack,
+      }),
+    );
+    // Sentry: capturado apenas quando NEXT_PUBLIC_SENTRY_DSN + pacote instalado.
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      try {
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        const Sentry = require('@sentry/nextjs');
+        Sentry.captureException(error, { tags: { digest: error.digest } });
+      } catch {
+        // pacote nao instalado — ver PENDING-ACTIONS.md
+      }
+    }
   }, [error]);
 
   return (

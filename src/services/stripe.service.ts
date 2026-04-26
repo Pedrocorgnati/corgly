@@ -2,9 +2,11 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { getStripe } from '@/lib/stripe';
 import { AppError } from '@/lib/errors';
-import { PACKAGE_PRICES, PACKAGE_CREDITS, PACKAGE_LABELS } from '@/lib/constants/stripe-prices';
+import { PACKAGE_CREDITS, PACKAGE_LABELS } from '@/lib/constants/stripe-prices';
 import type { CreateCheckoutInput, CreateSubscriptionCheckoutInput } from '@/schemas/checkout.schema';
 import { SubscriptionStatus } from '@/lib/constants/enums';
+import { resolvePrice, toStripeCurrency } from '@/lib/pricing/config';
+import type { Currency } from '@/lib/currency';
 
 const CREDIT_EXPIRY_6M_MS = 6 * 30 * 24 * 60 * 60 * 1000;
 
@@ -42,22 +44,27 @@ export class StripeService {
     // Primeira compra de SINGLE → PROMO
     const isPromo = isFirstPurchase && data.packageType === 'SINGLE';
     const resolvedType = isPromo ? 'PROMO' : data.packageType;
-    const unitAmount = PACKAGE_PRICES[resolvedType];
+    const currency: Currency = data.currency ?? 'USD';
+    const price = resolvePrice(resolvedType, currency);
     const creditQty = PACKAGE_CREDITS[resolvedType];
+
+    // Prioriza priceId pre-cadastrado no Stripe (recibo + contabilidade corretos);
+    // cai em price_data quando priceId nao foi configurado para o par moeda/pack.
+    const lineItem = price.priceId
+      ? { price: price.priceId, quantity: 1 }
+      : {
+          price_data: {
+            currency: toStripeCurrency(currency),
+            unit_amount: price.amountCents,
+            product_data: { name: `Corgly — ${PACKAGE_LABELS[resolvedType]}` },
+          },
+          quantity: 1,
+        };
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            unit_amount: unitAmount,
-            product_data: { name: `Corgly — ${PACKAGE_LABELS[resolvedType]}` },
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: [lineItem as Stripe.Checkout.SessionCreateParams.LineItem],
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/credits?canceled=true`,
@@ -65,6 +72,7 @@ export class StripeService {
         userId,
         packageType: resolvedType,
         creditQty: String(creditQty),
+        currency,
       },
     });
 
@@ -106,8 +114,12 @@ export class StripeService {
       await prisma.user.update({ where: { id: userId }, data: { stripeCustomerId } });
     }
 
-    // Calcular preço: weeklyFrequency × $16 × 4.33 semanas
-    const monthlyAmountCents = Math.ceil(data.weeklyFrequency * 16 * 4.33 * 100);
+    // Calcular preço em USD base e converter para a moeda escolhida (fator simples).
+    // O priceId nao e usado aqui porque a assinatura e variavel (frequencia 1..5).
+    const currency: Currency = data.currency ?? 'USD';
+    const FX: Record<Currency, number> = { USD: 1, USDC: 1, EUR: 0.92, BRL: 5.0 };
+    const baseUsdCents = Math.ceil(data.weeklyFrequency * 16 * 4.33 * 100);
+    const monthlyAmountCents = Math.ceil(baseUsdCents * FX[currency]);
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -115,7 +127,7 @@ export class StripeService {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: toStripeCurrency(currency),
             unit_amount: monthlyAmountCents,
             recurring: { interval: 'month' },
             product_data: {
@@ -131,6 +143,7 @@ export class StripeService {
       metadata: {
         userId,
         weeklyFrequency: String(data.weeklyFrequency),
+        currency,
       },
     });
 

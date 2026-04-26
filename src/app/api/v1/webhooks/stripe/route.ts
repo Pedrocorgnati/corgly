@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripeService } from '@/services/stripe.service';
 import { apiResponse } from '@/lib/auth';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { withApiHandler } from '@/lib/api-handler';
 
 export const config = {
   api: { bodyParser: false },
 };
 
 /** POST /api/v1/webhooks/stripe */
-export async function POST(request: NextRequest) {
+export const POST = withApiHandler(async (request: NextRequest) => {
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
   const rl = checkRateLimit(`webhook:${ip}`, RATE_LIMITS.WEBHOOK);
   if (!rl.allowed) {
@@ -31,4 +32,4 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(apiResponse(null, 'Webhook handling failed.'), { status: 500 });
   }
-}
+});

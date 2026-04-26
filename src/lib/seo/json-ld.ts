@@ -93,6 +93,55 @@ export function buildVideoObjectSchema(content: {
   };
 }
 
+/**
+ * Organization schema — represents Corgly as the publishing organization.
+ * Useful for knowledge-graph / brand recognition on SERPs.
+ */
+export function buildOrganizationSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Corgly',
+    url: SITE_URL,
+    logo: `${SITE_URL}/images/logo-corgly.png`,
+    description:
+      'Online school for 1:1 Brazilian Portuguese lessons with native teachers.',
+    founder: buildPersonSchema(),
+    sameAs: [] as string[],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      availableLanguage: ['Portuguese', 'English', 'Spanish', 'Italian'],
+    },
+  };
+}
+
+/**
+ * FAQPage schema — accepts a list of {question, answer} pairs.
+ * Pass the FAQ items rendered on the page to keep schema in sync with content.
+ */
+export function buildFaqSchema(items: Array<{ question: string; answer: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  };
+}
+
+// ─── Task-spec aliases (TASK-11 ST001) ─────────────────────────────────────
+// The task spec names the helpers organizationJsonLd / courseJsonLd / faqJsonLd.
+// These aliases mirror the existing build* API without breaking current callers.
+export const organizationJsonLd = buildOrganizationSchema;
+export const courseJsonLd = buildCourseSchema;
+export const faqJsonLd = buildFaqSchema;
+
 /** Returns all three schemas for the landing page. */
 export function buildLandingPageSchemas() {
   return [buildPersonSchema(), buildWebSiteSchema(), buildCourseSchema()];

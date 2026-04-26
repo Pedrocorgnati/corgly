@@ -56,6 +56,7 @@ export const API = {
     CANCEL_DELETION: '/api/v1/auth/cancel-deletion',
   },
   PROFILE: '/api/v1/profile',
+  PROFILE_MARKETING_OPT_IN: '/api/v1/profile/marketing-opt-in',
   SESSIONS: '/api/v1/sessions',
   SESSION: (id: string) => `/api/v1/sessions/${id}`,
   SESSION_FEEDBACK: (id: string) => `/api/v1/sessions/${id}/feedback`,

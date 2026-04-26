@@ -1,79 +1,91 @@
 /**
  * Logger centralizado — Corgly
  *
- * Desenvolvimento: mensagens legíveis com prefixo.
- * Produção: JSON estruturado para agregação (Datadog, Logtail, etc.).
+ * Producao: JSON estruturado por linha `{ts, level, msg, correlationId, userId?, route?, ...}`.
+ * Desenvolvimento: JSON tambem, para paridade com producao (CL-293).
+ *
+ * correlationId e resolvido automaticamente via AsyncLocalStorage (request-context),
+ * setado no middleware. Pode ser sobrescrito passando `correlationId` no context.
  *
  * Uso:
  *   import { logger } from '@/lib/logger';
  *   logger.error('mensagem', { route, userId, action }, err);
  *   logger.warn('mensagem', { action });
- *   logger.info('mensagem', { userId }); // no-op em produção
+ *   logger.info('mensagem', { userId });
  */
+
+import { getRequestContext } from '@/lib/request-context';
 
 type LogContext = {
   route?: string;
   userId?: string;
   digest?: string;
   action?: string;
+  correlationId?: string;
   [key: string]: unknown;
 };
 
+type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
+const SERVICE = 'corgly';
 const isDev = process.env.NODE_ENV === 'development';
 
-function formatDev(level: string, message: string, context?: LogContext): string {
-  const parts = [`[${level.toUpperCase()}]`, message];
-  if (context?.route) parts.push(`route=${context.route}`);
-  if (context?.action) parts.push(`action=${context.action}`);
-  if (context?.digest) parts.push(`digest=${context.digest}`);
-  if (context?.userId) parts.push(`userId=${context.userId}`);
-  return parts.join(' | ');
-}
-
-function formatProd(
-  level: string,
+function formatStructured(
+  level: LogLevel,
   message: string,
   context?: LogContext,
   error?: unknown,
 ): string {
-  return JSON.stringify({
+  const reqCtx = getRequestContext();
+  const base: Record<string, unknown> = {
+    ts: new Date().toISOString(),
     level,
-    message,
-    timestamp: new Date().toISOString(),
-    service: 'corgly',
-    ...context,
-    ...(error !== undefined
-      ? { error: error instanceof Error ? error.message : String(error) }
-      : {}),
-  });
+    msg: message,
+    service: SERVICE,
+    correlationId: context?.correlationId ?? reqCtx.correlationId,
+    userId: context?.userId ?? reqCtx.userId,
+    route: context?.route ?? reqCtx.route,
+  };
+  if (context) {
+    for (const [k, v] of Object.entries(context)) {
+      if (k === 'correlationId' || k === 'userId' || k === 'route') continue;
+      base[k] = v;
+    }
+  }
+  if (error !== undefined) {
+    if (error instanceof Error) {
+      base.error = { name: error.name, message: error.message, stack: error.stack };
+    } else {
+      base.error = String(error);
+    }
+  }
+  // Remover chaves undefined para linhas JSON mais limpas
+  for (const k of Object.keys(base)) {
+    if (base[k] === undefined) delete base[k];
+  }
+  return JSON.stringify(base);
 }
 
 export const logger = {
   error(message: string, context?: LogContext, error?: unknown): void {
-    if (isDev) {
-      console.error(formatDev('error', message, context), error ?? '');
-      return;
-    }
-
-    // Produção: integrar Sentry quando configurado
-    if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SENTRY_DSN) {
-      // Sentry.captureException(error ?? new Error(message), { extra: context });
-      // Descomente e instale @sentry/nextjs quando pronto
-    }
-
-    console.error(formatProd('error', message, context, error));
+    // eslint-disable-next-line no-console
+    console.error(formatStructured('error', message, context, error));
   },
 
   warn(message: string, context?: LogContext): void {
-    if (isDev) {
-      console.warn(formatDev('warn', message, context), context ?? '');
-      return;
-    }
-    console.warn(formatProd('warn', message, context));
+    // eslint-disable-next-line no-console
+    console.warn(formatStructured('warn', message, context));
   },
 
   info(message: string, context?: LogContext): void {
-    if (!isDev) return; // logs de info apenas em desenvolvimento
-    console.info(formatDev('info', message, context), context ?? '');
+    // Em producao, info continua ativo para observabilidade (Datadog/Logtail).
+    // eslint-disable-next-line no-console
+    console.info(formatStructured('info', message, context));
+  },
+
+  debug(message: string, context?: LogContext): void {
+    if (!isDev) return;
+    // eslint-disable-next-line no-console
+    console.debug(formatStructured('debug', message, context));
   },
 };

@@ -2,64 +2,85 @@
 import { API } from '@/lib/constants/routes';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { PRICING } from '@/lib/constants';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { PriceDisplay } from '@/components/billing/PriceDisplay';
+import { useUserCurrency } from '@/lib/hooks/use-user-currency';
+import { SUPPORTED_CURRENCIES, type Currency } from '@/lib/currency';
+import { resolvePrice } from '@/lib/pricing/config';
 
-const PACKAGES = [
+type Pkg = {
+  id: 'SINGLE' | 'PACK_5' | 'PACK_10' | 'MONTHLY';
+  credits: number;
+  nameKey: string;
+  descKey: string;
+  priceLabelKey: 'perLesson' | 'perMonth';
+  featureKeys: readonly string[];
+  popular: boolean;
+  badgeKey: string | null;
+};
+
+const PACKAGES: readonly Pkg[] = [
   {
     id: 'SINGLE',
     credits: 1,
-    nameKey: 'singleTitle' as const,
-    descKey: 'singleDesc' as const,
-    price: PRICING.SINGLE,
-    priceLabelKey: 'perLesson' as const,
-    featureKeys: ['singleFeat1', 'singleFeat2', 'singleFeat3'] as const,
+    nameKey: 'singleTitle',
+    descKey: 'singleDesc',
+    priceLabelKey: 'perLesson',
+    featureKeys: ['singleFeat1', 'singleFeat2', 'singleFeat3'],
     popular: false,
     badgeKey: null,
   },
   {
     id: 'PACK_5',
     credits: 5,
-    nameKey: 'pack5Title' as const,
-    descKey: 'pack5Desc' as const,
-    price: PRICING.PACK_5,
-    priceLabelKey: 'perLesson' as const,
-    featureKeys: ['pack5Feat1', 'pack5Feat2', 'pack5Feat3'] as const,
+    nameKey: 'pack5Title',
+    descKey: 'pack5Desc',
+    priceLabelKey: 'perLesson',
+    featureKeys: ['pack5Feat1', 'pack5Feat2', 'pack5Feat3'],
     popular: false,
-    badgeKey: 'pack5Badge' as const,
+    badgeKey: 'pack5Badge',
   },
   {
     id: 'PACK_10',
     credits: 10,
-    nameKey: 'pack10Title' as const,
-    descKey: 'pack10Desc' as const,
-    price: PRICING.PACK_10,
-    priceLabelKey: 'perLesson' as const,
-    featureKeys: ['pack10Feat1', 'pack10Feat2', 'pack10Feat3', 'pack10Feat4'] as const,
+    nameKey: 'pack10Title',
+    descKey: 'pack10Desc',
+    priceLabelKey: 'perLesson',
+    featureKeys: ['pack10Feat1', 'pack10Feat2', 'pack10Feat3', 'pack10Feat4'],
     popular: true,
-    badgeKey: 'pack10Badge' as const,
+    badgeKey: 'pack10Badge',
   },
   {
     id: 'MONTHLY',
     credits: 8,
-    nameKey: 'monthlyTitle' as const,
-    descKey: 'monthlyDesc' as const,
-    price: PRICING.MONTHLY,
-    priceLabelKey: 'perMonth' as const,
-    featureKeys: ['monthlyFeat1', 'monthlyFeat2', 'monthlyFeat3', 'monthlyFeat4'] as const,
+    nameKey: 'monthlyTitle',
+    descKey: 'monthlyDesc',
+    priceLabelKey: 'perMonth',
+    featureKeys: ['monthlyFeat1', 'monthlyFeat2', 'monthlyFeat3', 'monthlyFeat4'],
     popular: false,
     badgeKey: null,
   },
 ] as const;
 
+// Assinatura (MONTHLY) e calculada server-side; usar 2x/sem como referencia de display.
+const MONTHLY_REFERENCE_USD_CENTS = Math.ceil(2 * 16 * 4.33 * 100);
+const FX: Record<Currency, number> = { USD: 1, USDC: 1, EUR: 0.92, BRL: 5.0 };
+
+function priceCentsFor(id: Pkg['id'], currency: Currency): number {
+  if (id === 'MONTHLY') return Math.ceil(MONTHLY_REFERENCE_USD_CENTS * FX[currency]);
+  return resolvePrice(id, currency).amountCents;
+}
+
 export function PricingCards() {
   const t = useTranslations('credits.pricing');
+  const locale = useLocale();
+  const { currency, setCurrency } = useUserCurrency();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handleBuy = async (packageId: string) => {
@@ -67,8 +88,8 @@ export function PricingCards() {
     try {
       const isSubscription = packageId === 'MONTHLY';
       const body = isSubscription
-        ? { isSubscription: true, weeklyFrequency: 2 }
-        : { packageType: packageId, isSubscription: false };
+        ? { isSubscription: true, weeklyFrequency: 2, currency }
+        : { packageType: packageId, isSubscription: false, currency };
 
       const json = await apiClient.post<{ data: { url: string } }>(API.CHECKOUT, body);
       window.location.href = json.data.url;
@@ -81,7 +102,23 @@ export function PricingCards() {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <>
+      <div className="flex justify-end mb-4">
+        <label className="text-sm text-muted-foreground mr-2 self-center" htmlFor="currency-select">
+          {t.has('currencyLabel') ? t('currencyLabel') : 'Currency'}
+        </label>
+        <select
+          id="currency-select"
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value as Currency)}
+          className="bg-card border border-border rounded-md px-3 py-1 text-sm text-foreground"
+        >
+          {SUPPORTED_CURRENCIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {PACKAGES.map((pkg) => (
         <div
           key={pkg.id}
@@ -105,7 +142,12 @@ export function PricingCards() {
 
           <div className="mb-4">
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-foreground">$ {pkg.price}</span>
+              <PriceDisplay
+                amountCents={priceCentsFor(pkg.id, currency)}
+                currency={currency}
+                locale={locale}
+                className="text-3xl font-bold text-foreground"
+              />
             </div>
             <p className="text-sm text-muted-foreground">{t(pkg.priceLabelKey)}</p>
           </div>
@@ -133,6 +175,7 @@ export function PricingCards() {
           </Button>
         </div>
       ))}
-    </div>
+      </div>
+    </>
   );
 }

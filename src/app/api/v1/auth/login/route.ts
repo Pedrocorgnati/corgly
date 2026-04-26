@@ -3,9 +3,10 @@ import { LoginSchema } from '@/schemas/auth.schema';
 import { authService } from '@/services/auth.service';
 import { setAuthCookie, apiResponse } from '@/lib/auth';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { withApiHandler } from '@/lib/api-handler';
 
 /** POST /api/v1/auth/login */
-export async function POST(request: NextRequest) {
+export const POST = withApiHandler(async (request: NextRequest) => {
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
   const rl = checkRateLimit(`login:${ip}`, RATE_LIMITS.AUTH_LOGIN);
   if (!rl.allowed) {
@@ -38,4 +39,4 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
-}
+});

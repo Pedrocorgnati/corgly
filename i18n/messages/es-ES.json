@@ -568,5 +568,25 @@
       "description": "Ocurrió un error inesperado. Nuestro equipo fue notificado.",
       "retry": "Intentar de nuevo"
     }
+  },
+  "unsubscribe": {
+    "title": "Preferencias de correo | Corgly",
+    "success": {
+      "title": "Te has dado de baja",
+      "message": "Ya no enviaremos correos de marketing a esta dirección. Puedes reactivarlos en cualquier momento desde tu cuenta."
+    },
+    "invalid": {
+      "title": "Enlace inválido o expirado",
+      "message": "Este enlace ya no es válido. Actualiza tus preferencias desde la página de cuenta si aún deseas darte de baja."
+    },
+    "error": {
+      "title": "No se pudo procesar la solicitud",
+      "message": "Algo salió mal al procesar la solicitud. Inténtalo de nuevo en unos instantes."
+    },
+    "unknown": {
+      "title": "Darse de baja de correos",
+      "message": "Abre esta página desde el enlace enviado por correo para confirmar la baja."
+    },
+    "backHome": "Volver al inicio"
   }
 }

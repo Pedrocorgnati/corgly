@@ -3,6 +3,38 @@ import type { Metadata } from 'next';
 // Single source of truth for site URL — validated at build time via env
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://corgly.app';
 
+/** Supported locales for hreflang alternates. */
+export const SEO_LOCALES = ['pt-BR', 'en-US', 'es-ES', 'it-IT'] as const;
+export type SeoLocale = (typeof SEO_LOCALES)[number];
+
+/**
+ * Builds canonical + hreflang language alternates for a given path.
+ *
+ * Since this project serves all languages from the same URL (locale is
+ * negotiated via cookie/Accept-Language in i18n/request.ts), every language
+ * alternate points to the same absolute URL. `x-default` is also included.
+ *
+ * @param path - Path starting with "/" (e.g. "/", "/privacy", "/blog/pt-BR/foo")
+ * @param perLocalePath - Optional map to override path per locale (used for
+ *                       routes that DO have locale-prefixed URLs, e.g. blog).
+ */
+export function buildAlternates(
+  path: string,
+  perLocalePath?: Partial<Record<SeoLocale, string>>,
+): NonNullable<Metadata['alternates']> {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  const canonical = `${SITE_URL}${normalized}`;
+
+  const languages: Record<string, string> = {};
+  for (const loc of SEO_LOCALES) {
+    const p = perLocalePath?.[loc] ?? normalized;
+    languages[loc] = `${SITE_URL}${p.startsWith('/') ? p : `/${p}`}`;
+  }
+  languages['x-default'] = canonical;
+
+  return { canonical, languages };
+}
+
 const META_BY_LOCALE: Record<
   string,
   { title: string; description: string; ogTitle: string; ogDescription: string }
@@ -48,20 +80,15 @@ const META_BY_LOCALE: Record<
 export function generateLandingMetadata(locale = 'en-US'): Metadata {
   const meta = META_BY_LOCALE[locale] ?? META_BY_LOCALE['en-US'];
 
+  const alternateLocales = SEO_LOCALES.filter((l) => l !== locale).map((l) =>
+    l.replace('-', '_'),
+  );
+
   return {
     title: meta.title,
     description: meta.description,
     metadataBase: new URL(SITE_URL),
-    alternates: {
-      canonical: SITE_URL,
-      languages: {
-        'pt-BR': SITE_URL,
-        'en-US': SITE_URL,
-        'es-ES': SITE_URL,
-        'it-IT': SITE_URL,
-        'x-default': SITE_URL,
-      },
-    },
+    alternates: buildAlternates('/'),
     openGraph: {
       title: meta.ogTitle,
       description: meta.ogDescription,
@@ -76,6 +103,7 @@ export function generateLandingMetadata(locale = 'en-US'): Metadata {
         },
       ],
       locale: locale.replace('-', '_'),
+      alternateLocale: alternateLocales,
       type: 'website',
     },
     twitter: {

@@ -568,5 +568,25 @@
       "description": "Ocorreu um erro inesperado. Nossa equipe foi notificada.",
       "retry": "Tentar novamente"
     }
+  },
+  "unsubscribe": {
+    "title": "Gerenciamento de emails | Corgly",
+    "success": {
+      "title": "Você foi descadastrado",
+      "message": "Não enviaremos mais emails de marketing para este endereço. Você pode reativar a qualquer momento nas configurações da conta."
+    },
+    "invalid": {
+      "title": "Link inválido ou expirado",
+      "message": "O link de descadastro não é mais válido. Se ainda desejar sair da lista, ajuste suas preferências na página de conta."
+    },
+    "error": {
+      "title": "Falha no processamento",
+      "message": "Algo deu errado ao processar sua solicitação. Tente novamente em alguns instantes."
+    },
+    "unknown": {
+      "title": "Descadastro de emails",
+      "message": "Abra esta página pelo link enviado no email para confirmar o descadastro."
+    },
+    "backHome": "Voltar ao início"
   }
 }

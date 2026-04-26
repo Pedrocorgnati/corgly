@@ -300,6 +300,13 @@ model SessionDocument {
   @@map("session_documents")
 }
 
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
 model Content {
   id          String            @id @default(uuid())
   title       String
@@ -310,11 +317,37 @@ model Content {
   language    SupportedLanguage
   isPublished Boolean           @default(false)
   sortOrder   Int               @default(0)
+  status      ContentStatus     @default(DRAFT)
+  category    String?           @db.VarChar(80)
+  publishedAt DateTime?
+  authorId    String?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
+  translations ContentTranslation[]
+
   @@index([isPublished, sortOrder])
+  @@index([status, publishedAt])
   @@map("contents")
+}
+
+model ContentTranslation {
+  id         String            @id @default(uuid())
+  contentId  String
+  locale     SupportedLanguage
+  title      String
+  slug       String            @db.VarChar(200)
+  excerpt    String?           @db.Text
+  body       String            @db.LongText
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, locale])
+  @@unique([locale, slug])
+  @@index([locale])
+  @@map("content_translations")
 }
 
 model CookieConsent {

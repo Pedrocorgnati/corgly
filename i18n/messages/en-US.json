@@ -568,5 +568,25 @@
       "description": "An unexpected error occurred. Our team has been notified.",
       "retry": "Try again"
     }
+  },
+  "unsubscribe": {
+    "title": "Email preferences | Corgly",
+    "success": {
+      "title": "You have been unsubscribed",
+      "message": "We will no longer send marketing emails to this address. You can re-enable them anytime in your account settings."
+    },
+    "invalid": {
+      "title": "Invalid or expired link",
+      "message": "This unsubscribe link is no longer valid. Update your preferences from the account page if you still want to opt out."
+    },
+    "error": {
+      "title": "Could not process request",
+      "message": "Something went wrong while processing your request. Please try again in a moment."
+    },
+    "unknown": {
+      "title": "Email unsubscribe",
+      "message": "Open this page via the link sent to your email to confirm unsubscribing."
+    },
+    "backHome": "Back to home"
   }
 }

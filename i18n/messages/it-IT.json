@@ -568,5 +568,25 @@
       "description": "Si è verificato un errore imprevisto. Il nostro team è stato avvisato.",
       "retry": "Riprova"
     }
+  },
+  "unsubscribe": {
+    "title": "Preferenze email | Corgly",
+    "success": {
+      "title": "Iscrizione annullata",
+      "message": "Non invieremo più email di marketing a questo indirizzo. Puoi riattivarle in qualsiasi momento dalle impostazioni dell'account."
+    },
+    "invalid": {
+      "title": "Link non valido o scaduto",
+      "message": "Questo link di annullamento non è più valido. Aggiorna le preferenze dalla pagina account se vuoi ancora uscire dalla lista."
+    },
+    "error": {
+      "title": "Impossibile elaborare la richiesta",
+      "message": "Qualcosa è andato storto durante l'elaborazione. Riprova tra qualche istante."
+    },
+    "unknown": {
+      "title": "Annullamento iscrizione email",
+      "message": "Apri questa pagina dal link ricevuto via email per confermare l'annullamento."
+    },
+    "backHome": "Torna alla home"
   }
 }

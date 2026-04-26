@@ -15,6 +15,7 @@ const PUBLIC_API_PATHS = [
   '/api/v1/webhooks/stripe',
   '/api/v1/content',
   '/api/v1/availability',
+  '/api/v1/email/unsubscribe',
 ];
 
 const ADMIN_ONLY_PATHS = [
@@ -30,12 +31,13 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
-function addSecurityHeaders(response: NextResponse): NextResponse {
+function addSecurityHeaders(response: NextResponse, correlationId?: string): NextResponse {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (correlationId) response.headers.set('x-request-id', correlationId);
   return response;
 }
 
@@ -70,12 +72,25 @@ function nextWithStripped(
   return NextResponse.next({ request: { headers: merged } });
 }
 
+function generateCorrelationId(): string {
+  // crypto.randomUUID disponivel no Edge runtime via Web Crypto
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Strip internal trust headers from ALL incoming requests.
   // Prevents clients from forging x-user-id/x-user-role/x-token-version.
   stripInternalHeaders(request);
+
+  // CorrelationId: aceitar x-request-id inbound (mesh/proxy) ou gerar novo.
+  const correlationId = request.headers.get('x-request-id') ?? generateCorrelationId();
+  (request as NextRequest & { _strippedHeaders?: Headers })._strippedHeaders?.set('x-request-id', correlationId);
 
   // ─── Maintenance mode ─────────────────────────────────────────────────────
   if (
@@ -89,14 +104,14 @@ export async function middleware(request: NextRequest) {
         { error: 'Service temporarily unavailable', code: 'SYS_002' },
         { status: 503 },
       );
-      return addSecurityHeaders(res);
+      return addSecurityHeaders(res, correlationId);
     }
     return NextResponse.redirect(new URL('/maintenance', request.url));
   }
 
   // ─── Non-API routes: add security headers and continue ────────────────────
   if (!pathname.startsWith('/api/v1')) {
-    return addSecurityHeaders(nextWithStripped(request));
+    return addSecurityHeaders(nextWithStripped(request, { 'x-request-id': correlationId }), correlationId);
   }
 
   // ─── Rate limiting (skip webhooks Stripe) ─────────────────────────────────
@@ -134,7 +149,7 @@ export async function middleware(request: NextRequest) {
           },
         },
       );
-      return addSecurityHeaders(res);
+      return addSecurityHeaders(res, correlationId);
     }
   }
 
@@ -142,7 +157,12 @@ export async function middleware(request: NextRequest) {
   const isPublic = PUBLIC_API_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + '/'),
   );
-  if (isPublic) return addSecurityHeaders(nextWithStripped(request));
+  if (isPublic) {
+    return addSecurityHeaders(
+      nextWithStripped(request, { 'x-request-id': correlationId }),
+      correlationId,
+    );
+  }
 
   // ─── Verify JWT ───────────────────────────────────────────────────────────
   const payload = getPayloadFromRequest(request);
@@ -151,7 +171,7 @@ export async function middleware(request: NextRequest) {
       apiResponse(null, 'Não autorizado. Faça login para continuar.'),
       { status: 401 },
     );
-    return addSecurityHeaders(res);
+    return addSecurityHeaders(res, correlationId);
   }
 
   // ─── Admin-only paths ─────────────────────────────────────────────────────
@@ -163,7 +183,7 @@ export async function middleware(request: NextRequest) {
       apiResponse(null, 'Acesso restrito a administradores.'),
       { status: 403 },
     );
-    return addSecurityHeaders(res);
+    return addSecurityHeaders(res, correlationId);
   }
 
   // ─── Forward user context to route handlers via headers ───────────────────
@@ -171,10 +191,12 @@ export async function middleware(request: NextRequest) {
   // we now set them from the verified JWT payload only.
   return addSecurityHeaders(
     nextWithStripped(request, {
+      'x-request-id': correlationId,
       'x-user-id': payload.sub,
       'x-user-role': payload.role,
       'x-token-version': String(payload.version),
     }),
+    correlationId,
   );
 }
 
