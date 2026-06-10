@@ -81,7 +81,25 @@ enum EmailType {
   RECURRING_BOOKING_FAILED
   ACCOUNT_DELETION_REQUESTED
   DATA_EXPORT_READY
+  FEEDBACK_AVAILABLE
   BOOKING_RESCHEDULED
+}
+
+enum EmailChannel {
+  EMAIL
+}
+
+enum EmailTemplateStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum EmailDeliveryStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
 }
 
 enum PackageType {
@@ -95,42 +113,173 @@ enum ContentType {
   ARTICLE
 }
 
-model User {
-  id                   String            @id @default(uuid())
-  email                String            @unique
-  passwordHash         String
-  name                 String
-  role                 UserRole          @default(STUDENT)
-  country              String?
-  timezone             String
-  emailConfirmed       Boolean           @default(false)
-  emailConfirmToken    String?
-  emailConfirmExpires  DateTime?
-  resetPasswordToken   String?
-  resetPasswordExpires DateTime?
-  maxFutureSessions    Int               @default(5)
-  isFirstPurchase      Boolean           @default(true)
-  preferredLanguage    SupportedLanguage @default(EN_US)
-  onboardingCompletedAt DateTime?
-  termsAcceptedAt      DateTime?
-  termsVersion         String            @default("1.0") @db.VarChar(10)
-  marketingOptIn       Boolean           @default(false)
-  deletionRequestedAt  DateTime?
-  tokenVersion         Int               @default(0)
-  lastLoginAt                   DateTime?
-  deletionCancellationToken     String?
-  deletionCancellationExpires   DateTime?
-  stripeCustomerId     String?           @unique
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+enum CurrencyCode {
+  USD
+  BRL
+  EUR
+  USDC
+}
 
-  creditBatches      CreditBatch[]
-  sessions           Session[]
-  payments           Payment[]
-  subscriptions      Subscription[]
-  recurringPatterns  RecurringPattern[]
-  cookieConsents     CookieConsent[]
-  feedbacksAsAdmin   Feedback[]         @relation("FeedbackAdmin")
+enum FxRateSource {
+  MANUAL
+  STRIPE
+  OPEN_EXCHANGE_RATES
+  COINGECKO
+  SEED
+}
+
+enum FxRoundingPolicy {
+  HALF_UP
+  HALF_EVEN
+  FLOOR
+  CEIL
+}
+
+enum LegalDocType {
+  TERMS
+  PRIVACY
+  COOKIES
+  DPA
+}
+
+enum LegalDocStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum LegalAcceptanceSource {
+  REGISTER
+  CHECKOUT
+  LOGIN_BLOCKER
+  ACCOUNT_SETTINGS
+  ADMIN_IMPORT
+}
+
+enum LanguageProficiencyLevel {
+  BEGINNER
+  ELEMENTARY
+  INTERMEDIATE
+  UPPER_INTERMEDIATE
+  ADVANCED
+  PROFICIENT
+}
+
+enum OnboardingStep {
+  WELCOME
+  PROFILE
+  GOALS
+  PREFERENCES
+  EQUIPMENT_CHECK
+  COMPLETED
+}
+
+enum LanguageGoalType {
+  CONVERSATION
+  BUSINESS
+  TRAVEL
+  EXAM_PREP
+  CULTURE
+  PRONUNCIATION
+  GRAMMAR
+  OTHER
+}
+
+enum WebRtcConnectionState {
+  NEW
+  CHECKING
+  CONNECTED
+  COMPLETED
+  DISCONNECTED
+  FAILED
+  CLOSED
+}
+
+enum SessionHealthEventType {
+  METRIC_SNAPSHOT
+  CONNECTION_STATE
+  RECONNECT_ATTEMPT
+  RECONNECT_SUCCESS
+  RECONNECT_FAILED
+}
+
+enum JobType {
+  DATA_EXPORT
+  TRANSCRIPTION
+  EMAIL_DELIVERY
+  REPORT_EXPORT
+  CLEANUP
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum AdminImpersonationEndReason {
+  ADMIN_ENDED
+  TTL_EXPIRED
+  STUDENT_PASSWORD_RESET
+  SECURITY_REVIEW
+  SYSTEM_REVOKED
+}
+
+model User {
+  id                          String            @id @default(uuid())
+  email                       String            @unique
+  passwordHash                String
+  name                        String
+  role                        UserRole          @default(STUDENT)
+  country                     String?
+  timezone                    String
+  emailConfirmed              Boolean           @default(false)
+  emailConfirmToken           String?
+  emailConfirmExpires         DateTime?
+  resetPasswordToken          String?
+  resetPasswordExpires        DateTime?
+  maxFutureSessions           Int               @default(5)
+  isFirstPurchase             Boolean           @default(true)
+  preferredLanguage           SupportedLanguage @default(EN_US)
+  onboardingCompletedAt       DateTime?
+  termsAcceptedAt             DateTime?
+  termsVersion                String            @default("1.0") @db.VarChar(10)
+  marketingOptIn              Boolean           @default(false)
+  deletionRequestedAt         DateTime?
+  tokenVersion                Int               @default(0)
+  lastLoginAt                 DateTime?
+  deletionCancellationToken   String?
+  deletionCancellationExpires DateTime?
+  stripeCustomerId            String?           @unique
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+
+  creditBatches           CreditBatch[]
+  sessions                Session[]
+  payments                Payment[]
+  subscriptions           Subscription[]
+  recurringPatterns       RecurringPattern[]
+  cookieConsents          CookieConsent[]
+  cookieConsentHistory    CookieConsentHistory[]
+  feedbacksAsAdmin        Feedback[]                  @relation("FeedbackAdmin")
+  supportTickets          SupportTicket[]             @relation("SupportTicketUser")
+  supportMessages         SupportMessage[]            @relation("SupportMessageAuthor")
+  referrals               Referral[]                  @relation("ReferralReferrer")
+  referralInvitesReceived ReferralInvite[]            @relation("ReferralInvitedUser")
+  referralCredits         ReferralCredit[]            @relation("ReferralCreditBeneficiary")
+  featureFlagOverrides    FeatureFlagOverride[]       @relation("FeatureFlagOverrideUser")
+  dataRequests            DataRequest[]               @relation("DataRequestUser")
+  assets                  Asset[]                     @relation("AssetOwner")
+  emailDeliveries         EmailDelivery[]             @relation("EmailDeliveryUser")
+  createdJobs             Job[]                       @relation("JobCreatedBy")
+  termAcceptances         TermAcceptance[]            @relation("TermAcceptanceUser")
+  onboardingProfile       OnboardingProfile?
+  sessionHealthEvents     SessionHealth[]             @relation("SessionHealthParticipant")
+  impersonationsAsAdmin   AdminImpersonationSession[] @relation("AdminImpersonationAdmin")
+  impersonationsAsStudent AdminImpersonationSession[] @relation("AdminImpersonationStudent")
+  impersonationsEnded     AdminImpersonationSession[] @relation("AdminImpersonationEndedBy")
 
   @@index([role])
   @@index([emailConfirmToken])
@@ -162,7 +311,7 @@ model CreditBatch {
 
 model AvailabilitySlot {
   id        String   @id @default(uuid())
-  startAt   DateTime @unique // UNIQUE_slot_startAt — um slot por horário
+  startAt   DateTime @unique // UNIQUE_slot_startAt - um slot por horário
   endAt     DateTime
   isBlocked Boolean  @default(false)
   version   Int      @default(0) // lock otimista CAS
@@ -194,7 +343,7 @@ model RecurringPattern {
 model Session {
   id                      String        @id @default(uuid())
   studentId               String
-  availabilitySlotId      String        @unique // UNIQUE_session_slot — um slot por sessão
+  availabilitySlotId      String        @unique // UNIQUE_session_slot - um slot por sessão
   startAt                 DateTime
   endAt                   DateTime
   status                  SessionStatus @default(SCHEDULED)
@@ -206,8 +355,8 @@ model Session {
   completedAt             DateTime?
   interruptedAt           DateTime?
   extendedBy              Int?
-  reminderSentAt          Json?         // { "24h": ISO, "1h": ISO } — idempotência do cron
-  rescheduleRequestSlotId String?       // slot proposto em RESCHEDULE_PENDING
+  reminderSentAt          Json? // { "24h": ISO, "1h": ISO } - idempotência do cron
+  rescheduleRequestSlotId String? // slot proposto em RESCHEDULE_PENDING
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
 
@@ -217,6 +366,10 @@ model Session {
   recurringPattern RecurringPattern? @relation(fields: [recurringPatternId], references: [id])
   feedback         Feedback?
   document         SessionDocument?
+  noteSnapshots    SessionNoteSnapshot[]
+  supportTickets   SupportTicket[]
+  assets           Asset[]
+  healthEvents     SessionHealth[]
 
   @@index([studentId, status])
   @@index([startAt])
@@ -224,24 +377,119 @@ model Session {
   @@map("sessions")
 }
 
+model SessionHealth {
+  id                  String                 @id @default(uuid())
+  sessionId           String
+  participantId       String?
+  participantRole     UserRole
+  eventType           SessionHealthEventType @default(METRIC_SNAPSHOT)
+  occurredAt          DateTime               @default(now())
+  latencyMs           Int?
+  jitterMs            Int?
+  packetLossPercent   Decimal?               @db.Decimal(5, 2)
+  webrtcState         WebRtcConnectionState
+  reconnectAttempt    Int                    @default(0)
+  reconnectReason     String?                @db.VarChar(255)
+  reconnectSuccessful Boolean?
+  metadata            Json?
+  createdAt           DateTime               @default(now())
+
+  session     Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant User?   @relation("SessionHealthParticipant", fields: [participantId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, occurredAt])
+  @@index([sessionId, participantRole, occurredAt])
+  @@index([participantId, occurredAt])
+  @@index([webrtcState, occurredAt])
+  @@map("session_health")
+}
+
+model Job {
+  id                String    @id @default(uuid())
+  type              JobType
+  queueName         String    @default("default") @db.VarChar(80)
+  payload           Json
+  status            JobStatus @default(QUEUED)
+  attempts          Int       @default(0)
+  maxAttempts       Int       @default(3)
+  priority          Int       @default(0)
+  scheduledAt       DateTime  @default(now())
+  startedAt         DateTime?
+  completedAt       DateTime?
+  lockedAt          DateTime?
+  lockedBy          String?   @db.VarChar(120)
+  finalErrorCode    String?   @db.VarChar(80)
+  finalErrorMessage String?   @db.Text
+  finalErrorAt      DateTime?
+  createdById       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  createdBy User? @relation("JobCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledAt])
+  @@index([type, status])
+  @@index([queueName, status, priority, scheduledAt])
+  @@index([createdById, createdAt])
+  @@map("jobs")
+}
+
+/// Invariante de sessao ativa (AC2/AC3) enforced via CHECK
+/// `admin_impersonation_sessions_active_state_chk` na migration
+/// 20260527000012_admin_impersonation_active_coupling: sessao aberta (endedAt
+/// NULL) => activeAdminKey = adminId E activeStudentKey = studentId E endReason/
+/// endedById NULL; sessao encerrada => active keys NULL E endReason NOT NULL.
+/// Como a linha aberta carrega activeAdminKey = adminId, duas sessoes ativas do
+/// mesmo admin colidiriam na UNIQUE -> no maximo uma ativa por admin (idem por
+/// student). MySQL nao tem indice parcial; Prisma 5 nao expressa CHECK no schema;
+/// ver a migration. endedById nao e exigido (FK endedBy usa onDelete SetNull).
+model AdminImpersonationSession {
+  id               String                       @id @default(uuid())
+  adminId          String
+  studentId        String
+  startedAt        DateTime                     @default(now())
+  expiresAt        DateTime
+  endedAt          DateTime?
+  endedById        String?
+  endReason        AdminImpersonationEndReason?
+  reason           String                       @db.VarChar(500)
+  ipAddress        String                       @db.VarChar(45)
+  userAgent        String                       @db.VarChar(512)
+  activeAdminKey   String?                      @unique @db.VarChar(191)
+  activeStudentKey String?                      @unique @db.VarChar(191)
+  metadata         Json?
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+
+  admin   User  @relation("AdminImpersonationAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  student User  @relation("AdminImpersonationStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  endedBy User? @relation("AdminImpersonationEndedBy", fields: [endedById], references: [id], onDelete: SetNull)
+
+  @@index([adminId, startedAt])
+  @@index([studentId, startedAt])
+  @@index([expiresAt])
+  @@index([endedAt])
+  @@map("admin_impersonation_sessions")
+}
+
 model Feedback {
-  id                  String    @id @default(uuid())
-  sessionId           String    @unique
-  listeningScore      Int
-  speakingScore       Int
-  writingScore        Int
-  vocabularyScore     Int
-  overallFeedback     String?   @db.Text
-  listeningFeedback   String?   @db.Text
-  speakingFeedback    String?   @db.Text
-  writingFeedback     String?   @db.Text
-  vocabularyFeedback  String?   @db.Text
-  adminId             String?
-  privateNote         String?   @db.Text
-  reviewed            Boolean   @default(false)
-  reviewedAt          DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  sessionId          String    @unique
+  listeningScore     Int
+  speakingScore      Int
+  writingScore       Int
+  vocabularyScore    Int
+  overallFeedback    String?   @db.Text
+  listeningFeedback  String?   @db.Text
+  speakingFeedback   String?   @db.Text
+  writingFeedback    String?   @db.Text
+  vocabularyFeedback String?   @db.Text
+  adminId            String?
+  privateNote        String?   @db.Text
+  reviewed           Boolean   @default(false)
+  reviewedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   session Session @relation(fields: [sessionId], references: [id])
   admin   User?   @relation("FeedbackAdmin", fields: [adminId], references: [id])
@@ -300,6 +548,31 @@ model SessionDocument {
   @@map("session_documents")
 }
 
+/// Snapshot versionado e imutavel do caderno pos-aula (T-019, PRD §12.3).
+///
+/// Cada linha congela o estado do `SessionDocument` no momento da captura,
+/// guardando payload suficiente para restore (texto + estado Yjs binario) e
+/// metadata de auditoria. A versao e monotonica por sessao e o `contentHash`
+/// torna o POST idempotente: capturas sucessivas sem mudanca no documento
+/// reaproveitam o ultimo snapshot ao inves de criar uma nova versao.
+model SessionNoteSnapshot {
+  id                String   @id @default(uuid())
+  sessionId         String
+  version           Int // monotonica por sessao, 1-based
+  contentHash       String // sha256 do payload, chave de idempotencia por sessao
+  plainTextSnapshot String?  @db.LongText
+  yjsState          Bytes?   @db.LongBlob
+  createdById       String // autor da captura (FK logica para User, validada na app)
+  metadata          Json? // { plainTextLength, yjsByteLength, documentUpdatedAt }
+  createdAt         DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@unique([sessionId, version]) // UNIQUE_snapshot_session_version - idempotencia por versao
+  @@index([sessionId, createdAt]) // ordenacao temporal das capturas
+  @@map("session_note_snapshots")
+}
+
 enum ContentStatus {
   DRAFT
   SCHEDULED
@@ -325,6 +598,7 @@ model Content {
   updatedAt   DateTime          @updatedAt
 
   translations ContentTranslation[]
+  assets       Asset[]
 
   @@index([isPublished, sortOrder])
   @@index([status, publishedAt])
@@ -332,15 +606,15 @@ model Content {
 }
 
 model ContentTranslation {
-  id         String            @id @default(uuid())
-  contentId  String
-  locale     SupportedLanguage
-  title      String
-  slug       String            @db.VarChar(200)
-  excerpt    String?           @db.Text
-  body       String            @db.LongText
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id        String            @id @default(uuid())
+  contentId String
+  locale    SupportedLanguage
+  title     String
+  slug      String            @db.VarChar(200)
+  excerpt   String?           @db.Text
+  body      String            @db.LongText
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
   content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
@@ -351,19 +625,58 @@ model ContentTranslation {
 }
 
 model CookieConsent {
-  id                 String   @id @default(uuid())
+  id                  String        @id @default(uuid())
+  userId              String?
+  sessionFingerprint  String?
+  essentialAccepted   Boolean       @default(true)
+  analyticsAccepted   Boolean       @default(false)
+  marketingAccepted   Boolean       @default(false)
+  consentVersion      String        @default("1.0") @db.VarChar(20)
+  legalTextVersion    String        @default("1.0") @db.VarChar(20)
+  source              ConsentSource @default(COOKIE_BANNER)
+  acceptedAt          DateTime      @default(now())
+  lastPreferenceSetAt DateTime      @default(now())
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user    User?                  @relation(fields: [userId], references: [id])
+  history CookieConsentHistory[]
+
+  @@unique([userId])
+  @@unique([sessionFingerprint])
+  @@index([consentVersion])
+  @@map("cookie_consents")
+}
+
+enum ConsentSource {
+  COOKIE_BANNER
+  ACCOUNT_SETTINGS
+  CHECKOUT
+  ADMIN
+  IMPORT
+}
+
+model CookieConsentHistory {
+  id                 String        @id @default(uuid())
+  consentId          String?
   userId             String?
   sessionFingerprint String?
-  essentialAccepted  Boolean  @default(true)
-  analyticsAccepted  Boolean  @default(false)
-  marketingAccepted  Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  essentialAccepted  Boolean       @default(true)
+  analyticsAccepted  Boolean       @default(false)
+  marketingAccepted  Boolean       @default(false)
+  consentVersion     String        @db.VarChar(20)
+  legalTextVersion   String        @db.VarChar(20)
+  source             ConsentSource
+  changedAt          DateTime      @default(now())
+  metadata           Json?
 
-  user User? @relation(fields: [userId], references: [id])
+  consent CookieConsent? @relation(fields: [consentId], references: [id], onDelete: SetNull)
+  user    User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([userId])
-  @@map("cookie_consents")
+  @@index([consentId, changedAt])
+  @@index([userId, changedAt])
+  @@index([sessionFingerprint, changedAt])
+  @@map("cookie_consent_history")
 }
 
 model AuditLog {
@@ -377,4 +690,654 @@ model AuditLog {
 
   @@index([adminId, createdAt])
   @@map("audit_logs")
+}
+
+enum SupportTicketStatus {
+  OPEN
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportAuthorRole {
+  STUDENT
+  ADMIN
+  SYSTEM
+}
+
+model SupportTicket {
+  id         String                @id @default(uuid())
+  subject    String                @db.VarChar(200)
+  status     SupportTicketStatus   @default(OPEN)
+  priority   SupportTicketPriority @default(NORMAL)
+  userId     String?
+  sessionId  String?
+  resolvedAt DateTime?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  user     User?            @relation("SupportTicketUser", fields: [userId], references: [id])
+  session  Session?         @relation(fields: [sessionId], references: [id])
+  messages SupportMessage[]
+
+  @@index([status, priority])
+  @@index([userId])
+  @@index([sessionId])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id         String            @id @default(uuid())
+  ticketId   String
+  authorId   String?
+  authorRole SupportAuthorRole
+  body       String            @db.Text
+  isInternal Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User?         @relation("SupportMessageAuthor", fields: [authorId], references: [id])
+
+  @@index([ticketId, createdAt])
+  @@index([authorId])
+  @@map("support_messages")
+}
+
+enum ReferralStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+enum ReferralInviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum ReferralCreditStatus {
+  PENDING
+  GRANTED
+  REVOKED
+}
+
+model Referral {
+  id         String         @id @default(uuid())
+  code       String         @unique // UNIQUE_referral_code - impede código duplicado
+  referrerId String
+  status     ReferralStatus @default(ACTIVE)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  referrer User             @relation("ReferralReferrer", fields: [referrerId], references: [id])
+  invites  ReferralInvite[]
+  credits  ReferralCredit[]
+
+  @@index([referrerId])
+  @@index([status])
+  @@map("referrals")
+}
+
+model ReferralInvite {
+  id            String               @id @default(uuid())
+  referralId    String
+  invitedEmail  String
+  invitedUserId String?
+  status        ReferralInviteStatus @default(PENDING)
+  acceptedAt    DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  referral    Referral        @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  invitedUser User?           @relation("ReferralInvitedUser", fields: [invitedUserId], references: [id])
+  credit      ReferralCredit?
+
+  @@unique([referralId, invitedEmail]) // impede convite duplicado do mesmo email no mesmo programa
+  @@index([invitedUserId])
+  @@index([status])
+  @@map("referral_invites")
+}
+
+model ReferralCredit {
+  id                String               @id @default(uuid())
+  referralId        String
+  inviteId          String               @unique // UNIQUE_referral_credit_invite - impede dupla concessão de crédito por convite
+  beneficiaryUserId String
+  creditBatchId     String?              @unique
+  amount            Int
+  status            ReferralCreditStatus @default(PENDING)
+  grantedAt         DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  referral    Referral       @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  invite      ReferralInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  beneficiary User           @relation("ReferralCreditBeneficiary", fields: [beneficiaryUserId], references: [id])
+
+  @@index([beneficiaryUserId])
+  @@index([status])
+  @@map("referral_credits")
+}
+
+// ─── Feature flags (§12.4.2) - rollout de sala (realtime), billing portal e onboarding v2 ──
+
+enum FeatureFlagScope {
+  GLOBAL // aplica a todos os usuários
+  ROLE // aplica a um UserRole específico (targetRole)
+  COHORT // aplica a um coorte nomeado (targetCohort)
+}
+
+enum FeatureFlagAuditAction {
+  CREATED
+  ENABLED
+  DISABLED
+  ROLLOUT_CHANGED
+  SCOPE_CHANGED
+  OVERRIDE_SET
+  OVERRIDE_CLEARED
+}
+
+model FeatureFlag {
+  id                String           @id @default(uuid())
+  key               String           @unique // UNIQUE_feature_flag_key - identificador estável usado no código
+  description       String           @db.VarChar(280)
+  enabled           Boolean          @default(false)
+  rolloutPercentage Int              @default(0) // 0..100 - gating determinístico por hash(key+userId)
+  scope             FeatureFlagScope @default(GLOBAL)
+  targetRole        UserRole? // preenchido quando scope = ROLE
+  targetCohort      String? // preenchido quando scope = COHORT
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  overrides FeatureFlagOverride[]
+  audits    FeatureFlagAudit[]
+
+  @@index([enabled])
+  @@index([scope])
+  @@map("feature_flags")
+}
+
+model FeatureFlagOverride {
+  id        String   @id @default(uuid())
+  flagId    String
+  userId    String
+  enabled   Boolean // força on/off para este usuário, ignorando rollout
+  reason    String?  @db.VarChar(280)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  flag FeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+  user User        @relation("FeatureFlagOverrideUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([flagId, userId]) // impede override duplicado do mesmo usuário para a mesma flag
+  @@index([userId])
+  @@map("feature_flag_overrides")
+}
+
+model FeatureFlagAudit {
+  id          String                 @id @default(uuid())
+  flagId      String
+  actorId     String? // admin que efetuou a mudança (null = sistema/seed)
+  action      FeatureFlagAuditAction
+  fromEnabled Boolean?
+  toEnabled   Boolean?
+  metadata    Json? // detalhe da mudança (rollout antigo/novo, escopo, etc.)
+  createdAt   DateTime               @default(now())
+
+  flag FeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+
+  @@index([flagId, createdAt])
+  @@map("feature_flag_audits")
+}
+
+// ─── Leads (§12.4.3) - captação pública: landing, método e contato ──────────
+
+enum LeadOrigin {
+  LANDING // formulário da landing page
+  METHOD // página do método
+  CONTACT // formulário de contato
+}
+
+enum LeadStatus {
+  NEW // recém-captado, não triado
+  CONTACTED // já houve retorno ao lead
+  CONVERTED // virou aluno/cliente
+  SPAM // marcado como abuso
+  ARCHIVED // arquivado sem conversão
+}
+
+model Lead {
+  id           String            @id @default(uuid())
+  origin       LeadOrigin
+  email        String
+  name         String?           @db.VarChar(160)
+  message      String?           @db.Text
+  locale       SupportedLanguage @default(PT_BR)
+  consentGiven Boolean           @default(false) // aceite explícito de contato/privacidade
+  consentAt    DateTime? // momento do aceite (null = sem consentimento registrado)
+  status       LeadStatus        @default(NEW)
+
+  // metadados anti-abuso - nunca expostos no schema público de entrada
+  ipHash      String? @db.VarChar(64) // SHA-256 do IP de origem (nunca o IP cru)
+  userAgent   String? @db.VarChar(400)
+  honeypotHit Boolean @default(false) // campo isca preenchido => provável bot
+  spamScore   Int     @default(0) // heurística 0..100; >= threshold => SPAM
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // detecção de duplicidade abusiva por email/origem em janela curta (janela aplicada na aplicação)
+  @@index([email, origin, createdAt])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+// ─── Data Subject Requests (§12.4.1 / §12.4.4) - exportação, correção, portabilidade e exclusão ──
+
+enum DataRequestType {
+  EXPORT
+  RECTIFICATION
+  PORTABILITY
+  DELETION
+}
+
+enum DataRequestChannel {
+  WEB_PORTAL
+  EMAIL
+  SUPPORT
+  ADMIN
+}
+
+enum DataRequestStatus {
+  PENDING_EMAIL_VERIFICATION
+  PENDING
+  IN_PROGRESS
+  EXPORT_READY
+  COMPLETED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum DataRequestJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model DataRequest {
+  id                       String             @id @default(uuid())
+  referenceCode            String             @unique @db.VarChar(40)
+  userId                   String?
+  type                     DataRequestType
+  channel                  DataRequestChannel
+  requesterEmail           String             @db.VarChar(254)
+  requesterEmailVerifiedAt DateTime?
+  status                   DataRequestStatus  @default(PENDING_EMAIL_VERIFICATION)
+  signedArchiveUrl         String?            @db.VarChar(1000)
+  signedArchiveSha256      String?            @db.VarChar(64)
+  signedArchiveExpiresAt   DateTime?
+  slaDueAt                 DateTime
+  correctionPayload        Json?
+  metadata                 Json?
+  completedAt              DateTime?
+  rejectedAt               DateTime?
+  rejectionReason          String?            @db.Text
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  user User?           @relation("DataRequestUser", fields: [userId], references: [id], onDelete: SetNull)
+  job  DataRequestJob?
+
+  @@index([userId, status])
+  @@index([requesterEmail, status])
+  @@index([status, slaDueAt])
+  @@index([type, status])
+  @@map("data_requests")
+}
+
+model DataRequestJob {
+  id            String               @id @default(uuid())
+  dataRequestId String               @unique
+  queueName     String               @default("privacy.data-request") @db.VarChar(80)
+  status        DataRequestJobStatus @default(QUEUED)
+  attempts      Int                  @default(0)
+  scheduledAt   DateTime             @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  errorCode     String?              @db.VarChar(80)
+  errorMessage  String?              @db.Text
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  dataRequest DataRequest @relation(fields: [dataRequestId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
+  @@map("data_request_jobs")
+}
+
+// ─── Assets, transcripts e captions (§12.4.2 / §12.4.4) ─────────────────────
+
+enum AssetType {
+  VIDEO
+  AUDIO
+  DOCUMENT
+  IMAGE
+  OTHER
+}
+
+enum AssetStorageProvider {
+  LOCAL
+  S3
+  R2
+  VERCEL_BLOB
+  EXTERNAL
+}
+
+enum AssetProcessingStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum TranscriptStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum CaptionFormat {
+  VTT
+  SRT
+  TXT
+}
+
+enum CaptionStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model Asset {
+  id               String                @id @default(uuid())
+  ownerId          String?
+  sessionId        String?
+  contentId        String?
+  type             AssetType
+  storageProvider  AssetStorageProvider  @default(LOCAL)
+  storageKey       String                @unique @db.VarChar(500)
+  originalFilename String                @db.VarChar(255)
+  mimeType         String                @db.VarChar(120)
+  fileSizeBytes    BigInt
+  checksumSha256   String?               @db.VarChar(64)
+  publicUrl        String?               @db.VarChar(1000)
+  durationSeconds  Int?
+  language         SupportedLanguage?
+  processingStatus AssetProcessingStatus @default(PENDING)
+  processingError  String?               @db.Text
+  metadata         Json?
+  uploadedAt       DateTime              @default(now())
+  processedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  owner       User?        @relation("AssetOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  session     Session?     @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  content     Content?     @relation(fields: [contentId], references: [id], onDelete: SetNull)
+  transcripts Transcript[]
+  captions    Caption[]
+
+  @@index([ownerId, processingStatus])
+  @@index([sessionId, processingStatus])
+  @@index([contentId, processingStatus])
+  @@index([type, processingStatus])
+  @@index([language])
+  @@index([createdAt])
+  @@map("assets")
+}
+
+model Transcript {
+  id             String            @id @default(uuid())
+  assetId        String
+  language       SupportedLanguage
+  status         TranscriptStatus  @default(PENDING)
+  provider       String?           @db.VarChar(80)
+  rawText        String            @db.LongText
+  normalizedText String?           @db.LongText
+  confidence     Float?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  errorMessage   String?           @db.Text
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  asset    Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  captions Caption[]
+
+  @@unique([assetId, language])
+  @@index([status, language])
+  @@index([assetId, status])
+  @@map("transcripts")
+}
+
+model Caption {
+  id           String            @id @default(uuid())
+  assetId      String
+  transcriptId String?
+  language     SupportedLanguage
+  format       CaptionFormat
+  status       CaptionStatus     @default(PENDING)
+  storageKey   String?           @db.VarChar(500)
+  publicUrl    String?           @db.VarChar(1000)
+  content      String?           @db.LongText
+  generatedAt  DateTime?
+  errorMessage String?           @db.Text
+  metadata     Json?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  asset      Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  transcript Transcript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+
+  @@unique([assetId, language, format])
+  @@index([assetId, status])
+  @@index([language, status])
+  @@index([transcriptId])
+  @@map("captions")
+}
+
+// ─── Email templates e deliveries (§12.4.4 / AD-16 / AD-33 / AD-34) ────────
+
+model EmailTemplate {
+  id          String              @id @default(uuid())
+  type        EmailType
+  locale      SupportedLanguage
+  channel     EmailChannel        @default(EMAIL)
+  version     Int                 @default(1)
+  status      EmailTemplateStatus @default(DRAFT)
+  subject     String              @db.VarChar(180)
+  preheader   String?             @db.VarChar(180)
+  htmlBody    String              @db.LongText
+  textBody    String?             @db.LongText
+  variables   Json?
+  publishedAt DateTime?
+  archivedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  deliveries EmailDelivery[]
+
+  @@unique([type, locale, channel, version])
+  @@index([type, locale, status])
+  @@index([status, updatedAt])
+  @@map("email_templates")
+}
+
+model EmailDelivery {
+  id                String              @id @default(uuid())
+  templateId        String?
+  type              EmailType
+  locale            SupportedLanguage
+  channel           EmailChannel        @default(EMAIL)
+  toEmail           String              @db.VarChar(254)
+  userId            String?
+  provider          String?             @db.VarChar(80)
+  providerMessageId String?             @unique @db.VarChar(191)
+  status            EmailDeliveryStatus @default(QUEUED)
+  subject           String              @db.VarChar(180)
+  renderedHtml      String?             @db.LongText
+  renderedText      String?             @db.LongText
+  data              Json?
+  errorCode         String?             @db.VarChar(80)
+  errorMessage      String?             @db.Text
+  attempts          Int                 @default(0)
+  queuedAt          DateTime            @default(now())
+  sentAt            DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  user     User?          @relation("EmailDeliveryUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([templateId, status])
+  @@index([userId, status])
+  @@index([type, locale, status])
+  @@index([status, queuedAt])
+  @@index([toEmail])
+  @@map("email_deliveries")
+}
+
+// ─── FX multi-moeda (§12.4.2 / §12.4.4) ───────────────────────────────────
+
+model FxRate {
+  id             String           @id @default(uuid())
+  baseCurrency   CurrencyCode     @default(USD)
+  quoteCurrency  CurrencyCode
+  rate           Decimal          @db.Decimal(18, 8)
+  source         FxRateSource
+  roundingPolicy FxRoundingPolicy @default(HALF_UP)
+  validFrom      DateTime
+  validUntil     DateTime?
+  collectedAt    DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([baseCurrency, quoteCurrency, source, validFrom])
+  @@index([baseCurrency, quoteCurrency, validFrom, validUntil])
+  @@index([source, collectedAt])
+  @@map("fx_rates")
+}
+
+// ─── Documentos legais versionados (§12.4.4 / GL-19) ────────────────────────
+
+model LegalDoc {
+  id                 String            @id @default(uuid())
+  type               LegalDocType
+  locale             SupportedLanguage @default(PT_BR)
+  version            String            @db.VarChar(40)
+  status             LegalDocStatus    @default(DRAFT)
+  title              String            @db.VarChar(180)
+  slug               String            @db.VarChar(200)
+  bodyMarkdown       String            @db.LongText
+  contentHashSha256  String            @db.VarChar(64)
+  effectiveAt        DateTime
+  publishedAt        DateTime?
+  archivedAt         DateTime?
+  requiresAcceptance Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  acceptances TermAcceptance[]
+
+  @@unique([type, locale, version])
+  @@unique([locale, slug, version])
+  @@index([type, locale, status, effectiveAt])
+  @@index([contentHashSha256])
+  @@map("legal_docs")
+}
+
+model TermAcceptance {
+  id         String                @id @default(uuid())
+  userId     String
+  legalDocId String
+  type       LegalDocType
+  version    String                @db.VarChar(40)
+  acceptedAt DateTime              @default(now())
+  source     LegalAcceptanceSource @default(LOGIN_BLOCKER)
+  ipHash     String?               @db.VarChar(64)
+  userAgent  String?               @db.VarChar(400)
+  metadata   Json?
+  createdAt  DateTime              @default(now())
+
+  user     User     @relation("TermAcceptanceUser", fields: [userId], references: [id], onDelete: Cascade)
+  legalDoc LegalDoc @relation(fields: [legalDocId], references: [id])
+
+  @@unique([userId, legalDocId])
+  @@unique([userId, type, version])
+  @@index([userId, acceptedAt])
+  @@index([type, version])
+  @@map("term_acceptances")
+}
+
+// ─── Onboarding profile (§12.4.4 / ON-03 / ON-04 / ON-08) ──────────────────
+
+model OnboardingProfile {
+  id                String                   @id @default(uuid())
+  userId            String                   @unique
+  currentLevel      LanguageProficiencyLevel @default(BEGINNER)
+  preferredLanguage SupportedLanguage        @default(EN_US)
+  timezone          String                   @db.VarChar(100)
+  currentStep       OnboardingStep           @default(WELCOME)
+  preferences       Json?
+  notes             String?                  @db.Text
+  completedAt       DateTime?
+  skippedAt         DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goals LanguageGoal[]
+
+  @@index([currentStep, updatedAt])
+  @@index([preferredLanguage])
+  @@index([timezone])
+  @@map("onboarding_profiles")
+}
+
+model LanguageGoal {
+  id          String           @id @default(uuid())
+  profileId   String
+  type        LanguageGoalType
+  label       String           @db.VarChar(120)
+  description String?          @db.Text
+  priority    Int              @default(0)
+  targetDate  DateTime?
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  profile OnboardingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, type])
+  @@index([profileId, priority])
+  @@index([type])
+  @@map("language_goals")
 }

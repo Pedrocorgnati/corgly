@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { apiClient } from '@/lib/api-client'
 
 import type { SessionPageState, IceServersConfig } from '@/types/sala-virtual'
+import type { SessionClientUser, SessionClientData } from '@/lib/sessions/session-client.types'
 import { useWebRTC } from '@/hooks/useWebRTC'
 import { useReconnect } from '@/hooks/useReconnect'
 import { useSessionAccess } from '@/hooks/useSessionAccess'
@@ -29,15 +30,8 @@ import { AudioOnlyOverlay } from './AudioOnlyOverlay'
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface SessionPageClientProps {
-  session: {
-    id: string
-    startAt: string
-    endAt: string
-    status: string
-    extendedBy: number
-    student: { id: string; name: string }
-  }
-  currentUser: { id: string; role: string; name?: string }
+  session: SessionClientData
+  currentUser: SessionClientUser
   iceServers: IceServersConfig[]
   hocuspocusUrl: string
 }
@@ -88,11 +82,32 @@ export function SessionPageClient({
     isSynced: false,
   })
 
-  // We need a stable token for hocuspocus. Using a simple JWT-like value.
-  // In production this would come from the server. Using currentUser.id as token placeholder.
+  // Token Hocuspocus emitido pelo servidor (T-016): POST /api/v1/sessions/:id/notes/token.
+  // Substitui o antigo placeholder (token = currentUser.id). Enquanto o token não chega,
+  // o provider fica com token vazio (sem conexão autenticada); ao resolver, o effect do
+  // useYjsProvider recria o provider com o token assinado e conecta.
+  const [notesToken, setNotesToken] = useState<string>('')
+  useEffect(() => {
+    let cancelled = false
+    apiClient
+      .post<{ data: { token: string } | null }>(API.SESSION_NOTES_TOKEN(session.id), {})
+      .then((res) => {
+        if (!cancelled && res.data?.token) setNotesToken(res.data.token)
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          // eslint-disable-next-line no-console
+          console.error('[SessionPageClient] Falha ao obter token do caderno:', err)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [session.id])
+
   const yjsProvider = useYjsProvider({
     sessionId: session.id,
-    token: currentUser.id,
+    token: notesToken,
     hocuspocusUrl,
     doc: yjsDoc.doc,
   })

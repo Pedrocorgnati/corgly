@@ -30,6 +30,13 @@ export default defineConfig({
     ],
   },
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      // `server-only` lança fora de um React Server Component. Em produção (RSC)
+      // ele resolve para um no-op via condição `react-server`; o vitest não seta
+      // essa condição, então apontamos para o mesmo stub vazio para permitir o
+      // unit test de route handlers / libs server-side.
+      'server-only': path.resolve(__dirname, './node_modules/server-only/empty.js'),
+    },
   },
 })

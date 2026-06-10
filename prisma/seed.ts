@@ -7,11 +7,44 @@ import {
   PaymentStatus,
   SubscriptionStatus,
   ContentType,
+  DataRequestType,
+  DataRequestChannel,
+  DataRequestStatus,
+  DataRequestJobStatus,
+  AssetType,
+  AssetStorageProvider,
+  AssetProcessingStatus,
+  TranscriptStatus,
+  CaptionFormat,
+  CaptionStatus,
+  EmailType,
+  EmailChannel,
+  EmailTemplateStatus,
+  EmailDeliveryStatus,
+  CurrencyCode,
+  FxRateSource,
+  FxRoundingPolicy,
+  LegalDocType,
+  LegalDocStatus,
+  LegalAcceptanceSource,
+  LanguageProficiencyLevel,
+  OnboardingStep,
+  LanguageGoalType,
+  WebRtcConnectionState,
+  SessionHealthEventType,
+  JobType,
+  JobStatus,
+  AdminImpersonationEndReason,
 } from '@prisma/client'
+import { createHash } from 'crypto'
 import bcrypt from 'bcryptjs'
 import { addDays, subDays, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns'
 
 const prisma = new PrismaClient()
+
+function sha256Hex(input: string) {
+  return createHash('sha256').update(input, 'utf8').digest('hex')
+}
 
 async function main() {
   console.log('🌱 Iniciando seed...')
@@ -177,6 +210,76 @@ async function main() {
 
   console.log(`✅ Extra users: ${[studentUnconfirmed, studentFirst, studentSub, studentDeletion].map((u) => u.email).join(', ')}`)
 
+  // ─── Onboarding profile — nível, objetivos, idioma, fuso e preferências ──
+  const onboardingProfile = await prisma.onboardingProfile.upsert({
+    where: { userId: studentFirst.id },
+    update: {
+      currentLevel: LanguageProficiencyLevel.BEGINNER,
+      preferredLanguage: SupportedLanguage.ES_ES,
+      timezone: studentFirst.timezone,
+      currentStep: OnboardingStep.GOALS,
+      preferences: {
+        lessonCadence: 'WEEKLY',
+        preferredSessionLengthMinutes: 60,
+        focusAreas: ['conversação', 'pronúncia', 'viagem'],
+        wantsHomework: true,
+        wantsConversationFirst: true,
+      },
+    },
+    create: {
+      userId: studentFirst.id,
+      currentLevel: LanguageProficiencyLevel.BEGINNER,
+      preferredLanguage: SupportedLanguage.ES_ES,
+      timezone: studentFirst.timezone,
+      currentStep: OnboardingStep.GOALS,
+      preferences: {
+        lessonCadence: 'WEEKLY',
+        preferredSessionLengthMinutes: 60,
+        focusAreas: ['conversação', 'pronúncia', 'viagem'],
+        wantsHomework: true,
+        wantsConversationFirst: true,
+      },
+      notes: 'Seed: aluno em onboarding antes da primeira compra.',
+    },
+  })
+
+  const onboardingGoals = [
+    {
+      type: LanguageGoalType.CONVERSATION,
+      label: 'Conversar com confiança em viagens',
+      description: 'Praticar situações reais de chegada, restaurante, transporte e small talk.',
+      priority: 1,
+    },
+    {
+      type: LanguageGoalType.PRONUNCIATION,
+      label: 'Melhorar pronúncia do português brasileiro',
+      description: 'Foco inicial em vogais abertas, nasalização e ritmo de fala.',
+      priority: 2,
+    },
+  ]
+
+  for (const goal of onboardingGoals) {
+    await prisma.languageGoal.upsert({
+      where: {
+        profileId_type: {
+          profileId: onboardingProfile.id,
+          type: goal.type,
+        },
+      },
+      update: {
+        label: goal.label,
+        description: goal.description,
+        priority: goal.priority,
+      },
+      create: {
+        profileId: onboardingProfile.id,
+        ...goal,
+      },
+    })
+  }
+
+  console.log(`✅ Onboarding profile seeded for ${studentFirst.email}`)
+
   // ─── Slots passados (para sessões com todos os status históricos) ─────────
   const buildPastSlot = (daysAgo: number) => {
     const base = subDays(startOfDay(new Date()), daysAgo)
@@ -327,6 +430,96 @@ async function main() {
 
   console.log(`✅ Sessions (9 status): ${Object.keys(createdSessions).join(' | ')}`)
 
+  // ─── SessionHealth - métricas WebRTC e reconnect por participante ────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const healthOccurredAt = (session: any, minutesAfterStart: number) =>
+    new Date(new Date(session.startAt).getTime() + minutesAfterStart * 60_000)
+
+  const sessionHealthDefs = [
+    {
+      session: createdSessions[SessionStatus.IN_PROGRESS],
+      participantId: student.id,
+      participantRole: UserRole.STUDENT,
+      eventType: SessionHealthEventType.METRIC_SNAPSHOT,
+      occurredAt: healthOccurredAt(createdSessions[SessionStatus.IN_PROGRESS], 10),
+      latencyMs: 84,
+      jitterMs: 12,
+      packetLossPercent: 0.35,
+      webrtcState: WebRtcConnectionState.CONNECTED,
+      reconnectAttempt: 0,
+      reconnectReason: null,
+      reconnectSuccessful: null,
+      metadata: { source: 'seed', browser: 'Chrome', network: 'wifi' },
+    },
+    {
+      session: createdSessions[SessionStatus.IN_PROGRESS],
+      participantId: admin.id,
+      participantRole: UserRole.ADMIN,
+      eventType: SessionHealthEventType.CONNECTION_STATE,
+      occurredAt: healthOccurredAt(createdSessions[SessionStatus.IN_PROGRESS], 15),
+      latencyMs: 61,
+      jitterMs: 8,
+      packetLossPercent: 0,
+      webrtcState: WebRtcConnectionState.CONNECTED,
+      reconnectAttempt: 0,
+      reconnectReason: null,
+      reconnectSuccessful: null,
+      metadata: { source: 'seed', browser: 'Firefox', network: 'ethernet' },
+    },
+    {
+      session: createdSessions[SessionStatus.INTERRUPTED],
+      participantId: student.id,
+      participantRole: UserRole.STUDENT,
+      eventType: SessionHealthEventType.RECONNECT_FAILED,
+      occurredAt: interruptedAt,
+      latencyMs: 1430,
+      jitterMs: 320,
+      packetLossPercent: 18.75,
+      webrtcState: WebRtcConnectionState.FAILED,
+      reconnectAttempt: 3,
+      reconnectReason: 'ICE disconnected after unstable mobile network',
+      reconnectSuccessful: false,
+      metadata: { source: 'seed', iceRestarts: 3, lastCandidateType: 'relay' },
+    },
+  ] as const
+
+  for (const def of sessionHealthDefs) {
+    if (!def.session) {
+      continue
+    }
+
+    const exists = await prisma.sessionHealth.findFirst({
+      where: {
+        sessionId: def.session.id,
+        participantId: def.participantId,
+        eventType: def.eventType,
+        occurredAt: def.occurredAt,
+      },
+    })
+
+    if (!exists) {
+      await prisma.sessionHealth.create({
+        data: {
+          sessionId: def.session.id,
+          participantId: def.participantId,
+          participantRole: def.participantRole,
+          eventType: def.eventType,
+          occurredAt: def.occurredAt,
+          latencyMs: def.latencyMs,
+          jitterMs: def.jitterMs,
+          packetLossPercent: def.packetLossPercent,
+          webrtcState: def.webrtcState,
+          reconnectAttempt: def.reconnectAttempt,
+          reconnectReason: def.reconnectReason,
+          reconnectSuccessful: def.reconnectSuccessful,
+          metadata: def.metadata,
+        },
+      })
+    }
+  }
+
+  console.log('✅ SessionHealth: métricas WebRTC, packet loss e reconnect')
+
   // ─── Feedback para sessão COMPLETED ──────────────────────────────────────
   const completedSession = createdSessions[SessionStatus.COMPLETED]
   if (completedSession) {
@@ -335,11 +528,11 @@ async function main() {
       await prisma.feedback.create({
         data: {
           sessionId: completedSession.id,
-          clarityScore: 5,
-          didacticsScore: 4,
-          punctualityScore: 5,
-          engagementScore: 5,
-          comment: 'Aula excelente! Pedro explicou os tempos verbais com muita clareza. Já me sinto mais confiante.',
+          listeningScore: 5,
+          speakingScore: 4,
+          writingScore: 5,
+          vocabularyScore: 5,
+          overallFeedback: 'Aula excelente! Pedro explicou os tempos verbais com muita clareza. Já me sinto mais confiante.',
           adminId: admin.id,
           privateNote: 'Aluno demonstrou ótima evolução na pronúncia dos ditongos. Focar em subjuntivo na próxima.',
           reviewed: true,
@@ -434,6 +627,92 @@ async function main() {
 
   console.log('✅ Content: VIDEO (PT, EN, ES rascunho) + ARTICLE (IT)')
 
+  // ─── Assets, transcripts e captions — vídeo com legenda pt-BR (§12.4.2 / §12.4.4) ──
+  const assetContent = await prisma.content.findFirst({
+    where: { title: 'Introdução ao Corgly Method', language: SupportedLanguage.PT_BR },
+  })
+  const assetSession = createdSessions[SessionStatus.COMPLETED]
+  const demoVideo = await prisma.asset.upsert({
+    where: { storageKey: 'seed/assets/corgly-method-intro-pt-br.mp4' },
+    update: {},
+    create: {
+      ownerId: student.id,
+      sessionId: assetSession?.id ?? null,
+      contentId: assetContent?.id ?? null,
+      type: AssetType.VIDEO,
+      storageProvider: AssetStorageProvider.LOCAL,
+      storageKey: 'seed/assets/corgly-method-intro-pt-br.mp4',
+      originalFilename: 'corgly-method-intro-pt-br.mp4',
+      mimeType: 'video/mp4',
+      fileSizeBytes: BigInt(24_576_000),
+      checksumSha256: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      publicUrl: 'https://cdn.corgly.example/assets/corgly-method-intro-pt-br.mp4',
+      durationSeconds: 184,
+      language: SupportedLanguage.PT_BR,
+      processingStatus: AssetProcessingStatus.READY,
+      processedAt: new Date(),
+      metadata: {
+        seededBy: 'prisma/seed.ts',
+        scenario: 'video asset with transcript and pt-BR caption',
+      },
+    },
+  })
+
+  const demoTranscript = await prisma.transcript.upsert({
+    where: {
+      assetId_language: {
+        assetId: demoVideo.id,
+        language: SupportedLanguage.PT_BR,
+      },
+    },
+    update: {},
+    create: {
+      assetId: demoVideo.id,
+      language: SupportedLanguage.PT_BR,
+      status: TranscriptStatus.READY,
+      provider: 'seed',
+      rawText:
+        'Bem-vindo ao Corgly Method. Nesta aula apresentamos fluidez, gramática contextual, cultura e pronúncia em uma rotina prática de estudo.',
+      normalizedText:
+        'Bem-vindo ao Corgly Method. Nesta aula apresentamos fluidez, gramática contextual, cultura e pronúncia em uma rotina prática de estudo.',
+      confidence: 0.98,
+      startedAt: subDays(new Date(), 1),
+      completedAt: new Date(),
+      metadata: {
+        seededBy: 'prisma/seed.ts',
+      },
+    },
+  })
+
+  await prisma.caption.upsert({
+    where: {
+      assetId_language_format: {
+        assetId: demoVideo.id,
+        language: SupportedLanguage.PT_BR,
+        format: CaptionFormat.VTT,
+      },
+    },
+    update: {},
+    create: {
+      assetId: demoVideo.id,
+      transcriptId: demoTranscript.id,
+      language: SupportedLanguage.PT_BR,
+      format: CaptionFormat.VTT,
+      status: CaptionStatus.READY,
+      storageKey: 'seed/captions/corgly-method-intro-pt-br.vtt',
+      publicUrl: 'https://cdn.corgly.example/captions/corgly-method-intro-pt-br.vtt',
+      content:
+        'WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nBem-vindo ao Corgly Method.\n\n00:00:05.000 --> 00:00:12.000\nNesta aula apresentamos fluidez, gramática contextual, cultura e pronúncia.',
+      generatedAt: new Date(),
+      metadata: {
+        seededBy: 'prisma/seed.ts',
+        sourceTranscriptId: demoTranscript.id,
+      },
+    },
+  })
+
+  console.log('✅ Asset: vídeo demo com transcript e caption pt-BR')
+
   // ─── CookieConsent ────────────────────────────────────────────────────────
   const cookieDefs = [
     { userId: student.id,  sessionFingerprint: null,                  essentialAccepted: true, analyticsAccepted: true,  marketingAccepted: true  },
@@ -449,6 +728,697 @@ async function main() {
   }
 
   console.log('✅ CookieConsent: user (tudo aceito) + anon (essencial) + anon (analytics)')
+
+  // ─── SupportTicket — exemplo de thread aluno/admin (§12.4.4) ──────────────
+  const supportSubject = 'Não consigo entrar na sala virtual'
+  const existingTicket = await prisma.supportTicket.findFirst({ where: { subject: supportSubject } })
+  if (!existingTicket) {
+    await prisma.supportTicket.create({
+      data: {
+        subject: supportSubject,
+        status: 'OPEN',
+        priority: 'HIGH',
+        userId: student.id,
+        messages: {
+          create: [
+            {
+              authorId: student.id,
+              authorRole: 'STUDENT',
+              body: 'Cliquei em entrar na sala mas a tela fica carregando. O que faço?',
+              isInternal: false,
+            },
+            {
+              authorId: admin.id,
+              authorRole: 'ADMIN',
+              body: 'Oi! Pode tentar atualizar a página e verificar a câmera/microfone? Já vou acompanhar por aqui.',
+              isInternal: false,
+            },
+            {
+              authorId: admin.id,
+              authorRole: 'ADMIN',
+              body: 'Nota interna: verificar se o token do Hocuspocus expirou para este aluno.',
+              isInternal: true,
+            },
+          ],
+        },
+      },
+    })
+  }
+
+  console.log('✅ SupportTicket: ticket exemplo (aluno) com 2 mensagens públicas + 1 nota interna')
+
+  // ─── Referral — programa do aluno com 1 convite aceito + crédito concedido (§12.4.3/§12.4.4) ──
+  const referralCode = 'CORGLY-REF-DEMO'
+  const existingReferral = await prisma.referral.findUnique({ where: { code: referralCode } })
+  if (!existingReferral) {
+    const referral = await prisma.referral.create({
+      data: {
+        code: referralCode,
+        referrerId: student.id,
+        status: 'ACTIVE',
+        invites: {
+          create: [
+            {
+              invitedEmail: 'amigo.convidado@example.com',
+              invitedUserId: studentFirst.id,
+              status: 'ACCEPTED',
+              acceptedAt: new Date(),
+            },
+            {
+              invitedEmail: 'pendente.convidado@example.com',
+              status: 'PENDING',
+              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            },
+          ],
+        },
+      },
+      include: { invites: true },
+    })
+
+    const acceptedInvite = referral.invites.find((i) => i.status === 'ACCEPTED')
+    if (acceptedInvite) {
+      await prisma.referralCredit.create({
+        data: {
+          referralId: referral.id,
+          inviteId: acceptedInvite.id,
+          beneficiaryUserId: student.id,
+          amount: 1,
+          status: 'GRANTED',
+          grantedAt: new Date(),
+        },
+      })
+    }
+  }
+
+  console.log('✅ Referral: programa do aluno (1 convite aceito + 1 pendente) com crédito concedido')
+
+  // ─── Feature flags — realtime (sala), billing portal e onboarding v2 (§12.4.2) ──
+  const featureFlagSeeds = [
+    {
+      key: 'realtime-room',
+      description: 'Habilita a sala em tempo real (signaling/áudio-vídeo) durante o rollout gradual.',
+      enabled: true,
+      rolloutPercentage: 25,
+      scope: 'GLOBAL' as const,
+    },
+    {
+      key: 'billing-portal',
+      description: 'Expõe o portal de billing do aluno (gestão de assinatura e métodos de pagamento).',
+      enabled: true,
+      rolloutPercentage: 100,
+      scope: 'GLOBAL' as const,
+    },
+    {
+      key: 'onboarding-v2',
+      description: 'Novo fluxo de onboarding v2 — liberado apenas para o coorte de beta testers.',
+      enabled: true,
+      rolloutPercentage: 100,
+      scope: 'COHORT' as const,
+      targetCohort: 'beta',
+    },
+  ]
+
+  for (const ff of featureFlagSeeds) {
+    const existing = await prisma.featureFlag.findUnique({ where: { key: ff.key } })
+    if (!existing) {
+      const created = await prisma.featureFlag.create({ data: ff })
+      await prisma.featureFlagAudit.create({
+        data: {
+          flagId: created.id,
+          actorId: admin.id,
+          action: 'CREATED',
+          fromEnabled: null,
+          toEnabled: created.enabled,
+          metadata: {
+            seededBy: 'prisma/seed.ts',
+            rolloutPercentage: created.rolloutPercentage,
+            scope: created.scope,
+          },
+        },
+      })
+    }
+  }
+
+  console.log('✅ FeatureFlag: realtime-room (25%), billing-portal (100%), onboarding-v2 (coorte beta) + auditoria CREATED')
+
+  const leadSeeds = [
+    {
+      origin: 'LANDING' as const,
+      email: 'lead.landing@corgly.demo',
+      name: 'Visitante Landing',
+      message: null,
+      locale: SupportedLanguage.PT_BR,
+      consentGiven: true,
+      consentAt: new Date(),
+    },
+    {
+      origin: 'CONTACT' as const,
+      email: 'lead.contato@corgly.demo',
+      name: 'Visitante Contato',
+      message: 'Gostaria de saber mais sobre as aulas e os planos disponíveis.',
+      locale: SupportedLanguage.PT_BR,
+      consentGiven: true,
+      consentAt: new Date(),
+    },
+  ]
+
+  for (const lead of leadSeeds) {
+    const existing = await prisma.lead.findFirst({
+      where: { email: lead.email, origin: lead.origin },
+    })
+    if (!existing) {
+      await prisma.lead.create({ data: lead })
+    }
+  }
+
+  console.log('✅ Lead: captação demo landing + contato (idempotente por email/origem)')
+
+  // ─── DataRequest — DSR pendente e concluído (§12.4.1 / §12.4.4) ─────────
+  const pendingDataRequest = await prisma.dataRequest.upsert({
+    where: { referenceCode: 'DSR-SEED-PENDING-001' },
+    update: {},
+    create: {
+      referenceCode: 'DSR-SEED-PENDING-001',
+      userId: student.id,
+      type: DataRequestType.EXPORT,
+      channel: DataRequestChannel.WEB_PORTAL,
+      requesterEmail: student.email,
+      requesterEmailVerifiedAt: new Date(),
+      status: DataRequestStatus.PENDING,
+      slaDueAt: addDays(new Date(), 15),
+      metadata: {
+        seededBy: 'prisma/seed.ts',
+        scenario: 'pending export request inside SLA',
+      },
+      job: {
+        create: {
+          status: DataRequestJobStatus.QUEUED,
+          scheduledAt: new Date(),
+        },
+      },
+    },
+  })
+
+  const completedDataRequest = await prisma.dataRequest.upsert({
+    where: { referenceCode: 'DSR-SEED-COMPLETED-001' },
+    update: {},
+    create: {
+      referenceCode: 'DSR-SEED-COMPLETED-001',
+      userId: studentDeletion.id,
+      type: DataRequestType.DELETION,
+      channel: DataRequestChannel.SUPPORT,
+      requesterEmail: studentDeletion.email,
+      requesterEmailVerifiedAt: subDays(new Date(), 10),
+      status: DataRequestStatus.COMPLETED,
+      signedArchiveUrl: 'https://downloads.corgly.example/dsr/DSR-SEED-COMPLETED-001.zip?signature=seed',
+      signedArchiveSha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      signedArchiveExpiresAt: addDays(new Date(), 7),
+      slaDueAt: addDays(new Date(), 20),
+      completedAt: subDays(new Date(), 1),
+      metadata: {
+        seededBy: 'prisma/seed.ts',
+        scenario: 'completed deletion request with signed archive',
+      },
+      job: {
+        create: {
+          status: DataRequestJobStatus.SUCCEEDED,
+          attempts: 1,
+          scheduledAt: subDays(new Date(), 2),
+          startedAt: subDays(new Date(), 2),
+          finishedAt: subDays(new Date(), 1),
+        },
+      },
+    },
+  })
+
+  console.log('✅ DataRequest: pendente + concluído com job e arquivo assinado')
+
+  // ─── Job — fila assíncrona genérica para DSR export e transcrição (§12.4.4) ──
+  const existingDataExportJob = await prisma.job.findFirst({
+    where: {
+      type: JobType.DATA_EXPORT,
+      queueName: 'privacy.data-export',
+      createdById: admin.id,
+    },
+  })
+  if (!existingDataExportJob) {
+    await prisma.job.create({
+      data: {
+        type: JobType.DATA_EXPORT,
+        queueName: 'privacy.data-export',
+        payload: {
+          dataRequestId: pendingDataRequest.id,
+          referenceCode: pendingDataRequest.referenceCode,
+          requesterEmail: pendingDataRequest.requesterEmail,
+          includeSignedArchive: true,
+          seededBy: 'prisma/seed.ts',
+        },
+        status: JobStatus.QUEUED,
+        attempts: 0,
+        maxAttempts: 5,
+        priority: 20,
+        scheduledAt: new Date(),
+        createdById: admin.id,
+      },
+    })
+  }
+
+  const existingTranscriptionJob = await prisma.job.findFirst({
+    where: {
+      type: JobType.TRANSCRIPTION,
+      queueName: 'media.transcription',
+      createdById: admin.id,
+    },
+  })
+  if (!existingTranscriptionJob) {
+    await prisma.job.create({
+      data: {
+        type: JobType.TRANSCRIPTION,
+        queueName: 'media.transcription',
+        payload: {
+          assetId: demoVideo.id,
+          language: SupportedLanguage.PT_BR,
+          provider: 'seed',
+          generateCaptions: true,
+          seededBy: 'prisma/seed.ts',
+        },
+        status: JobStatus.SUCCEEDED,
+        attempts: 1,
+        maxAttempts: 3,
+        priority: 10,
+        scheduledAt: subDays(new Date(), 1),
+        startedAt: subDays(new Date(), 1),
+        completedAt: new Date(),
+        createdById: admin.id,
+      },
+    })
+  }
+
+  console.log(`✅ Job: exportação DSR (${pendingDataRequest.referenceCode}) + transcrição (${demoVideo.storageKey}); DSR concluído ${completedDataRequest.referenceCode}`)
+
+  // ─── AdminImpersonationSession — auditoria de suporte com TTL (§12.5) ──
+  const activeImpersonation = await prisma.adminImpersonationSession.findFirst({
+    where: {
+      adminId: admin.id,
+      endedAt: null,
+    },
+  })
+
+  if (!activeImpersonation) {
+    await prisma.adminImpersonationSession.create({
+      data: {
+        adminId: admin.id,
+        studentId: student.id,
+        startedAt: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        reason: 'Seed: suporte reproduzindo problema de acesso à sala virtual do aluno.',
+        ipAddress: '127.0.0.1',
+        userAgent: 'CorglySeed/1.0 admin-impersonation',
+        activeAdminKey: admin.id,
+        activeStudentKey: student.id,
+        metadata: {
+          seededBy: 'prisma/seed.ts',
+          scenario: 'active admin impersonation inside TTL',
+        },
+      },
+    })
+  }
+
+  const endedImpersonation = await prisma.adminImpersonationSession.findFirst({
+    where: {
+      adminId: admin.id,
+      studentId: studentFirst.id,
+      endReason: AdminImpersonationEndReason.ADMIN_ENDED,
+    },
+  })
+
+  if (!endedImpersonation) {
+    const endedStartedAt = subDays(new Date(), 1)
+    await prisma.adminImpersonationSession.create({
+      data: {
+        adminId: admin.id,
+        studentId: studentFirst.id,
+        startedAt: endedStartedAt,
+        expiresAt: new Date(endedStartedAt.getTime() + 20 * 60 * 1000),
+        endedAt: new Date(endedStartedAt.getTime() + 12 * 60 * 1000),
+        endedById: admin.id,
+        endReason: AdminImpersonationEndReason.ADMIN_ENDED,
+        reason: 'Seed: suporte validou preferências de onboarding e encerrou a sessão auditável.',
+        ipAddress: '127.0.0.1',
+        userAgent: 'CorglySeed/1.0 admin-impersonation-ended',
+        activeAdminKey: null,
+        activeStudentKey: null,
+        metadata: {
+          seededBy: 'prisma/seed.ts',
+          scenario: 'ended admin impersonation with audit trail',
+        },
+      },
+    })
+  }
+
+  console.log('✅ AdminImpersonationSession: ativa com TTL + encerrada com motivo e auditoria')
+
+  // ─── EmailTemplate / EmailDelivery — templates versionados + log (§12.4.4) ──
+  const emailTemplateSeeds = [
+    {
+      type: EmailType.CONFIRM_EMAIL,
+      locale: SupportedLanguage.PT_BR,
+      version: 1,
+      subject: 'Confirme seu email na Corgly',
+      preheader: 'Seu link de confirmação expira em 24 horas.',
+      htmlBody:
+        '<p>Olá {{name}},</p><p>Confirme seu email para acessar sua conta Corgly.</p><p><a href="{{confirmUrl}}">Confirmar email</a></p>',
+      textBody: 'Olá {{name}}, confirme seu email em {{confirmUrl}}.',
+      variables: ['name', 'confirmUrl'],
+    },
+    {
+      type: EmailType.SUBSCRIPTION_PAYMENT_FAILED,
+      locale: SupportedLanguage.PT_BR,
+      version: 1,
+      subject: 'Falha no pagamento da sua assinatura',
+      preheader: 'Atualize seu método de pagamento para manter suas aulas ativas.',
+      htmlBody:
+        '<p>Não conseguimos processar o pagamento da sua assinatura.</p><p><a href="{{billingUrl}}">Atualizar pagamento</a></p>',
+      textBody: 'Não conseguimos processar o pagamento. Atualize em {{billingUrl}}.',
+      variables: ['billingUrl'],
+    },
+    {
+      type: EmailType.FEEDBACK_AVAILABLE,
+      locale: SupportedLanguage.PT_BR,
+      version: 1,
+      subject: 'Seu feedback de aula está disponível',
+      preheader: 'Veja os comentários e próximos passos da sua aula.',
+      htmlBody:
+        '<p>Olá {{name}},</p><p>Seu feedback da aula de {{sessionDate}} está disponível.</p><p><a href="{{feedbackUrl}}">Ver feedback</a></p>',
+      textBody: 'Olá {{name}}, seu feedback da aula de {{sessionDate}} está disponível em {{feedbackUrl}}.',
+      variables: ['name', 'sessionDate', 'feedbackUrl'],
+    },
+  ] as const
+
+  const createdEmailTemplates = new Map<EmailType, { id: string; subject: string; htmlBody: string }>()
+
+  for (const template of emailTemplateSeeds) {
+    const upserted = await prisma.emailTemplate.upsert({
+      where: {
+        type_locale_channel_version: {
+          type: template.type,
+          locale: template.locale,
+          channel: EmailChannel.EMAIL,
+          version: template.version,
+        },
+      },
+      update: {
+        status: EmailTemplateStatus.ACTIVE,
+        subject: template.subject,
+        preheader: template.preheader,
+        htmlBody: template.htmlBody,
+        textBody: template.textBody,
+        variables: template.variables,
+        publishedAt: new Date(),
+        archivedAt: null,
+      },
+      create: {
+        type: template.type,
+        locale: template.locale,
+        channel: EmailChannel.EMAIL,
+        version: template.version,
+        status: EmailTemplateStatus.ACTIVE,
+        subject: template.subject,
+        preheader: template.preheader,
+        htmlBody: template.htmlBody,
+        textBody: template.textBody,
+        variables: template.variables,
+        publishedAt: new Date(),
+      },
+    })
+    createdEmailTemplates.set(template.type, {
+      id: upserted.id,
+      subject: upserted.subject,
+      htmlBody: upserted.htmlBody,
+    })
+  }
+
+  const confirmTemplate = createdEmailTemplates.get(EmailType.CONFIRM_EMAIL)
+  const paymentFailedTemplate = createdEmailTemplates.get(EmailType.SUBSCRIPTION_PAYMENT_FAILED)
+  const feedbackTemplate = createdEmailTemplates.get(EmailType.FEEDBACK_AVAILABLE)
+
+  const emailDeliverySeeds = [
+    {
+      providerMessageId: 'seed-email-confirm-001',
+      template: confirmTemplate,
+      type: EmailType.CONFIRM_EMAIL,
+      toEmail: studentFirst.email,
+      userId: studentFirst.id,
+      status: EmailDeliveryStatus.SENT,
+      data: { name: studentFirst.name, confirmUrl: 'https://corgly.example/auth/confirm-email?token=seed' },
+      sentAt: subDays(new Date(), 1),
+      failedAt: null,
+      errorCode: null,
+      errorMessage: null,
+    },
+    {
+      providerMessageId: 'seed-email-payment-failed-001',
+      template: paymentFailedTemplate,
+      type: EmailType.SUBSCRIPTION_PAYMENT_FAILED,
+      toEmail: studentSub.email,
+      userId: studentSub.id,
+      status: EmailDeliveryStatus.FAILED,
+      data: { billingUrl: 'https://corgly.example/billing' },
+      sentAt: null,
+      failedAt: new Date(),
+      errorCode: 'PROVIDER_402',
+      errorMessage: 'Seed: provider recusou envio de teste',
+    },
+    {
+      providerMessageId: 'seed-email-feedback-available-001',
+      template: feedbackTemplate,
+      type: EmailType.FEEDBACK_AVAILABLE,
+      toEmail: student.email,
+      userId: student.id,
+      status: EmailDeliveryStatus.SENT,
+      data: {
+        name: student.name,
+        sessionDate: completedSession?.startAt.toISOString() ?? new Date().toISOString(),
+        feedbackUrl: 'https://corgly.example/dashboard/feedback',
+      },
+      sentAt: new Date(),
+      failedAt: null,
+      errorCode: null,
+      errorMessage: null,
+    },
+  ] as const
+
+  for (const delivery of emailDeliverySeeds) {
+    if (!delivery.template) continue
+    await prisma.emailDelivery.upsert({
+      where: { providerMessageId: delivery.providerMessageId },
+      update: {
+        templateId: delivery.template.id,
+        status: delivery.status,
+        data: delivery.data,
+        sentAt: delivery.sentAt,
+        failedAt: delivery.failedAt,
+        errorCode: delivery.errorCode,
+        errorMessage: delivery.errorMessage,
+      },
+      create: {
+        templateId: delivery.template.id,
+        type: delivery.type,
+        locale: SupportedLanguage.PT_BR,
+        channel: EmailChannel.EMAIL,
+        toEmail: delivery.toEmail,
+        userId: delivery.userId,
+        provider: 'seed',
+        providerMessageId: delivery.providerMessageId,
+        status: delivery.status,
+        subject: delivery.template.subject,
+        renderedHtml: delivery.template.htmlBody,
+        data: delivery.data,
+        attempts: delivery.status === EmailDeliveryStatus.FAILED ? 3 : 1,
+        sentAt: delivery.sentAt,
+        failedAt: delivery.failedAt,
+        errorCode: delivery.errorCode,
+        errorMessage: delivery.errorMessage,
+      },
+    })
+  }
+
+  console.log('✅ EmailTemplate: confirmação, pagamento falho e feedback disponível + deliveries seed')
+
+  // ─── FX multi-moeda — taxas base USD + politica de arredondamento (§12.4.2) ──
+  const fxSeedTimestamp = new Date('2026-05-27T00:00:00.000Z')
+  const fxValidUntil = addDays(fxSeedTimestamp, 30)
+  const fxRates = [
+    {
+      quoteCurrency: CurrencyCode.USD,
+      rate: '1.00000000',
+      roundingPolicy: FxRoundingPolicy.HALF_UP,
+    },
+    {
+      quoteCurrency: CurrencyCode.BRL,
+      rate: '5.12000000',
+      roundingPolicy: FxRoundingPolicy.HALF_UP,
+    },
+    {
+      quoteCurrency: CurrencyCode.EUR,
+      rate: '0.92000000',
+      roundingPolicy: FxRoundingPolicy.HALF_EVEN,
+    },
+    {
+      quoteCurrency: CurrencyCode.USDC,
+      rate: '1.00000000',
+      roundingPolicy: FxRoundingPolicy.HALF_UP,
+    },
+  ] as const
+
+  for (const fx of fxRates) {
+    await prisma.fxRate.upsert({
+      where: {
+        baseCurrency_quoteCurrency_source_validFrom: {
+          baseCurrency: CurrencyCode.USD,
+          quoteCurrency: fx.quoteCurrency,
+          source: FxRateSource.SEED,
+          validFrom: fxSeedTimestamp,
+        },
+      },
+      update: {
+        rate: fx.rate,
+        roundingPolicy: fx.roundingPolicy,
+        validUntil: fxValidUntil,
+        collectedAt: fxSeedTimestamp,
+      },
+      create: {
+        baseCurrency: CurrencyCode.USD,
+        quoteCurrency: fx.quoteCurrency,
+        rate: fx.rate,
+        source: FxRateSource.SEED,
+        roundingPolicy: fx.roundingPolicy,
+        validFrom: fxSeedTimestamp,
+        validUntil: fxValidUntil,
+        collectedAt: fxSeedTimestamp,
+      },
+    })
+  }
+
+  console.log('✅ FxRate: USD, BRL, EUR e USDC com timestamp e política de arredondamento')
+
+  // ─── LegalDoc / TermAcceptance: documentos versionados e aceite bloqueante ──
+  const legalEffectiveAt = new Date('2026-05-27T00:00:00.000Z')
+  const legalDocSeeds = [
+    {
+      type: LegalDocType.TERMS,
+      slug: 'terms-of-use',
+      title: 'Termos de Uso Corgly',
+      version: '2026.05.27',
+      requiresAcceptance: true,
+      bodyMarkdown:
+        '# Termos de Uso Corgly\n\nAo usar a Corgly, o aluno concorda com as regras de acesso, agendamento, cancelamento, créditos, conduta em aula e uso aceitável da plataforma.',
+    },
+    {
+      type: LegalDocType.PRIVACY,
+      slug: 'privacy-policy',
+      title: 'Política de Privacidade Corgly',
+      version: '2026.05.27',
+      requiresAcceptance: true,
+      bodyMarkdown:
+        '# Política de Privacidade Corgly\n\nExplica as bases legais, categorias de dados pessoais, retenção, direitos LGPD/GDPR, fornecedores essenciais e canais de contato do DPO.',
+    },
+    {
+      type: LegalDocType.COOKIES,
+      slug: 'cookies-policy',
+      title: 'Política de Cookies Corgly',
+      version: '2026.05.27',
+      requiresAcceptance: true,
+      bodyMarkdown:
+        '# Política de Cookies Corgly\n\nDetalha cookies essenciais, analytics e marketing, incluindo finalidade, duração, revogação de consentimento e impacto nas preferências do usuário.',
+    },
+    {
+      type: LegalDocType.DPA,
+      slug: 'data-processing-addendum',
+      title: 'Data Processing Addendum Corgly',
+      version: '2026.05.27',
+      requiresAcceptance: false,
+      bodyMarkdown:
+        '# Data Processing Addendum Corgly\n\nDefine papéis de controlador e operador, subprocessadores, transferências internacionais, medidas técnicas e suporte a incidentes de segurança.',
+    },
+  ] as const
+
+  const activeLegalDocs = []
+  for (const doc of legalDocSeeds) {
+    const contentHashSha256 = sha256Hex(doc.bodyMarkdown)
+    const legalDoc = await prisma.legalDoc.upsert({
+      where: {
+        type_locale_version: {
+          type: doc.type,
+          locale: SupportedLanguage.PT_BR,
+          version: doc.version,
+        },
+      },
+      update: {
+        status: LegalDocStatus.ACTIVE,
+        title: doc.title,
+        slug: doc.slug,
+        bodyMarkdown: doc.bodyMarkdown,
+        contentHashSha256,
+        effectiveAt: legalEffectiveAt,
+        publishedAt: legalEffectiveAt,
+        archivedAt: null,
+        requiresAcceptance: doc.requiresAcceptance,
+      },
+      create: {
+        type: doc.type,
+        locale: SupportedLanguage.PT_BR,
+        version: doc.version,
+        status: LegalDocStatus.ACTIVE,
+        title: doc.title,
+        slug: doc.slug,
+        bodyMarkdown: doc.bodyMarkdown,
+        contentHashSha256,
+        effectiveAt: legalEffectiveAt,
+        publishedAt: legalEffectiveAt,
+        requiresAcceptance: doc.requiresAcceptance,
+      },
+    })
+    activeLegalDocs.push(legalDoc)
+  }
+
+  const acceptanceUsers = [admin, student] as const
+  for (const legalDoc of activeLegalDocs.filter((doc) => doc.requiresAcceptance)) {
+    for (const user of acceptanceUsers) {
+      await prisma.termAcceptance.upsert({
+        where: {
+          userId_legalDocId: {
+            userId: user.id,
+            legalDocId: legalDoc.id,
+          },
+        },
+        update: {
+          type: legalDoc.type,
+          version: legalDoc.version,
+          source: LegalAcceptanceSource.ADMIN_IMPORT,
+          acceptedAt: legalEffectiveAt,
+          metadata: {
+            seed: true,
+            source: 'prisma/seed.ts',
+          },
+        },
+        create: {
+          userId: user.id,
+          legalDocId: legalDoc.id,
+          type: legalDoc.type,
+          version: legalDoc.version,
+          source: LegalAcceptanceSource.ADMIN_IMPORT,
+          acceptedAt: legalEffectiveAt,
+          metadata: {
+            seed: true,
+            source: 'prisma/seed.ts',
+          },
+        },
+      })
+    }
+  }
+
+  console.log('✅ LegalDoc: terms, privacy, cookies e DPA ativos + TermAcceptance para usuários seed')
 
   console.log('🎉 Seed concluído!')
 }

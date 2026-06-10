@@ -7,24 +7,41 @@ import {
   runConnectivityCheck,
   type ConnectivityResult,
 } from '@/lib/webrtc/connectivity-check'
+import type { EquipmentFailure } from '@/lib/equipment/last-check.client'
 
 export type OverallStatus = 'idle' | 'checking' | 'ok' | 'warning' | 'fail'
+
+/** Resultado consolidado de uma rodada de teste, com o detalhe das falhas. */
+export interface EquipmentCheckResult {
+  status: OverallStatus
+  failedChecks: EquipmentFailure[]
+  /** ISO 8601 do momento em que a rodada foi concluída. */
+  at: string
+}
 
 interface DeviceTestProps {
   userId: string
   onReady?: (status: OverallStatus) => void
+  /**
+   * Disparado uma vez por rodada quando o teste chega a um estado terminal
+   * (ok/warning/fail) com a sonda de rede concluída ou erro de dispositivo.
+   * Carrega o detalhe das falhas (camera/microphone/permission/bandwidth) para
+   * onboarding e lobby persistirem e orientarem correção.
+   */
+  onResult?: (result: EquipmentCheckResult) => void
 }
 
 /**
  * Componente de teste pre-aula: camera, microfone, audio de saida e rede.
  * Expoe status consolidado via onReady para o container habilitar o CTA.
  */
-export function DeviceTest({ userId, onReady }: DeviceTestProps) {
+export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
   const device = useDeviceCheck()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [network, setNetwork] = useState<ConnectivityResult | null>(null)
   const [networkChecking, setNetworkChecking] = useState(false)
   const [audioOutputOk, setAudioOutputOk] = useState<boolean | null>(null)
+  const lastReportedRef = useRef<string>('')
 
   useEffect(() => {
     if (videoRef.current && device.stream) {
@@ -50,6 +67,42 @@ export function DeviceTest({ userId, onReady }: DeviceTestProps) {
   useEffect(() => {
     onReady?.(overall)
   }, [overall, onReady])
+
+  // Detalha as falhas para onboarding/lobby. Classifica erro de dispositivo em
+  // permission vs camera ausente pela mensagem do hook (NotAllowed/NotFound).
+  const failedChecks: EquipmentFailure[] = (() => {
+    const failed: EquipmentFailure[] = []
+    const errMsg = device.error ?? ''
+    if (device.status === 'error') {
+      if (errMsg.includes('Permissao')) failed.push('permission')
+      else if (errMsg.includes('Nenhum dispositivo')) failed.push('camera')
+      else failed.push('camera')
+      return failed
+    }
+    if (!cameraOk) failed.push('camera')
+    if (!micOk) failed.push('microphone')
+    if (network && (!netOk || netWarn)) failed.push('bandwidth')
+    return failed
+  })()
+
+  // Reporta o resultado uma vez por estado terminal (sonda concluída OU erro).
+  const settled =
+    (overall === 'ok' || overall === 'warning' || overall === 'fail') &&
+    (network !== null || device.status === 'error')
+
+  useEffect(() => {
+    if (!onResult || !settled) return
+    const payload: EquipmentCheckResult = {
+      status: overall,
+      failedChecks,
+      at: new Date().toISOString(),
+    }
+    const fingerprint = `${payload.status}|${payload.failedChecks.join(',')}`
+    if (lastReportedRef.current === fingerprint) return
+    lastReportedRef.current = fingerprint
+    onResult(payload)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled, overall, failedChecks.join(','), onResult])
 
   async function handleStart() {
     await device.start()

@@ -14,6 +14,12 @@ const envSchema = z.object({
   HOCUSPOCUS_JWT_SECRET: z
     .string()
     .min(32, 'HOCUSPOCUS_JWT_SECRET deve ter no mínimo 32 caracteres'),
+  // Secret dedicado do token de entrada da sessão (§12.3). Opcional no schema
+  // para não quebrar o boot; o service exige presença (>=32) ao emitir (500).
+  SESSION_ENTRY_TOKEN_SECRET: z
+    .string()
+    .min(32, 'SESSION_ENTRY_TOKEN_SECRET deve ter no mínimo 32 caracteres')
+    .optional(),
   ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY deve ter no mínimo 32 caracteres'),
 
   // Stripe
