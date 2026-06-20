@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { AppError } from '@/lib/errors';
 import type { ManualCreditInput } from '@/schemas/credit.schema';
+import { creditConsumptionService } from '@/lib/credits/credit-consumption.service';
 
 /** Lote de créditos com saldo calculado — usado em getBreakdown e checkExpiring. */
 export interface BreakdownItem {
@@ -81,51 +82,7 @@ export class CreditService {
     userId: string,
     qty: number,
   ): Promise<{ consumed: number; batchIds: string[] } | null> {
-    if (qty === 0) return { consumed: 0, batchIds: [] };
-    if (qty < 0) throw new AppError('VAL_003', 'qty deve ser positivo', 400);
-
-    try {
-      return await prisma.$transaction(async (tx) => {
-        const batches = await tx.$queryRaw<
-          Array<{ id: string; totalCredits: number; usedCredits: number }>
-        >`
-          SELECT id, totalCredits, usedCredits
-          FROM credit_batches
-          WHERE userId = ${userId}
-            AND usedCredits < totalCredits
-            AND (expiresAt > NOW() OR expiresAt IS NULL)
-          ORDER BY
-            CASE WHEN expiresAt IS NULL THEN 1 ELSE 0 END ASC,
-            expiresAt ASC,
-            createdAt ASC
-          FOR UPDATE
-        `;
-
-        let remaining = qty;
-        const batchIds: string[] = [];
-
-        for (const batch of batches) {
-          if (remaining <= 0) break;
-          const available = Number(batch.totalCredits) - Number(batch.usedCredits);
-          const toConsume = Math.min(available, remaining);
-
-          await tx.$executeRaw`
-            UPDATE credit_batches SET usedCredits = usedCredits + ${toConsume} WHERE id = ${batch.id}
-          `;
-          batchIds.push(batch.id);
-          remaining -= toConsume;
-        }
-
-        if (remaining > 0) {
-          throw new AppError('CREDIT_050', 'Saldo de créditos insuficiente.', 400);
-        }
-
-        return { consumed: qty, batchIds };
-      });
-    } catch (err) {
-      if (err instanceof AppError && err.code === 'CREDIT_050') return null;
-      throw err;
-    }
+    return creditConsumptionService.consume(userId, qty);
   }
 
   /**

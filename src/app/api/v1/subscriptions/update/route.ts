@@ -6,11 +6,16 @@ import { requireAuth } from '@/lib/auth-guard';
 import { apiResponse } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
 import { SubscriptionStatus } from '@/lib/constants/enums';
+import {
+  financialIdempotencyService,
+  resolveRequestIdempotencyKey,
+} from '@/lib/billing/idempotency.service';
 
 const UpdateSubscriptionSchema = z.object({
   weeklyFrequency: z.number().int().min(1).max(5, {
     message: 'Frequência deve estar entre 1 e 5 aulas por semana.',
   }),
+  prorationDate: z.number().int().positive().optional(),
 });
 
 /** POST /api/v1/subscriptions/update — atualizar frequência semanal da assinatura */
@@ -45,15 +50,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await stripeService.updateSubscription(
-      subscription.stripeSubscriptionId,
-      parsed.data.weeklyFrequency,
+    const clientKey = resolveRequestIdempotencyKey(request.headers);
+
+    const { result: updated, idempotentReplay } = await financialIdempotencyService.run(
+      'subscription_update',
+      userId,
+      clientKey,
+      {
+        userId,
+        subscriptionId: subscription.id,
+        stripeSubscriptionId: subscription.stripeSubscriptionId,
+        weeklyFrequency: parsed.data.weeklyFrequency,
+        prorationDate: parsed.data.prorationDate,
+      },
+      async (idempotencyKey) => {
+        const updateOptions = parsed.data.prorationDate
+          ? { prorationDate: parsed.data.prorationDate }
+          : undefined;
+
+        if (updateOptions) {
+          await stripeService.updateSubscription(
+            subscription.stripeSubscriptionId,
+            parsed.data.weeklyFrequency,
+            idempotencyKey,
+            updateOptions,
+          );
+        } else {
+          await stripeService.updateSubscription(
+            subscription.stripeSubscriptionId,
+            parsed.data.weeklyFrequency,
+            idempotencyKey,
+          );
+        }
+
+        return prisma.subscription.findUnique({ where: { id: subscription.id } });
+      },
     );
 
-    const updated = await prisma.subscription.findUnique({ where: { id: subscription.id } });
-
     return NextResponse.json(
-      apiResponse(updated, null, 'Frequência atualizada com sucesso.'),
+      apiResponse(
+        { subscription: updated, idempotentReplay },
+        null,
+        idempotentReplay
+          ? 'Frequência atualizada anteriormente para esta Idempotency-Key.'
+          : 'Frequência atualizada com sucesso.',
+      ),
     );
   } catch (err) {
     if (err instanceof AppError) {

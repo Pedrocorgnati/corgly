@@ -2,6 +2,10 @@ import { prisma } from '@/lib/prisma';
 import { AppError } from '@/lib/errors';
 import { emailService } from '@/services/email.service';
 import { creditService } from '@/services/credit.service';
+import {
+  creditConsumptionService,
+  runSerializableCreditTransaction,
+} from '@/lib/credits/credit-consumption.service';
 import { EmailType, SupportedLanguage } from '@/types/enums';
 import { logger } from '@/lib/logger';
 import { SessionStatus } from '@/lib/constants/enums';
@@ -84,7 +88,7 @@ export class SessionService {
     let creditBatchId: string | null = null;
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await runSerializableCreditTransaction(async (tx) => {
         // Passo 1: Lock pessimista no slot
         const slots = await tx.$queryRaw<
           Array<{
@@ -145,10 +149,8 @@ export class SessionService {
           throw new Error('SLOT_UNAVAILABLE'); // race condition
         }
 
-        // Passo 5: Consumir crédito FEFO (fora da tx — creditService usa sua própria tx interna)
-        // Nota: creditService.consume tem sua própria $transaction com SELECT FOR UPDATE
-        // Executamos aqui dentro da tx externa; o Prisma aninha corretamente no MySQL
-        const creditResult = await creditService.consume(studentId, 1);
+        // Passo 5: Consumir crédito FEFO na mesma tx serializável da sessão.
+        const creditResult = await creditConsumptionService.consumeOrNullWithTx(tx, studentId, 1);
         if (!creditResult) {
           throw new Error('INSUFFICIENT_CREDITS');
         }

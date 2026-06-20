@@ -9,6 +9,9 @@ export interface ConnectivityResult {
   hasStun: boolean
   hasTurn: boolean
   durationMs: number
+  estimatedDownlinkMbps?: number
+  effectiveType?: string
+  bandwidthLow: boolean
   error?: string
 }
 
@@ -30,6 +33,7 @@ export async function runConnectivityCheck(
       hasStun: false,
       hasTurn: false,
       durationMs: 0,
+      bandwidthLow: false,
       error: 'RTCPeerConnection nao disponivel',
     }
   }
@@ -56,6 +60,7 @@ export async function runConnectivityCheck(
         hasStun: candidateTypes.includes('srflx'),
         hasTurn: candidateTypes.includes('relay'),
         durationMs: Date.now() - started,
+        ...readConnectionQuality(),
         ...partial,
       })
     }
@@ -101,4 +106,22 @@ function parseType(candidate: string): CandidateType {
   const m = /typ (host|srflx|prflx|relay)/.exec(candidate)
   if (!m) return 'unknown'
   return m[1] as CandidateType
+}
+
+function readConnectionQuality(): Pick<ConnectivityResult, 'estimatedDownlinkMbps' | 'effectiveType' | 'bandwidthLow'> {
+  const nav = navigator as Navigator & {
+    connection?: { downlink?: number; effectiveType?: string }
+  }
+  const downlink = nav.connection?.downlink
+  const effectiveType = nav.connection?.effectiveType
+  const bandwidthLow =
+    (typeof downlink === 'number' && downlink > 0 && downlink < 1.5) ||
+    effectiveType === 'slow-2g' ||
+    effectiveType === '2g'
+
+  return {
+    estimatedDownlinkMbps: typeof downlink === 'number' ? downlink : undefined,
+    effectiveType,
+    bandwidthLow,
+  }
 }

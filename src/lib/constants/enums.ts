@@ -46,6 +46,16 @@ export const PaymentStatus = {
 } as const;
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 
+export const RefundRequestStatus = {
+  PENDING: 'PENDING',
+  STRIPE_PROCESSING: 'STRIPE_PROCESSING',
+  STRIPE_FAILED: 'STRIPE_FAILED',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+export type RefundRequestStatus =
+  (typeof RefundRequestStatus)[keyof typeof RefundRequestStatus];
+
 export const SubscriptionStatus = {
   TRIAL: 'TRIAL',
   ACTIVE: 'ACTIVE',

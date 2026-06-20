@@ -4,6 +4,7 @@ import { apiResponse } from '@/lib/auth';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { withApiHandler } from '@/lib/api-handler';
 
+// ## Stripe webhook ingress
 export const config = {
   api: { bodyParser: false },
 };
@@ -11,7 +12,7 @@ export const config = {
 /** POST /api/v1/webhooks/stripe */
 export const POST = withApiHandler(async (request: NextRequest) => {
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-  const rl = checkRateLimit(`webhook:${ip}`, RATE_LIMITS.WEBHOOK);
+  const rl = await checkRateLimit(`webhook:${ip}`, RATE_LIMITS.WEBHOOK);
   if (!rl.allowed) {
     return NextResponse.json(apiResponse(null, 'Rate limit exceeded.'), { status: 429 });
   }

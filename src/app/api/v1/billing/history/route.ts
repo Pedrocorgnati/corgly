@@ -94,6 +94,8 @@ export async function GET(request: NextRequest) {
       currency: p.currency,
       status: p.status,
       receiptAvailable: p.status === PaymentStatus.SUCCEEDED,
+      refundEligible:
+        p.status === PaymentStatus.SUCCEEDED && Boolean(p.stripePaymentIntentId?.trim()),
     }));
 
     return NextResponse.json(apiResponse({ items: mapped, nextCursor }));

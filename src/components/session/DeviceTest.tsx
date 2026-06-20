@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useDeviceCheck } from '@/hooks/useDeviceCheck'
-import { getIceServers } from '@/lib/iceServers'
+import { API } from '@/lib/constants/routes'
 import {
   runConnectivityCheck,
   type ConnectivityResult,
 } from '@/lib/webrtc/connectivity-check'
+import type { IceServersConfig } from '@/types/sala-virtual'
 import type { EquipmentFailure } from '@/lib/equipment/last-check.client'
 
 export type OverallStatus = 'idle' | 'checking' | 'ok' | 'warning' | 'fail'
@@ -20,7 +21,6 @@ export interface EquipmentCheckResult {
 }
 
 interface DeviceTestProps {
-  userId: string
   onReady?: (status: OverallStatus) => void
   /**
    * Disparado uma vez por rodada quando o teste chega a um estado terminal
@@ -35,11 +35,12 @@ interface DeviceTestProps {
  * Componente de teste pre-aula: camera, microfone, audio de saida e rede.
  * Expoe status consolidado via onReady para o container habilitar o CTA.
  */
-export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
+export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
   const device = useDeviceCheck()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [network, setNetwork] = useState<ConnectivityResult | null>(null)
   const [networkChecking, setNetworkChecking] = useState(false)
+  const [networkError, setNetworkError] = useState<string | null>(null)
   const [audioOutputOk, setAudioOutputOk] = useState<boolean | null>(null)
   const lastReportedRef = useRef<string>('')
 
@@ -54,13 +55,14 @@ export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
     device.status === 'ok' && !!device.stream?.getAudioTracks().length && device.audioLevel > 0.01
   const netOk = network?.ok === true
   const netWarn = network != null && !network.hasTurn && network.ok
+  const bandwidthLow = network?.bandwidthLow === true
 
   const overall: OverallStatus = (() => {
     if (device.status === 'error') return 'fail'
     if (device.status === 'checking' || networkChecking) return 'checking'
     if (!cameraOk || !network) return 'idle'
     if (!netOk) return 'fail'
-    if (netWarn || !micOk) return 'warning'
+    if (netWarn || bandwidthLow || !micOk) return 'warning'
     return 'ok'
   })()
 
@@ -81,7 +83,7 @@ export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
     }
     if (!cameraOk) failed.push('camera')
     if (!micOk) failed.push('microphone')
-    if (network && (!netOk || netWarn)) failed.push('bandwidth')
+    if (network && (!netOk || bandwidthLow)) failed.push('bandwidth')
     return failed
   })()
 
@@ -107,10 +109,24 @@ export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
   async function handleStart() {
     await device.start()
     setNetworkChecking(true)
+    setNetworkError(null)
     try {
-      const ice = getIceServers(userId)
+      const ice = await fetchIceServers()
       const result = await runConnectivityCheck(ice, 10_000)
       setNetwork(result)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Nao foi possivel carregar a configuracao de rede.'
+      setNetworkError(message)
+      setNetwork({
+        ok: false,
+        timedOut: false,
+        candidateTypes: [],
+        hasStun: false,
+        hasTurn: false,
+        durationMs: 0,
+        bandwidthLow: false,
+        error: message,
+      })
     } finally {
       setNetworkChecking(false)
     }
@@ -240,6 +256,10 @@ export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
             <li>Candidates: {network.candidateTypes.join(', ') || 'nenhum'}</li>
             <li>STUN (srflx): {network.hasStun ? 'sim' : 'nao'}</li>
             <li>TURN (relay): {network.hasTurn ? 'sim' : 'nao — algumas redes corporativas podem falhar'}</li>
+            {typeof network.estimatedDownlinkMbps === 'number' && (
+              <li>Banda estimada: {network.estimatedDownlinkMbps.toFixed(1)} Mbps</li>
+            )}
+            {network.effectiveType && <li>Perfil de rede: {network.effectiveType}</li>}
             <li>Duracao: {network.durationMs} ms {network.timedOut && '(timeout)'}</li>
           </ul>
         ) : (
@@ -252,6 +272,11 @@ export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
       {device.error && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
           {device.error}
+        </div>
+      )}
+      {networkError && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          {networkError}
         </div>
       )}
 
@@ -276,6 +301,21 @@ export function DeviceTest({ userId, onReady, onResult }: DeviceTestProps) {
       </div>
     </div>
   )
+}
+
+async function fetchIceServers(): Promise<IceServersConfig[]> {
+  const res = await fetch(API.ICE_CONFIG, { method: 'GET' })
+  if (!res.ok) {
+    throw new Error('Nao foi possivel preparar o teste de rede. Tente novamente em instantes.')
+  }
+  const json = (await res.json()) as {
+    data?: { iceServers?: IceServersConfig[] }
+    error?: string | null
+  }
+  if (!Array.isArray(json.data?.iceServers)) {
+    throw new Error(json.error ?? 'Configuracao de rede invalida.')
+  }
+  return json.data.iceServers
 }
 
 function Badge({ state }: { state: 'ok' | 'warning' | 'fail' | 'checking' | 'idle' }) {

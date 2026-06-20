@@ -8,9 +8,15 @@ import { useTimezone } from '@/hooks/useTimezone';
 import { CalendarView } from '@/components/calendar/CalendarView';
 import { SlotPicker } from '@/components/calendar/SlotPicker';
 import { BookingConfirmModal } from '@/components/calendar/BookingConfirmModal';
+import { InsufficientCreditsGate } from '@/components/credits/InsufficientCreditsGate';
+import { ROUTES } from '@/lib/constants/routes';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 
-export function CalendarSchedule() {
+interface CalendarScheduleProps {
+  creditBalance: number;
+}
+
+export function CalendarSchedule({ creditBalance }: CalendarScheduleProps) {
   const router = useRouter();
   const {
     currentMonth,
@@ -29,8 +35,10 @@ export function CalendarSchedule() {
   const [showModal, setShowModal] = useState(false);
 
   const slotsForDate = selectedDate ? (slotsByDate[selectedDate] ?? []) : [];
+  const hasCredits = creditBalance > 0;
 
   const handleSelectSlot = (slot: AvailabilitySlot) => {
+    if (!hasCredits) return;
     setSelectedSlot((prev) => (prev?.id === slot.id ? null : slot));
   };
 
@@ -40,7 +48,7 @@ export function CalendarSchedule() {
   };
 
   const handleOpenModal = () => {
-    if (selectedSlot) setShowModal(true);
+    if (selectedSlot && hasCredits) setShowModal(true);
   };
 
   const handleCloseModal = () => {
@@ -69,7 +77,9 @@ export function CalendarSchedule() {
 
   return (
     <>
-      <div className="flex flex-col lg:flex-row gap-6">
+      {!hasCredits && <InsufficientCreditsGate balance={creditBalance} />}
+
+      <div className="flex flex-col gap-6 lg:flex-row">
         <CalendarView
           currentMonth={currentMonth}
           currentYear={currentYear}
@@ -84,14 +94,14 @@ export function CalendarSchedule() {
         <div className="flex flex-col gap-4">
           <SlotPicker
             slots={slotsForDate}
-            selectedSlotId={selectedSlot?.id ?? null}
+            selectedSlotId={hasCredits ? (selectedSlot?.id ?? null) : null}
             onSelectSlot={handleSelectSlot}
             studentTz={studentTz}
             isLoading={isLoading}
             selectedDate={selectedDate}
           />
 
-          {selectedSlot && (
+          {selectedSlot && hasCredits && (
             <Button onClick={handleOpenModal} className="w-full h-11">
               Confirmar horário
             </Button>

@@ -1,6 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import { emailService } from '@/services/email.service';
 import { creditService } from '@/services/credit.service';
+import {
+  creditConsumptionService,
+  runSerializableCreditTransaction,
+} from '@/lib/credits/credit-consumption.service';
 import { EmailType } from '@/lib/constants/enums';
 import type { ReminderSentAt } from '@/types/session.types';
 import { logger } from '@/lib/logger';
@@ -394,7 +398,7 @@ export class CronService {
         }
 
         // CAS + criar sessão na transação
-        await prisma.$transaction(async (tx) => {
+        await runSerializableCreditTransaction(async (tx) => {
           const slots = await tx.$queryRaw<Array<{ id: string; version: number }>>`
             SELECT id, version FROM availability_slots WHERE id = ${slot.id} FOR UPDATE
           `;
@@ -407,8 +411,8 @@ export class CronService {
           `;
           if (cas === 0) throw new Error('SLOT_RACE');
 
-          // Consumir crédito
-          const credit = await creditService.consume(pattern.studentId, 1);
+          // Consumir crédito na mesma tx serializável da sessão recorrente.
+          const credit = await creditConsumptionService.consumeOrNullWithTx(tx, pattern.studentId, 1);
           if (!credit) throw new Error('NO_CREDIT');
 
           await tx.session.create({

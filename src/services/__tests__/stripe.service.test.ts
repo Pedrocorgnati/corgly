@@ -10,6 +10,12 @@ const prismaMocks = vi.hoisted(() => {
     userUpdate: vi.fn(),
     subscriptionFindFirst: vi.fn(),
     subscriptionUpdateMany: vi.fn(),
+    paymentUpdateMany: vi.fn(),
+    stripeWebhookEventFindUnique: vi.fn(),
+    stripeWebhookEventCreate: vi.fn(),
+    stripeWebhookEventUpdate: vi.fn(),
+    stripeWebhookEventFindMany: vi.fn(),
+    stripeWebhookEventCount: vi.fn(),
     transaction: vi.fn(),
   };
 });
@@ -19,6 +25,14 @@ vi.mock('@/lib/prisma', () => ({
     payment: {
       findUnique: prismaMocks.paymentFindUnique,
       create: prismaMocks.paymentCreate,
+      updateMany: prismaMocks.paymentUpdateMany,
+    },
+    stripeWebhookEvent: {
+      findUnique: prismaMocks.stripeWebhookEventFindUnique,
+      create: prismaMocks.stripeWebhookEventCreate,
+      update: prismaMocks.stripeWebhookEventUpdate,
+      findMany: prismaMocks.stripeWebhookEventFindMany,
+      count: prismaMocks.stripeWebhookEventCount,
     },
     creditBatch: {
       create: prismaMocks.creditBatchCreate,
@@ -53,6 +67,13 @@ describe('StripeService.handleWebhook', () => {
   beforeEach(() => {
     service = new StripeService();
     vi.clearAllMocks();
+    prismaMocks.stripeWebhookEventFindUnique.mockResolvedValue(null);
+    prismaMocks.stripeWebhookEventCreate.mockImplementation(async ({ data }) =>
+      webhookEventRecord(data),
+    );
+    prismaMocks.stripeWebhookEventUpdate.mockImplementation(async ({ data }) =>
+      webhookEventRecord({ ...data, status: data.status ?? 'PROCESSED' }),
+    );
   });
 
   // Caso 1: assinatura inválida → lança erro (capturado pela route como 400 PAYMENT_001)
@@ -126,6 +147,26 @@ describe('StripeService.handleWebhook', () => {
     expect(prismaMocks.transaction).not.toHaveBeenCalled();
   });
 
+  it('caso 3b: event.id já processado → replay idempotente sem handlers financeiros', async () => {
+    const mockEvent = {
+      id: 'evt_processed',
+      type: 'checkout.session.completed',
+      data: { object: { metadata: {} } },
+    };
+
+    stripeMocks.webhooksConstructEvent.mockReturnValue(mockEvent);
+    prismaMocks.stripeWebhookEventFindUnique.mockResolvedValue(
+      webhookEventRecord({ eventId: 'evt_processed', type: 'checkout.session.completed', status: 'PROCESSED' }),
+    );
+
+    await service.handleWebhook(Buffer.from('{}'), 'valid-sig');
+
+    expect(prismaMocks.paymentFindUnique).not.toHaveBeenCalled();
+    expect(prismaMocks.transaction).not.toHaveBeenCalled();
+    expect(prismaMocks.stripeWebhookEventCreate).not.toHaveBeenCalled();
+    expect(prismaMocks.stripeWebhookEventUpdate).not.toHaveBeenCalled();
+  });
+
   // Caso 4: evento não reconhecido → 200 silencioso (sem erro)
   it('caso 4: evento não tratado → não lança erro (200 silencioso)', async () => {
     const mockEvent = {
@@ -137,6 +178,9 @@ describe('StripeService.handleWebhook', () => {
     stripeMocks.webhooksConstructEvent.mockReturnValue(mockEvent);
 
     await expect(service.handleWebhook(Buffer.from('{}'), 'valid-sig')).resolves.toBeUndefined();
+    expect(prismaMocks.stripeWebhookEventUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'IGNORED' }) }),
+    );
   });
 
   // Caso adicional: isFirstPurchase=true (PROMO) → user.isFirstPurchase = false
@@ -174,3 +218,21 @@ describe('StripeService.handleWebhook', () => {
     );
   });
 });
+
+function webhookEventRecord(overrides: Record<string, unknown> = {}) {
+  const now = new Date('2026-06-18T20:30:00.000Z');
+  return {
+    id: 'swe-1',
+    eventId: overrides.eventId ?? 'evt_test_001',
+    type: overrides.type ?? 'checkout.session.completed',
+    status: overrides.status ?? 'RECEIVED',
+    payload: overrides.payload ?? null,
+    rawPayload: overrides.rawPayload ?? '{}',
+    errorMessage: overrides.errorMessage ?? null,
+    processedAt: overrides.processedAt ?? null,
+    lastReplayAt: overrides.lastReplayAt ?? null,
+    replayCount: overrides.replayCount ?? 0,
+    createdAt: overrides.createdAt ?? now,
+    updatedAt: overrides.updatedAt ?? now,
+  };
+}

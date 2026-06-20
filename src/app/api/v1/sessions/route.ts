@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SessionStatus as PrismaSessionStatus } from '@prisma/client';
 import { BookSessionSchema } from '@/schemas/session.schema';
 import { sessionService } from '@/services/session.service';
 import { apiResponse } from '@/lib/auth';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { AppError } from '@/lib/errors';
+import {
+  bookingIdempotencyService,
+  BookingConflictError,
+} from '@/lib/bookings/booking-idempotency.service';
 
 /** GET /api/v1/sessions */
 export async function GET(request: NextRequest) {
   const userId = request.headers.get('x-user-id')!;
   const role = request.headers.get('x-user-role')!;
   const { searchParams } = request.nextUrl;
-  const status = searchParams.get('status') ?? undefined;
+  const rawStatus = searchParams.get('status');
+  const status =
+    rawStatus && Object.values(PrismaSessionStatus).includes(rawStatus as PrismaSessionStatus)
+      ? (rawStatus as PrismaSessionStatus)
+      : undefined;
 
   try {
     const page = Number(searchParams.get('page') ?? '1');
@@ -32,7 +42,7 @@ export async function GET(request: NextRequest) {
 /** POST /api/v1/sessions — book a session */
 export async function POST(request: NextRequest) {
   const userId = request.headers.get('x-user-id')!;
-  const rl = checkRateLimit(`sessions:${userId}`, RATE_LIMITS.SESSIONS_CREATE);
+  const rl = await checkRateLimit(`sessions:${userId}`, RATE_LIMITS.SESSIONS_CREATE);
   if (!rl.allowed) {
     return NextResponse.json(
       apiResponse(null, 'Muitas tentativas. Aguarde 1 minuto.'),
@@ -50,9 +60,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await sessionService.create(userId, parsed.data);
-    return NextResponse.json(apiResponse(session, null, 'Aula agendada com sucesso.'), { status: 201 });
+    const result = await bookingIdempotencyService.lockAndBook(
+      userId,
+      parsed.data,
+      request.headers.get('idempotency-key'),
+    );
+    return NextResponse.json(
+      apiResponse(result.session, null, result.idempotentReplay ? 'Reserva já processada.' : 'Aula agendada com sucesso.'),
+      { status: result.idempotentReplay ? 200 : 201 },
+    );
   } catch (err: unknown) {
+    if (err instanceof BookingConflictError) {
+      return NextResponse.json(
+        apiResponse(
+          { alternatives: err.alternatives },
+          err.message,
+          'Escolha um dos horários alternativos disponíveis.',
+        ),
+        { status: err.status },
+      );
+    }
+    if (err instanceof AppError) {
+      return NextResponse.json(apiResponse(null, err.message), { status: err.status });
+    }
     if (err instanceof Error) {
       if (err.message === 'INSUFFICIENT_CREDITS')
         return NextResponse.json(apiResponse(null, 'Créditos insuficientes.'), { status: 400 });

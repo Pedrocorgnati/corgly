@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import { CalendarSchedule } from '@/components/student/calendar-schedule';
 import { PageWrapper } from '@/components/shared';
+import { getAuthUser } from '@/lib/data/auth';
 
 export const metadata: Metadata = {
   title: 'Agendar Aula',
 };
 
-export default function SchedulePage() {
+export default async function SchedulePage() {
+  const user = await getAuthUser();
+
   return (
     <PageWrapper className="max-w-5xl">
       <div className="mb-6">
@@ -15,7 +18,7 @@ export default function SchedulePage() {
           Horários em {Intl.DateTimeFormat().resolvedOptions().timeZone}
         </p>
       </div>
-      <CalendarSchedule />
+      <CalendarSchedule creditBalance={user?.creditBalance ?? 0} />
     </PageWrapper>
   );
 }

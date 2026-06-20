@@ -10,20 +10,21 @@ import { ROUTES } from '@/lib/constants/routes';
 export default function OnboardingPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const userId = user?.id;
   const [isCompleting, setIsCompleting] = useState(false);
 
   const handleComplete = useCallback(async () => {
-    if (!user?.id || isCompleting) return;
+    if (!userId || isCompleting) return;
 
     setIsCompleting(true);
     try {
-      await completeOnboarding(user.id);
-      router.push(ROUTES.CREDITS);
+      await completeOnboarding(userId);
+      router.push(ROUTES.ONBOARDING_EQUIPMENT);
     } catch {
       // Allow retry on failure
       setIsCompleting(false);
     }
-  }, [user?.id, isCompleting, router]);
+  }, [userId, isCompleting, router]);
 
   const handleSkip = useCallback(() => {
     router.push(ROUTES.DASHBOARD);

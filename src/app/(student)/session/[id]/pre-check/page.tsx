@@ -3,12 +3,10 @@
 import { useCallback, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { DeviceTest, type OverallStatus } from '@/components/session/DeviceTest'
-import { useAuth } from '@/hooks/useAuth'
 
 export default function PreCheckPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
-  const { user } = useAuth()
   const [status, setStatus] = useState<OverallStatus>('idle')
   const [confirmedWarning, setConfirmedWarning] = useState(false)
 
@@ -30,7 +28,7 @@ export default function PreCheckPage() {
         </p>
       </header>
 
-      <DeviceTest userId={user?.id ?? 'anonymous'} onReady={setStatus} />
+      <DeviceTest onReady={setStatus} />
 
       {status === 'warning' && (
         <label className="mt-6 flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">

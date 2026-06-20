@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo, useSyncExternalStore, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { DeviceTest, type EquipmentCheckResult, type OverallStatus } from '@/components/session/DeviceTest'
-import { useAuth } from '@/hooks/useAuth'
 import {
   EQUIPMENT_FAILURE_LABEL,
-  readLastEquipmentCheck,
+  parseLastEquipmentCheck,
+  readLastEquipmentCheckRaw,
   writeLastEquipmentCheck,
   type LastEquipmentCheck,
 } from '@/lib/equipment/last-check.client'
@@ -20,20 +20,20 @@ import {
 export default function SessionLobbyPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
-  const { user } = useAuth()
   const sessionId = params?.id
 
-  const [lastCheck, setLastCheck] = useState<LastEquipmentCheck | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const storedCheckRaw = useSyncExternalStore(
+    subscribeLastCheck,
+    readLastEquipmentCheckRaw,
+    () => null,
+  )
+  const storedCheck = useMemo(() => parseLastEquipmentCheck(storedCheckRaw), [storedCheckRaw])
+  const [lastCheckOverride, setLastCheckOverride] = useState<LastEquipmentCheck | null>(null)
   const [showTest, setShowTest] = useState(false)
   const [liveStatus, setLiveStatus] = useState<OverallStatus>('idle')
   const [confirmedWarning, setConfirmedWarning] = useState(false)
-
-  // Leitura client-only do último check persistido.
-  useEffect(() => {
-    setLastCheck(readLastEquipmentCheck())
-    setLoaded(true)
-  }, [])
+  const [saveWarning, setSaveWarning] = useState<string | null>(null)
+  const lastCheck = lastCheckOverride ?? storedCheck
 
   const effectiveStatus: OverallStatus = showTest
     ? liveStatus
@@ -50,8 +50,12 @@ export default function SessionLobbyPage() {
         at: r.at,
         sessionId: sessionId ?? undefined,
       }
-      writeLastEquipmentCheck(next)
-      setLastCheck(next)
+      setSaveWarning(
+        writeLastEquipmentCheck(next)
+          ? null
+          : 'Resultado válido nesta sessão. O navegador bloqueou o armazenamento local.',
+      )
+      setLastCheckOverride(next)
     },
     [sessionId],
   )
@@ -70,7 +74,7 @@ export default function SessionLobbyPage() {
         </p>
       </header>
 
-      {loaded && !showTest && (
+      {!showTest && (
         <section className="rounded-lg border bg-card p-4">
           {lastCheck ? (
             <div className="space-y-3">
@@ -117,7 +121,6 @@ export default function SessionLobbyPage() {
       {showTest && (
         <section className="space-y-6">
           <DeviceTest
-            userId={user?.id ?? 'anonymous'}
             onReady={setLiveStatus}
             onResult={handleResult}
           />
@@ -163,10 +166,16 @@ export default function SessionLobbyPage() {
       </div>
 
       <p className="mt-6 text-xs text-muted-foreground" aria-live="polite">
-        Status atual: <span className="font-medium uppercase">{effectiveStatus}</span>
+        {saveWarning
+          ? saveWarning
+          : <>Status atual: <span className="font-medium uppercase">{effectiveStatus}</span></>}
       </p>
     </main>
   )
+}
+
+function subscribeLastCheck() {
+  return () => {}
 }
 
 function formatWhen(iso: string): string {

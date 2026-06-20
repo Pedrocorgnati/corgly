@@ -27,6 +27,8 @@ export interface LastEquipmentCheck {
 }
 
 const STORAGE_KEY = 'corgly:last-equipment-check';
+const VALID_STATUSES = new Set<EquipmentStatus>(['idle', 'checking', 'ok', 'warning', 'fail']);
+const VALID_FAILURES = new Set<EquipmentFailure>(['camera', 'microphone', 'permission', 'bandwidth']);
 
 /**
  * Lê o último check persistido. Retorna null em SSR, quando ausente ou quando o
@@ -35,17 +37,43 @@ const STORAGE_KEY = 'corgly:last-equipment-check';
 export function readLastEquipmentCheck(): LastEquipmentCheck | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    return parseLastEquipmentCheck(window.localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+/** Snapshot estavel para useSyncExternalStore. */
+export function readLastEquipmentCheckRaw(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function parseLastEquipmentCheck(raw: string | null): LastEquipmentCheck | null {
+  if (!raw) return null;
+  try {
     const parsed = JSON.parse(raw) as Partial<LastEquipmentCheck>;
-    if (!parsed || typeof parsed.status !== 'string' || typeof parsed.at !== 'string') {
+    if (
+      !parsed ||
+      typeof parsed.status !== 'string' ||
+      !VALID_STATUSES.has(parsed.status as EquipmentStatus) ||
+      typeof parsed.at !== 'string' ||
+      Number.isNaN(Date.parse(parsed.at))
+    ) {
       return null;
     }
+    const failedChecks = Array.isArray(parsed.failedChecks)
+      ? parsed.failedChecks.filter((value): value is EquipmentFailure =>
+          typeof value === 'string' && VALID_FAILURES.has(value as EquipmentFailure),
+        )
+      : [];
     return {
-      status: parsed.status as EquipmentStatus,
-      failedChecks: Array.isArray(parsed.failedChecks)
-        ? (parsed.failedChecks as EquipmentFailure[])
-        : [],
+      status: parsed.status,
+      failedChecks,
       at: parsed.at,
       sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : undefined,
     };
@@ -54,13 +82,14 @@ export function readLastEquipmentCheck(): LastEquipmentCheck | null {
   }
 }
 
-/** Grava o último check. No-op silencioso em SSR ou quota excedida. */
-export function writeLastEquipmentCheck(value: LastEquipmentCheck): void {
-  if (typeof window === 'undefined') return;
+/** Grava o último check. Retorna false em SSR ou quando o browser bloqueia storage. */
+export function writeLastEquipmentCheck(value: LastEquipmentCheck): boolean {
+  if (typeof window === 'undefined') return false;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    return true;
   } catch {
-    // Quota/serialização — ignora; persistência é best-effort.
+    return false;
   }
 }
 

@@ -1,0 +1,380 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum SessionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED_BY_STUDENT
+  CANCELLED_BY_ADMIN
+  NO_SHOW_STUDENT
+  NO_SHOW_ADMIN
+  INTERRUPTED
+  RESCHEDULE_PENDING
+}
+
+enum CreditType {
+  SINGLE
+  PACK_5
+  PACK_10
+  MONTHLY
+  PROMO
+  MANUAL
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  PAUSED
+  TRIAL
+}
+
+enum SupportedLanguage {
+  PT_BR
+  EN_US
+  ES_ES
+  IT_IT
+}
+
+enum CreditEventType {
+  PURCHASE
+  CONSUMED
+  REFUNDED
+  EXPIRED
+  MANUAL_ADJUSTMENT
+}
+
+enum EmailType {
+  CONFIRM_EMAIL
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REMINDER_24H
+  BOOKING_REMINDER_1H
+  PASSWORD_RESET
+  CREDIT_EXPIRY_WARNING
+  PAYMENT_RECEIPT
+  SUBSCRIPTION_CANCELLED
+  BULK_CANCEL_NOTIFICATION
+  PURCHASE_CONFIRMED
+  SUBSCRIPTION_PAYMENT_FAILED
+  SESSION_INTERRUPTED
+  RECURRING_BOOKING_FAILED
+  ACCOUNT_DELETION_REQUESTED
+  DATA_EXPORT_READY
+  BOOKING_RESCHEDULED
+}
+
+enum PackageType {
+  SINGLE
+  PACK_5
+  PACK_10
+}
+
+enum ContentType {
+  VIDEO
+  ARTICLE
+}
+
+model User {
+  id                   String            @id @default(uuid())
+  email                String            @unique
+  passwordHash         String
+  name                 String
+  role                 UserRole          @default(STUDENT)
+  country              String?
+  timezone             String
+  emailConfirmed       Boolean           @default(false)
+  emailConfirmToken    String?
+  emailConfirmExpires  DateTime?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  maxFutureSessions    Int               @default(5)
+  isFirstPurchase      Boolean           @default(true)
+  preferredLanguage    SupportedLanguage @default(EN_US)
+  onboardingCompletedAt DateTime?
+  termsAcceptedAt      DateTime?
+  termsVersion         String            @default("1.0") @db.VarChar(10)
+  marketingOptIn       Boolean           @default(false)
+  deletionRequestedAt  DateTime?
+  tokenVersion         Int               @default(0)
+  lastLoginAt                   DateTime?
+  deletionCancellationToken     String?
+  deletionCancellationExpires   DateTime?
+  stripeCustomerId     String?           @unique
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  creditBatches      CreditBatch[]
+  sessions           Session[]
+  payments           Payment[]
+  subscriptions      Subscription[]
+  recurringPatterns  RecurringPattern[]
+  cookieConsents     CookieConsent[]
+  feedbacksAsAdmin   Feedback[]         @relation("FeedbackAdmin")
+
+  @@index([role])
+  @@index([emailConfirmToken])
+  @@index([resetPasswordToken])
+  @@index([deletionRequestedAt])
+  @@map("users")
+}
+
+model CreditBatch {
+  id                    String     @id @default(uuid())
+  userId                String
+  type                  CreditType
+  totalCredits          Int
+  usedCredits           Int        @default(0)
+  expiresAt             DateTime?
+  stripePaymentIntentId String?    @unique
+  reason                String?    @db.VarChar(500)
+  lastExpiryEmailSent   DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  sessions Session[]
+  payment  Payment?
+
+  @@index([userId, expiresAt])
+  @@map("credit_batches")
+}
+
+model AvailabilitySlot {
+  id        String   @id @default(uuid())
+  startAt   DateTime @unique // UNIQUE_slot_startAt — um slot por horário
+  endAt     DateTime
+  isBlocked Boolean  @default(false)
+  version   Int      @default(0) // lock otimista CAS
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+
+  @@index([startAt, isBlocked], name: "IDX_availability_startAt_isBlocked")
+  @@map("availability_slots")
+}
+
+model RecurringPattern {
+  id        String   @id @default(uuid())
+  studentId String
+  dayOfWeek Int
+  startTime String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student  User      @relation(fields: [studentId], references: [id])
+  sessions Session[]
+
+  @@index([studentId, isActive])
+  @@map("recurring_patterns")
+}
+
+model Session {
+  id                      String        @id @default(uuid())
+  studentId               String
+  availabilitySlotId      String        @unique // UNIQUE_session_slot — um slot por sessão
+  startAt                 DateTime
+  endAt                   DateTime
+  status                  SessionStatus @default(SCHEDULED)
+  creditBatchId           String?
+  isRecurring             Boolean       @default(false)
+  recurringPatternId      String?
+  cancelledAt             DateTime?
+  cancelledBy             UserRole?
+  completedAt             DateTime?
+  interruptedAt           DateTime?
+  extendedBy              Int?
+  reminderSentAt          Json?         // { "24h": ISO, "1h": ISO } — idempotência do cron
+  rescheduleRequestSlotId String?       // slot proposto em RESCHEDULE_PENDING
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  student          User              @relation(fields: [studentId], references: [id])
+  availabilitySlot AvailabilitySlot  @relation(fields: [availabilitySlotId], references: [id])
+  creditBatch      CreditBatch?      @relation(fields: [creditBatchId], references: [id])
+  recurringPattern RecurringPattern? @relation(fields: [recurringPatternId], references: [id])
+  feedback         Feedback?
+  document         SessionDocument?
+
+  @@index([studentId, status])
+  @@index([startAt])
+  @@index([status])
+  @@map("sessions")
+}
+
+model Feedback {
+  id                  String    @id @default(uuid())
+  sessionId           String    @unique
+  listeningScore      Int
+  speakingScore       Int
+  writingScore        Int
+  vocabularyScore     Int
+  overallFeedback     String?   @db.Text
+  listeningFeedback   String?   @db.Text
+  speakingFeedback    String?   @db.Text
+  writingFeedback     String?   @db.Text
+  vocabularyFeedback  String?   @db.Text
+  adminId             String?
+  privateNote         String?   @db.Text
+  reviewed            Boolean   @default(false)
+  reviewedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id])
+  admin   User?   @relation("FeedbackAdmin", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@map("feedbacks")
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  userId                String
+  stripePaymentIntentId String        @unique
+  stripeEventId         String?       @unique
+  amount                Int
+  currency              String        @default("usd")
+  status                PaymentStatus
+  creditBatchId         String?       @unique
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id])
+  creditBatch CreditBatch? @relation(fields: [creditBatchId], references: [id])
+
+  @@index([userId])
+  @@map("payments")
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String
+  stripeSubscriptionId String             @unique
+  status               SubscriptionStatus
+  weeklyFrequency      Int
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelledAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+model SessionDocument {
+  id                String   @id @default(uuid())
+  sessionId         String   @unique
+  yjsState          Bytes?   @db.LongBlob
+  plainTextSnapshot String?  @db.LongText
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@map("session_documents")
+}
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+model Content {
+  id          String            @id @default(uuid())
+  title       String
+  type        ContentType
+  youtubeUrl  String?           @db.VarChar(500)
+  description String?           @db.Text
+  transcript  String?           @db.Text
+  language    SupportedLanguage
+  isPublished Boolean           @default(false)
+  sortOrder   Int               @default(0)
+  status      ContentStatus     @default(DRAFT)
+  category    String?           @db.VarChar(80)
+  publishedAt DateTime?
+  authorId    String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  translations ContentTranslation[]
+
+  @@index([isPublished, sortOrder])
+  @@index([status, publishedAt])
+  @@map("contents")
+}
+
+model ContentTranslation {
+  id         String            @id @default(uuid())
+  contentId  String
+  locale     SupportedLanguage
+  title      String
+  slug       String            @db.VarChar(200)
+  excerpt    String?           @db.Text
+  body       String            @db.LongText
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, locale])
+  @@unique([locale, slug])
+  @@index([locale])
+  @@map("content_translations")
+}
+
+model CookieConsent {
+  id                 String   @id @default(uuid())
+  userId             String?
+  sessionFingerprint String?
+  essentialAccepted  Boolean  @default(true)
+  analyticsAccepted  Boolean  @default(false)
+  marketingAccepted  Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("cookie_consents")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  adminId      String
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@map("audit_logs")
+}

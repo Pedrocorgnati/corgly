@@ -81,7 +81,7 @@ export function NextSessionCard({ session, canEnter = true }: NextSessionCardPro
           Cancelar
         </Button>
         {canEnter ? (
-          <Link href={ROUTES.SESSION(session.sessionId)} className={cn(buttonVariants({ size: 'sm' }), 'flex-1')}>
+          <Link href={ROUTES.SESSION_LOBBY(session.sessionId)} className={cn(buttonVariants({ size: 'sm' }), 'flex-1')}>
             Entrar &rarr;
           </Link>
         ) : (

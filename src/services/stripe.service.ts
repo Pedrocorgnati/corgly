@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import type { Prisma, StripeWebhookEvent } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getStripe } from '@/lib/stripe';
 import { AppError } from '@/lib/errors';
@@ -7,8 +8,31 @@ import type { CreateCheckoutInput, CreateSubscriptionCheckoutInput } from '@/sch
 import { SubscriptionStatus } from '@/lib/constants/enums';
 import { resolvePrice, toStripeCurrency } from '@/lib/pricing/config';
 import type { Currency } from '@/lib/currency';
+import {
+  calculateSubscriptionMonthlyAmountCents,
+  stripeCurrencyToCurrency,
+} from '@/lib/billing/subscription-pricing';
 
 const CREDIT_EXPIRY_6M_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+const WEBHOOK_TERMINAL_STATUSES = new Set(['PROCESSED', 'IGNORED']);
+
+export interface StripeWebhookEventDTO {
+  id: string;
+  eventId: string;
+  type: string;
+  status: string;
+  errorMessage: string | null;
+  processedAt: string | null;
+  lastReplayAt: string | null;
+  replayCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StripeWebhookReplayResult {
+  event: StripeWebhookEventDTO;
+  idempotentReplay: boolean;
+}
 
 export class StripeService {
   // ─── Checkout ──────────────────────────────────────────────────────────────
@@ -95,9 +119,8 @@ export class StripeService {
     });
 
     // Bloquear assinatura duplicada ativa
-    const activeSub = user.subscriptions.find((s) =>
-      [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL].includes(s.status as typeof SubscriptionStatus[keyof typeof SubscriptionStatus]),
-    );
+    const activeStates: string[] = [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL];
+    const activeSub = user.subscriptions.find((s) => activeStates.includes(s.status));
     if (activeSub) {
       throw new AppError('PAYMENT_050', 'Usuário já possui assinatura ativa.', 409);
     }
@@ -114,12 +137,12 @@ export class StripeService {
       await prisma.user.update({ where: { id: userId }, data: { stripeCustomerId } });
     }
 
-    // Calcular preço em USD base e converter para a moeda escolhida (fator simples).
     // O priceId nao e usado aqui porque a assinatura e variavel (frequencia 1..5).
     const currency: Currency = data.currency ?? 'USD';
-    const FX: Record<Currency, number> = { USD: 1, USDC: 1, EUR: 0.92, BRL: 5.0 };
-    const baseUsdCents = Math.ceil(data.weeklyFrequency * 16 * 4.33 * 100);
-    const monthlyAmountCents = Math.ceil(baseUsdCents * FX[currency]);
+    const monthlyAmountCents = calculateSubscriptionMonthlyAmountCents(
+      data.weeklyFrequency,
+      currency,
+    );
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -168,6 +191,8 @@ export class StripeService {
   async updateSubscription(
     stripeSubscriptionId: string,
     newWeeklyFrequency: number,
+    idempotencyKey?: string | null,
+    options: { prorationDate?: number } = {},
   ): Promise<void> {
     if (newWeeklyFrequency < 1 || newWeeklyFrequency > 5) {
       throw new AppError('VAL_003', 'weeklyFrequency deve estar entre 1 e 5.', 400);
@@ -177,27 +202,43 @@ export class StripeService {
 
     // Buscar assinatura atual para obter o item ID
     const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-    const itemId = stripeSub.items.data[0]?.id;
-    if (!itemId) throw new AppError('SYS_001', 'Item de assinatura não encontrado.', 500);
+    const subscriptionItem = stripeSub.items.data[0];
+    if (!subscriptionItem) throw new AppError('SYS_001', 'Item de assinatura não encontrado.', 500);
 
-    const monthlyAmountCents = Math.ceil(newWeeklyFrequency * 16 * 4.33 * 100);
+    const product = subscriptionItem.price.product;
+    const productId = typeof product === 'string'
+      ? product
+      : product && !product.deleted
+        ? product.id
+        : null;
+    if (!productId) throw new AppError('PAYMENT_083', 'Produto da assinatura não encontrado no Stripe.', 500);
 
-    await stripe.subscriptions.update(stripeSubscriptionId, {
-      proration_behavior: 'create_prorations',
-      items: [
-        {
-          id: itemId,
-          price_data: {
-            currency: 'usd',
-            unit_amount: monthlyAmountCents,
-            recurring: { interval: 'month' },
-            product_data: {
-              name: `Corgly — ${newWeeklyFrequency}× por semana`,
+    const currentCurrency = stripeCurrencyToCurrency(subscriptionItem.price.currency);
+    const monthlyAmountCents = calculateSubscriptionMonthlyAmountCents(
+      newWeeklyFrequency,
+      currentCurrency,
+    );
+
+    await stripe.subscriptions.update(
+      stripeSubscriptionId,
+      {
+        proration_behavior: 'create_prorations',
+        proration_date: options.prorationDate,
+        items: [
+          {
+            id: subscriptionItem.id,
+            price_data: {
+              currency: toStripeCurrency(currentCurrency),
+              unit_amount: monthlyAmountCents,
+              recurring: { interval: 'month' },
+              product: productId,
+              tax_behavior: subscriptionItem.price.tax_behavior ?? undefined,
             },
           },
-        },
-      ],
-    });
+        ],
+      },
+      idempotencyKey ? { idempotencyKey } : undefined,
+    );
 
     // Atualizar frequência no banco
     await prisma.subscription.updateMany({
@@ -208,32 +249,140 @@ export class StripeService {
 
   // ─── Webhook ───────────────────────────────────────────────────────────────
 
-  /** Roteador de webhooks Stripe — valida assinatura e delega por tipo de evento. */
+  /** Roteador de webhooks Stripe: valida assinatura antes de qualquer parsing confiavel. */
   async handleWebhook(rawBody: Buffer, signature: string): Promise<void> {
     const event = this.constructEvent(rawBody, signature);
+    await this.processWebhookEvent(event, rawBody.toString('utf8'), false);
+  }
 
+  async listWebhookEvents(status?: string): Promise<{ items: StripeWebhookEventDTO[]; total: number }> {
+    const where = status ? { status: status as never } : undefined;
+    const [items, total] = await Promise.all([
+      prisma.stripeWebhookEvent.findMany({
+        where,
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 50,
+      }),
+      prisma.stripeWebhookEvent.count({ where }),
+    ]);
+
+    return { items: items.map(toWebhookDTO), total };
+  }
+
+  async replayWebhookEvent(eventId: string): Promise<StripeWebhookReplayResult> {
+    const stored = await prisma.stripeWebhookEvent.findUnique({ where: { eventId } });
+    if (!stored) {
+      throw new AppError('PAYMENT_070', 'Evento Stripe não encontrado.', 404);
+    }
+    if (stored.status === 'PROCESSING') {
+      throw new AppError('PAYMENT_071', 'Evento Stripe já está em processamento.', 409);
+    }
+    if (!stored.payload || typeof stored.payload !== 'object') {
+      throw new AppError('PAYMENT_072', 'Payload do evento Stripe indisponível para replay.', 409);
+    }
+
+    const event = stored.payload as unknown as Stripe.Event;
+    if (!event.id || !event.type || !event.data) {
+      throw new AppError('PAYMENT_073', 'Payload do evento Stripe está inválido para replay.', 409);
+    }
+
+    return this.processWebhookEvent(event, stored.rawPayload ?? null, true);
+  }
+
+  private async processWebhookEvent(
+    event: Stripe.Event,
+    rawPayload: string | null,
+    replay: boolean,
+  ): Promise<StripeWebhookReplayResult> {
+    const existing = await prisma.stripeWebhookEvent.findUnique({
+      where: { eventId: event.id },
+    });
+
+    if (existing && WEBHOOK_TERMINAL_STATUSES.has(existing.status) && !replay) {
+      return { event: toWebhookDTO(existing), idempotentReplay: true };
+    }
+
+    const stored =
+      existing ??
+      (await prisma.stripeWebhookEvent.create({
+        data: {
+          eventId: event.id,
+          type: event.type,
+          status: 'RECEIVED',
+          rawPayload,
+          payload: event as unknown as Prisma.InputJsonValue,
+        },
+      }));
+
+    await prisma.stripeWebhookEvent.update({
+      where: { id: stored.id },
+      data: {
+        status: 'PROCESSING',
+        type: event.type,
+        rawPayload: rawPayload ?? stored.rawPayload,
+        payload: event as unknown as Prisma.InputJsonValue,
+        errorMessage: null,
+        ...(replay ? { lastReplayAt: new Date(), replayCount: { increment: 1 } } : {}),
+      },
+    });
+
+    try {
+      const handled = await this.dispatchWebhookEvent(event);
+      const updated = await prisma.stripeWebhookEvent.update({
+        where: { id: stored.id },
+        data: {
+          status: handled ? 'PROCESSED' : 'IGNORED',
+          processedAt: new Date(),
+          errorMessage: null,
+        },
+      });
+
+      return { event: toWebhookDTO(updated), idempotentReplay: false };
+    } catch (error) {
+      await prisma.stripeWebhookEvent.update({
+        where: { id: stored.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: errorToMessage(error),
+        },
+      });
+      throw error;
+    }
+  }
+
+  private async dispatchWebhookEvent(event: Stripe.Event): Promise<boolean> {
     switch (event.type) {
       case 'checkout.session.completed':
         await this.onCheckoutCompleted(
           event.data.object as Stripe.Checkout.Session,
           event.id,
         );
-        break;
+        return true;
+      case 'invoice.payment_succeeded':
       case 'invoice.paid':
         await this.onInvoicePaid(event.data.object as Stripe.Invoice, event.id);
-        break;
+        return true;
       case 'customer.subscription.updated':
         await this.onSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
+        return true;
       case 'customer.subscription.deleted':
         await this.onSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
+        return true;
       case 'invoice.payment_failed':
         await this.onPaymentFailed(event.data.object as Stripe.Invoice);
-        break;
+        return true;
+      case 'charge.refunded':
+        await this.onChargeRefunded(event.data.object as Stripe.Charge);
+        return true;
+      case 'charge.dispute.created':
+      case 'charge.dispute.updated':
+      case 'charge.dispute.closed':
+      case 'charge.dispute.funds_withdrawn':
+      case 'charge.dispute.funds_reinstated':
+        await this.onChargeDispute(event.data.object as Stripe.Dispute);
+        return true;
       default:
-        // Eventos não tratados: 200 silencioso
-        break;
+        return false;
     }
   }
 
@@ -305,7 +454,11 @@ export class StripeService {
     const existing = await prisma.payment.findUnique({ where: { stripeEventId } });
     if (existing) return;
 
-    const subscriptionId = invoice.subscription as string;
+    const invoiceWithLegacyFields = invoice as Stripe.Invoice & {
+      payment_intent?: string | null;
+      subscription?: string | null;
+    };
+    const subscriptionId = invoiceWithLegacyFields.subscription as string;
     const sub = await prisma.subscription.findFirst({
       where: { stripeSubscriptionId: subscriptionId },
     });
@@ -333,7 +486,7 @@ export class StripeService {
       await tx.payment.create({
         data: {
           userId: sub.userId,
-          stripePaymentIntentId: (invoice.payment_intent as string) ?? `pi_${invoice.id}`,
+          stripePaymentIntentId: invoiceWithLegacyFields.payment_intent ?? `pi_${invoice.id}`,
           stripeEventId,
           amount: invoice.amount_paid,
           currency: invoice.currency,
@@ -366,12 +519,35 @@ export class StripeService {
   }
 
   private async onPaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionId = invoice.subscription as string;
+    const subscriptionId = (invoice as Stripe.Invoice & { subscription?: string | null }).subscription;
     if (!subscriptionId) return;
 
     await prisma.subscription.updateMany({
       where: { stripeSubscriptionId: subscriptionId },
       data: { status: SubscriptionStatus.PAST_DUE },
+    });
+  }
+
+  private async onChargeRefunded(charge: Stripe.Charge): Promise<void> {
+    const paymentIntentId = resolveStripeId(charge.payment_intent);
+    if (!paymentIntentId) return;
+
+    await prisma.payment.updateMany({
+      where: { stripePaymentIntentId: paymentIntentId },
+      data: { status: 'REFUNDED' },
+    });
+  }
+
+  private async onChargeDispute(dispute: Stripe.Dispute): Promise<void> {
+    const paymentIntentId = resolveStripeId(
+      (dispute as Stripe.Dispute & { payment_intent?: string | Stripe.PaymentIntent | null })
+        .payment_intent,
+    );
+    if (!paymentIntentId) return;
+
+    await prisma.payment.updateMany({
+      where: { stripePaymentIntentId: paymentIntentId },
+      data: { status: 'FAILED' },
     });
   }
 
@@ -393,6 +569,32 @@ export class StripeService {
         return SubscriptionStatus.ACTIVE;
     }
   }
+}
+
+function resolveStripeId(value: string | { id?: string } | null | undefined): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  return value.id ?? null;
+}
+
+function toWebhookDTO(event: StripeWebhookEvent): StripeWebhookEventDTO {
+  return {
+    id: event.id,
+    eventId: event.eventId,
+    type: event.type,
+    status: event.status,
+    errorMessage: event.errorMessage,
+    processedAt: event.processedAt?.toISOString() ?? null,
+    lastReplayAt: event.lastReplayAt?.toISOString() ?? null,
+    replayCount: event.replayCount,
+    createdAt: event.createdAt.toISOString(),
+    updatedAt: event.updatedAt.toISOString(),
+  };
+}
+
+function errorToMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return 'Erro desconhecido ao processar webhook Stripe.';
 }
 
 export const stripeService = new StripeService();
