@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayloadFromRequest, apiResponse } from '@/lib/auth';
+import { isMfaRecent } from '@/lib/auth/mfa-recency';
 import { checkRateLimit, RATE_LIMITS, type RateLimitConfig } from '@/lib/rate-limit';
 import { UserRole } from '@/lib/constants/enums';
 
@@ -16,11 +17,24 @@ const PUBLIC_API_PATHS = [
   '/api/v1/content',
   '/api/v1/availability',
   '/api/v1/email/unsubscribe',
+  '/api/v1/privacy/data-requests', // DSR público: titular anônimo abre pedido sem sessão (LGPD Art. 18)
 ];
 
 const ADMIN_ONLY_PATHS = [
   '/api/v1/admin',
   '/api/v1/credits/manual',
+];
+
+// Rotas de UI admin que exigem MFA recente (redirect 307 para challenge se ausente).
+// Assets estaticos, login e a propria challenge nao entram nesta lista (evita loop).
+const ADMIN_UI_MFA_REQUIRED = '/admin';
+const MFA_CHALLENGE_PATH = '/auth/mfa/challenge';
+const MFA_ALLOWLIST_PREFIXES = [
+  '/_next',
+  '/auth/login',
+  '/auth/mfa',
+  '/maintenance',
+  '/api/',
 ];
 
 function getClientIp(request: NextRequest): string {
@@ -109,8 +123,32 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/maintenance', request.url));
   }
 
-  // ─── Non-API routes: add security headers and continue ────────────────────
+  // ─── Non-API routes ────────────────────────────────────────────────────────
   if (!pathname.startsWith('/api/v1')) {
+    // Gate de MFA para rotas admin UI (ex: /admin/*).
+    // Allowlist: assets, login, a propria challenge e qualquer /api/ (tratada abaixo).
+    const isAdminUi = pathname.startsWith(ADMIN_UI_MFA_REQUIRED);
+    const isAllowlisted = MFA_ALLOWLIST_PREFIXES.some((p) => pathname.startsWith(p));
+
+    if (isAdminUi && !isAllowlisted) {
+      const adminPayload = getPayloadFromRequest(request);
+
+      // Sem sessao ou sem role admin: redirect para login (nao para challenge)
+      if (!adminPayload || adminPayload.role !== UserRole.ADMIN) {
+        const loginUrl = new URL('/auth/login', request.url);
+        loginUrl.searchParams.set('redirectTo', pathname);
+        return NextResponse.redirect(loginUrl, { status: 307 });
+      }
+
+      // Admin autenticado mas MFA ausente ou expirado: redirect para challenge
+      if (!isMfaRecent(adminPayload.mfaAt)) {
+        const challengeUrl = new URL(MFA_CHALLENGE_PATH, request.url);
+        challengeUrl.searchParams.set('redirectTo', pathname);
+        const res = NextResponse.redirect(challengeUrl, { status: 307 });
+        return addSecurityHeaders(res, correlationId);
+      }
+    }
+
     return addSecurityHeaders(nextWithStripped(request, { 'x-request-id': correlationId }), correlationId);
   }
 

@@ -1,57 +1,103 @@
 import { z } from 'zod';
 
 /**
- * Domínio de leads (§12.4.3) — schemas Zod para captação pública e triagem.
- * Espelha os enums Prisma LeadOrigin / LeadStatus e o enum SupportedLanguage (locale).
+ * Domínio de leads (§12.4.3) — ponto de entrada único para todos os schemas de lead.
+ * Cobre captação pública, validação client-side do formulário e triagem/consulta admin.
+ * Espelha os enums Prisma LeadOrigin / LeadStatus / SupportedLanguage (locale).
  *
- * IMPORTANTE: o schema público (`createLeadSchema`) NUNCA aceita campos internos
+ * IMPORTANTE: LeadSubmitSchema NUNCA aceita campos internos
  * (status, ipHash, userAgent, honeypotHit, spamScore). Esses são preenchidos pelo
  * servidor a partir do contexto da requisição, não pelo cliente.
+ * O honeypot (LEAD_HONEYPOT_FIELD) é lido pelo endpoint FORA da validação Zod
+ * para não revelar a heurística; bots recebem 200 silencioso.
  */
 
 export const LEAD_ORIGINS = ['LANDING', 'METHOD', 'CONTACT'] as const;
 export const LEAD_STATUSES = ['NEW', 'CONTACTED', 'CONVERTED', 'SPAM', 'ARCHIVED'] as const;
 export const LEAD_LOCALES = ['PT_BR', 'EN_US', 'ES_ES', 'IT_IT'] as const;
 
+export type LeadOriginValue = (typeof LEAD_ORIGINS)[number];
+export type LeadLocaleValue = (typeof LEAD_LOCALES)[number];
+
 export const leadOriginSchema = z.enum(LEAD_ORIGINS);
 export const leadStatusSchema = z.enum(LEAD_STATUSES);
 export const leadLocaleSchema = z.enum(LEAD_LOCALES);
 
 /**
- * Captação pública de lead (landing, método, contato).
- * Só expõe os campos que o visitante de fato preenche; consentimento é obrigatório.
- * O honeypot (`website`) é um campo isca: bots tendem a preenchê-lo, humanos o deixam vazio.
+ * Campo isca (honeypot). Renderizado escondido para humanos; bots tendem a preenchê-lo.
+ * Lido pelo servidor FORA da validação Zod — nunca incluir no schema público.
  */
-export const createLeadSchema = z
-  .object({
-    origin: leadOriginSchema,
-    email: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .email('E-mail inválido')
-      .max(254, 'E-mail excede 254 caracteres'),
-    name: z.string().trim().min(1, 'Nome obrigatório').max(160, 'Nome excede 160 caracteres').optional(),
-    message: z.string().trim().max(2000, 'Mensagem excede 2000 caracteres').optional(),
-    locale: leadLocaleSchema.default('PT_BR'),
-    consent: z.literal(true, {
-      message: 'É necessário aceitar a política de privacidade',
-    }),
-    // honeypot anti-bot: deve chegar vazio. Preenchido => spam.
-    website: z.string().max(0, 'Spam detectado').optional(),
-  })
-  .superRefine((data, ctx) => {
-    // Contato exige mensagem; landing/método podem ser apenas e-mail + consentimento.
-    if (data.origin === 'CONTACT' && (!data.message || data.message.trim().length === 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['message'],
-        message: 'Mensagem é obrigatória no formulário de contato',
-      });
-    }
+export const LEAD_HONEYPOT_FIELD = 'website' as const;
+
+// ---------- campos compartilhados ----------
+
+const emailField = z
+  .string({ message: 'Informe seu e-mail.' })
+  .trim()
+  .toLowerCase()
+  .min(1, 'Informe seu e-mail.')
+  .max(160, 'E-mail muito longo.')
+  .email('E-mail inválido.');
+
+const nameField = z
+  .string()
+  .trim()
+  .max(160, 'Nome muito longo.')
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : undefined));
+
+const messageField = z
+  .string()
+  .trim()
+  .max(2000, 'Mensagem muito longa (máx. 2000 caracteres).')
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : undefined));
+
+const consentField = z
+  .boolean()
+  .refine((v) => v === true, {
+    message: 'É necessário aceitar o contato para enviar.',
   });
 
-/** Triagem administrativa de um lead (admin only) — altera status/consentimento de abuso. */
+// ---------- captação pública ----------
+
+/**
+ * Campos visíveis preenchidos pelo usuário no formulário (validação client-side via zodResolver).
+ * `origin` e `locale` são injetados pelo componente no submit, não digitados pelo usuário.
+ */
+export const LeadFormFieldsSchema = z.object({
+  name: nameField,
+  email: emailField,
+  message: messageField,
+  consentGiven: consentField,
+});
+export type LeadFormFields = z.input<typeof LeadFormFieldsSchema>;
+
+/**
+ * Payload completo aceito pelo endpoint POST /api/v1/leads (validação server-side).
+ * Landing, método e contato postam para o mesmo endpoint com a mesma forma de payload;
+ * a `origin` distingue a fonte para triagem e análise.
+ * Honeypot e captchaToken são opcionais e tratados separadamente da validação de negócio.
+ */
+export const LeadSubmitSchema = z.object({
+  origin: leadOriginSchema,
+  email: emailField,
+  name: nameField,
+  message: messageField,
+  locale: leadLocaleSchema.default('PT_BR'),
+  consentGiven: consentField,
+  captchaToken: z.string().max(4000).optional(),
+});
+export type LeadSubmitInput = z.input<typeof LeadSubmitSchema>;
+export type LeadSubmitData = z.output<typeof LeadSubmitSchema>;
+
+/** @deprecated Use LeadSubmitSchema. Alias de compatibilidade com o domínio task-005. */
+export const createLeadSchema = LeadSubmitSchema;
+export type CreateLeadInput = LeadSubmitInput;
+
+// ---------- schemas admin ----------
+
+/** Triagem administrativa de um lead (admin only) — altera status. */
 export const updateLeadStatusSchema = z.object({
   status: leadStatusSchema,
 });
@@ -66,7 +112,6 @@ export const leadQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type UpdateLeadStatusInput = z.infer<typeof updateLeadStatusSchema>;
 export type LeadQuery = z.infer<typeof leadQuerySchema>;
 export type LeadOrigin = z.infer<typeof leadOriginSchema>;

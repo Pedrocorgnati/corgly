@@ -8,7 +8,10 @@ type AuthEvent =
   | 'rbac.denied'
   | 'rate.limit.exceeded'
   | 'deletion.requested'
-  | 'deletion.cancelled';
+  | 'deletion.cancelled'
+  // T-045: magic-link (login sem senha)
+  | 'magic_link.requested'
+  | 'magic_link.failed';
 
 interface AuthFailureParams {
   event: AuthEvent;
@@ -39,7 +42,14 @@ export function logAuthFailure(params: AuthFailureParams): void {
 }
 
 export function logAuthSuccess(params: {
-  event: 'login.success' | 'register.success' | 'password.reset' | 'email.confirmed';
+  event:
+    | 'login.success'
+    | 'register.success'
+    | 'password.reset'
+    | 'email.confirmed'
+    // T-045: magic-link (login sem senha)
+    | 'magic_link.sent'
+    | 'magic_link.success';
   userId: string;
 }): void {
   console.info('[AUTH]', JSON.stringify({ ...params, timestamp: new Date().toISOString() }));

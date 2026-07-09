@@ -24,7 +24,8 @@
       "history": "Histórico",
       "buy": "Comprar créditos",
       "settings": "Configurações",
-      "creditsBalance": "Saldo: {count} créditos"
+      "creditsBalance": "Saldo: {count} créditos",
+      "library": "Biblioteca"
     },
     "admin": {
       "dashboard": "Painel",
@@ -34,7 +35,11 @@
       "credits": "Créditos",
       "reports": "Relatórios",
       "content": "Conteúdo",
-      "phase1Label": "Fase 1"
+      "support": "Suporte",
+      "health": "Saúde",
+      "security": "Segurança",
+      "phase1Label": "Fase 1",
+      "emailTemplates": "Emails"
     }
   },
   "darkMode": {
@@ -52,7 +57,8 @@
     "privacy": "Política de Privacidade",
     "terms": "Termos de Uso",
     "cookies": "Cookies",
-    "languageLabel": "Idioma"
+    "languageLabel": "Idioma",
+    "preferences": "Preferências de cookies"
   },
   "creditBadge": {
     "credits": "{count} créditos",
@@ -132,7 +138,8 @@
     "analytics_description": "Nos ajudam a melhorar o site",
     "marketing_label": "Marketing",
     "marketing_description": "Permitem personalizar conteúdo",
-    "save_preferences": "Salvar preferências"
+    "save_preferences": "Salvar preferências",
+    "manage_preferences": "Gerenciar preferências"
   },
   "privacy": {
     "title": "Política de Privacidade",
@@ -588,5 +595,23 @@
       "message": "Abra esta página pelo link enviado no email para confirmar o descadastro."
     },
     "backHome": "Voltar ao início"
+  },
+  "library": {
+    "pageTitle": "Biblioteca",
+    "pageDescription": "Suas aulas gravadas, transcricoes, legendas e recursos.",
+    "empty": "Nenhuma aula gravada disponivel ainda.",
+    "resourceCount": "{count, plural, =0 {Sem recursos} one {# recurso} other {# recursos}}",
+    "backToLibrary": "Voltar para a biblioteca",
+    "notFoundTitle": "Aula nao encontrada",
+    "transcriptTitle": "Transcricao",
+    "transcriptEmpty": "Transcricao ainda nao disponivel para esta aula.",
+    "captionsTitle": "Legendas",
+    "captionsEmpty": "Nenhuma legenda disponivel para esta aula.",
+    "resourcesTitle": "Recursos da aula",
+    "resourcesEmpty": "Nenhum recurso vinculado a esta aula.",
+    "resourcesExpiringHint": "Os links de download expiram por seguranca e sao renovados automaticamente a cada download.",
+    "resourcesDownload": "Baixar",
+    "resourcesDownloadAria": "Baixar recurso {name}",
+    "resourcesError": "Nao foi possivel gerar o link de download. Tente novamente."
   }
 }

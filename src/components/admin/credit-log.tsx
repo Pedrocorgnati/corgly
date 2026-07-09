@@ -13,6 +13,8 @@ import { Pagination } from '@/components/ui/pagination';
 import { CreditType, CREDIT_TYPE_MAP } from '@/lib/constants/enums';
 import { formatDatePtBR } from '@/lib/format-datetime';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { getRegionalDisplay } from '@/lib/billing/currency-policy';
+import { toCurrency } from '@/lib/currency';
 
 const PAGE_LIMIT = 20;
 const TRUNCATE_LENGTH = 60;
@@ -159,7 +161,7 @@ export function CreditLog() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">
-                    {payment.currency} {payment.amount.toFixed(2)}
+                    {getRegionalDisplay(payment.amount, toCurrency(payment.currency), 'pt-BR').formatted}
                   </span>
                   {payment.creditBatchId && (
                     <span className="text-xs text-muted-foreground" title={payment.creditBatchId}>
@@ -189,7 +191,7 @@ export function CreditLog() {
                       <Badge variant="outline">{CREDIT_TYPE_MAP[payment.status as CreditType]?.label ?? payment.status}</Badge>
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-foreground">
-                      {payment.currency} {payment.amount.toFixed(2)}
+                      {getRegionalDisplay(payment.amount, toCurrency(payment.currency), 'pt-BR').formatted}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground" title={payment.creditBatchId ?? undefined}>
                       {payment.creditBatchId ? truncate(payment.creditBatchId) : '—'}

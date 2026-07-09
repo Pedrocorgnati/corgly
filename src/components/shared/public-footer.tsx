@@ -26,6 +26,18 @@ export function PublicFooter() {
           >
             {t('terms')}
           </Link>
+          <Link
+            href={ROUTES.COOKIES}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {t('cookies')}
+          </Link>
+          <Link
+            href={ROUTES.COOKIE_PREFERENCES}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {t('preferences')}
+          </Link>
         </div>
       </div>
     </footer>

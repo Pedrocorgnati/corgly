@@ -6,7 +6,12 @@ import { AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants/routes';
+import { CUSTOMER_PORTAL_RETURN_AFTER_PATH } from '@/lib/billing/customer-portal.config';
 import { SubscriptionStatus } from '@/lib/constants/enums';
+
+// ST-23 (Past Due banner). Abre o Customer Portal via redirect (hosted Stripe).
+// Decisão canônica: ADR-0003 — embed inviável (X-Frame-Options); path de retorno
+// centralizado em customer-portal.config.ts.
 
 interface SubscriptionResponse {
   data?: {
@@ -42,7 +47,7 @@ function formatDate(value?: string | null) {
 export function PastDueBanner({
   status,
   currentPeriodEnd,
-  returnTo = '/billing/subscription?portal=returned',
+  returnTo = CUSTOMER_PORTAL_RETURN_AFTER_PATH,
 }: PastDueBannerProps) {
   const [resolvedStatus, setResolvedStatus] = useState(status ?? null);
   const [resolvedPeriodEnd, setResolvedPeriodEnd] = useState(currentPeriodEnd ?? null);

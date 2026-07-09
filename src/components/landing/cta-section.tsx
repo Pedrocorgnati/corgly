@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { LeadForm } from '@/components/public/LeadForm';
 import { ROUTES } from '@/lib/constants/routes';
 
 export function CTASection() {
@@ -38,6 +39,15 @@ export function CTASection() {
               {t('cta.button_secondary')}
             </Button>
           </a>
+        </div>
+
+        <div className="mt-12 border-t border-white/20 pt-10">
+          <p className="text-white/70 text-sm mb-5">
+            Ainda com dúvidas? Deixe seu contato e entraremos em breve:
+          </p>
+          <div className="max-w-sm mx-auto bg-white rounded-xl p-5 shadow-lg">
+            <LeadForm origin="LANDING" showMessage={false} submitLabel="Receber informações" />
+          </div>
         </div>
       </div>
     </section>

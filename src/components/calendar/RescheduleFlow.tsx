@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Loader2, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { CalendarView } from '@/components/calendar/CalendarView';
 import { SlotPicker } from '@/components/calendar/SlotPicker';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useTimezone } from '@/hooks/useTimezone';
 import { rescheduleSession } from '@/actions/sessions';
+import { ROUTES } from '@/lib/constants/routes';
 import { toast } from 'sonner';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 
@@ -141,6 +143,14 @@ export function RescheduleFlow({
               />
             </div>
 
+            <Link
+              href={ROUTES.RESCHEDULE_OPTIONS(session.id)}
+              className="mb-4 flex items-center gap-1.5 text-sm text-primary transition-colors hover:underline"
+            >
+              <Sparkles className="h-4 w-4" />
+              Ver horários alternativos sugeridos
+            </Link>
+
             <div className="flex gap-3">
               <Button variant="outline" onClick={handleClose} className="flex-1">
                 Cancelar
@@ -187,13 +197,24 @@ export function RescheduleFlow({
             <p className="text-sm text-muted-foreground mt-1 text-center">
               {errorMessage}
             </p>
-            <div className="flex gap-3 mt-6">
+            <p className="text-sm text-muted-foreground mt-3 text-center">
+              O horário escolhido pode não estar mais disponível. Veja as
+              alternativas sugeridas dentro da política de reagendamento.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
               <Button variant="outline" onClick={handleClose}>
                 Fechar
               </Button>
-              <Button onClick={() => setFlowState('selecting')}>
+              <Button variant="outline" onClick={() => setFlowState('selecting')}>
                 Tentar novamente
               </Button>
+              <Link
+                href={ROUTES.RESCHEDULE_OPTIONS(session.id)}
+                className={buttonVariants()}
+              >
+                <Sparkles className="mr-1.5 h-4 w-4" />
+                Ver alternativas
+              </Link>
             </div>
           </div>
         )}

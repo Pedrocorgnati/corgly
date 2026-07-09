@@ -14,6 +14,17 @@ export function isSupportedCurrency(v: unknown): v is Currency {
 }
 
 /**
+ * Coage um codigo de moeda livre (string, qualquer casing) para o tipo Currency.
+ * Retorna `fallback` (default USD) quando o valor nao e suportado. Centraliza a
+ * normalizacao para os consumidores (admin/checkout) nao reimplementarem o guard
+ * fora do modulo canonico (ADR-0006 §4).
+ */
+export function toCurrency(value: unknown, fallback: Currency = 'USD'): Currency {
+  const upper = typeof value === 'string' ? value.toUpperCase() : '';
+  return isSupportedCurrency(upper) ? upper : fallback;
+}
+
+/**
  * Mapeamento locale -> moeda padrao. Fallback USD.
  * Esta e a "currency inferida" quando o usuario nao escolheu explicitamente.
  */

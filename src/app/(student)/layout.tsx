@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { StudentAppShell } from '@/components/shared/student-app-shell';
 import { EmailConfirmationBanner } from '@/components/shared/email-confirmation-banner';
+import { TermsAcceptanceGate } from '@/components/legal/TermsAcceptanceGate';
 import { ROUTES } from '@/lib/constants/routes';
 import { UserRole } from '@/lib/constants/enums';
 import { getAuthUser } from '@/lib/data/auth';
@@ -26,7 +27,8 @@ export default async function StudentLayout({ children }: { children: React.Reac
     <StudentAppShell user={user}>
       {/* ST008: Email confirmation banner — only shown when emailConfirmed is false */}
       <EmailConfirmationBanner emailConfirmed={user.emailConfirmed ?? true} />
-      {children}
+      {/* T-046 / GL-19: bloqueia o dashboard ate o aceite dos termos vigentes */}
+      <TermsAcceptanceGate>{children}</TermsAcceptanceGate>
     </StudentAppShell>
   );
 }

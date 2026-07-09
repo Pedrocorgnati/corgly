@@ -2,18 +2,17 @@
 
 import { useLocale } from 'next-intl';
 import { useState, useCallback } from 'react';
-import {
-  localeToCurrency,
-  isSupportedCurrency,
-  type Currency,
-} from '@/lib/currency';
+import { type Currency } from '@/lib/currency';
+import { resolveChargeCurrency } from '@/lib/billing/currency-policy';
 
 const STORAGE_KEY = 'corgly.preferredCurrency';
 
 /**
- * Resolve a moeda do usuario:
+ * Resolve a moeda do usuario via a politica unica de moeda de registro
+ * (`resolveChargeCurrency`, ADR-0006 §2):
  *   1. localStorage `corgly.preferredCurrency` (escolha explicita).
  *   2. Mapeamento pelo locale ativo do next-intl.
+ *   3. Fallback DEFAULT_CHARGE_CURRENCY.
  *
  * Expoe `setCurrency` que persiste a escolha.
  */
@@ -24,10 +23,9 @@ export function useUserCurrency(): {
   const locale = useLocale();
 
   const [currency, setCurrencyState] = useState<Currency>(() => {
-    if (typeof window === 'undefined') return localeToCurrency(locale);
+    if (typeof window === 'undefined') return resolveChargeCurrency({ locale });
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (isSupportedCurrency(stored)) return stored;
-    return localeToCurrency(locale);
+    return resolveChargeCurrency({ explicit: stored, locale });
   });
 
   const setCurrency = useCallback((c: Currency) => {

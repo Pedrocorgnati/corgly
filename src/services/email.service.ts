@@ -37,6 +37,10 @@ const EMAIL_CATEGORIES: Record<EmailType, EmailCategory> = {
   [EmailType.ACCOUNT_DELETION_REQUESTED]: 'transactional',
   [EmailType.DATA_EXPORT_READY]: 'transactional',
   [EmailType.BOOKING_RESCHEDULED]: 'transactional',
+  [EmailType.FEEDBACK_AVAILABLE]: 'transactional',
+  [EmailType.MAGIC_LINK]: 'transactional',
+  // T-055: broadcasts em massa sao marketing -> exigem opt-in + unsubscribe.
+  [EmailType.MARKETING_BROADCAST]: 'marketing',
 };
 
 export function getEmailCategory(type: EmailType): EmailCategory {
@@ -392,6 +396,49 @@ const TEMPLATES: Record<EmailType, TemplateRenderer> = {
     };
     return { subject: subjects[locale], html: wrapLayout(bodies[locale]) };
   },
+
+  [EmailType.FEEDBACK_AVAILABLE]: (data, locale) => {
+    const subjects: Record<SupportedLanguage, string> = {
+      PT_BR: 'Seu feedback está disponível — Corgly',
+      EN_US: 'Your feedback is available — Corgly',
+      ES_ES: 'Tu feedback está disponible — Corgly',
+      IT_IT: 'Il tuo feedback è disponibile — Corgly',
+    };
+    const bodies: Record<SupportedLanguage, string> = {
+      PT_BR: `<p>Olá, ${data.name}!</p><p>O feedback da sua aula já está disponível.</p><p><a href="${data.link}">Ver feedback</a></p>`,
+      EN_US: `<p>Hi ${data.name},</p><p>The feedback for your class is now available.</p><p><a href="${data.link}">View feedback</a></p>`,
+      ES_ES: `<p>Hola ${data.name},</p><p>El feedback de tu clase ya está disponible.</p><p><a href="${data.link}">Ver feedback</a></p>`,
+      IT_IT: `<p>Ciao ${data.name},</p><p>Il feedback della tua lezione è ora disponibile.</p><p><a href="${data.link}">Vedi feedback</a></p>`,
+    };
+    return { subject: subjects[locale], html: wrapLayout(bodies[locale]) };
+  },
+
+  [EmailType.MAGIC_LINK]: (data, locale) => {
+    const subjects: Record<SupportedLanguage, string> = {
+      PT_BR: 'Seu link de acesso — Corgly',
+      EN_US: 'Your access link — Corgly',
+      ES_ES: 'Tu enlace de acceso — Corgly',
+      IT_IT: 'Il tuo link di accesso — Corgly',
+    };
+    const bodies: Record<SupportedLanguage, string> = {
+      PT_BR: `<p>Olá${data.name ? `, ${data.name}` : ''}!</p><p>Você solicitou um link de acesso à sua conta.</p><p><a href="${data.link}">Entrar na Corgly</a></p><p>Este link expira em 15 minutos e só pode ser usado uma vez. Se não foi você, ignore este email.</p>`,
+      EN_US: `<p>Hi${data.name ? ` ${data.name}` : ''},</p><p>You requested an access link for your account.</p><p><a href="${data.link}">Sign in to Corgly</a></p><p>This link expires in 15 minutes and can only be used once. If this wasn't you, ignore this email.</p>`,
+      ES_ES: `<p>Hola${data.name ? ` ${data.name}` : ''},</p><p>Solicitaste un enlace de acceso a tu cuenta.</p><p><a href="${data.link}">Entrar en Corgly</a></p><p>Este enlace expira en 15 minutos y solo puede usarse una vez. Si no fuiste tú, ignora este correo.</p>`,
+      IT_IT: `<p>Ciao${data.name ? ` ${data.name}` : ''},</p><p>Hai richiesto un link di accesso al tuo account.</p><p><a href="${data.link}">Accedi a Corgly</a></p><p>Il link scade tra 15 minuti e può essere usato una sola volta. Se non sei stato tu, ignora questa email.</p>`,
+    };
+    return { subject: subjects[locale], html: wrapLayout(bodies[locale]) };
+  },
+
+  // T-055: broadcasts sao ad-hoc (assunto + HTML fornecidos pelo admin) e
+  // normalmente NAO passam por renderTemplate — o envio em massa usa
+  // email-delivery.service.ts diretamente. Este renderer existe apenas para
+  // satisfazer o mapa exaustivo e faz passthrough seguro de `data.subject`/
+  // `data.html` quando, excepcionalmente, for chamado.
+  [EmailType.MARKETING_BROADCAST]: (data) => {
+    const subject = typeof data.subject === 'string' ? data.subject : '';
+    const body = typeof data.html === 'string' ? data.html : '';
+    return { subject, html: wrapLayout(body) };
+  },
 };
 
 // ── Layout wrapper ──
@@ -546,7 +593,9 @@ export class EmailService implements IEmailService {
     const locale = params.locale ?? SupportedLanguage.EN_US;
     const category = EMAIL_CATEGORIES[params.type];
 
-    let { html, subject } = this.renderTemplate(params.type, params.data, locale);
+    const rendered = this.renderTemplate(params.type, params.data, locale);
+    const { subject } = rendered;
+    let html = rendered.html;
 
     // LGPD/CAN-SPAM: emails de marketing exigem opt-in e unsubscribe footer.
     if (category === 'marketing') {

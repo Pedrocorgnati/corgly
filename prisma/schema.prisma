@@ -99,6 +99,7 @@ enum EmailType {
   DATA_EXPORT_READY
   FEEDBACK_AVAILABLE
   BOOKING_RESCHEDULED
+  MARKETING_BROADCAST
 }
 
 enum EmailChannel {
@@ -259,12 +260,15 @@ model User {
   maxFutureSessions           Int               @default(5)
   isFirstPurchase             Boolean           @default(true)
   preferredLanguage           SupportedLanguage @default(EN_US)
+  preferredCurrency           CurrencyCode?     @map("preferred_currency")
   onboardingCompletedAt       DateTime?
   termsAcceptedAt             DateTime?
   termsVersion                String            @default("1.0") @db.VarChar(10)
   marketingOptIn              Boolean           @default(false)
   deletionRequestedAt         DateTime?
   tokenVersion                Int               @default(0)
+  mfaEnabled                  Boolean           @default(false)
+  mfaEnabledAt                DateTime?
   lastLoginAt                 DateTime?
   deletionCancellationToken   String?
   deletionCancellationExpires DateTime?
@@ -293,16 +297,41 @@ model User {
   createdJobs             Job[]                       @relation("JobCreatedBy")
   termAcceptances         TermAcceptance[]            @relation("TermAcceptanceUser")
   onboardingProfile       OnboardingProfile?
+  mfa                     UserMfa?
   sessionHealthEvents     SessionHealth[]             @relation("SessionHealthParticipant")
   impersonationsAsAdmin   AdminImpersonationSession[] @relation("AdminImpersonationAdmin")
   impersonationsAsStudent AdminImpersonationSession[] @relation("AdminImpersonationStudent")
   impersonationsEnded     AdminImpersonationSession[] @relation("AdminImpersonationEndedBy")
+  magicLinkTokens         MagicLinkToken[]            @relation("MagicLinkTokenUser")
 
   @@index([role])
   @@index([emailConfirmToken])
   @@index([resetPasswordToken])
   @@index([deletionRequestedAt])
   @@map("users")
+}
+
+/// T-045: token de magic-link (login sem senha).
+/// Dedicado (nao reusa o pattern single-field do User) para suportar multiplos
+/// tokens pendentes, marcacao de uso unico (consumedAt) e anti-replay.
+/// Armazena apenas o hash SHA-256 do token; o token bruto so existe no link enviado.
+model MagicLinkToken {
+  id           String    @id @default(uuid())
+  userId       String
+  /// SHA-256 hex do token bruto. Lookup sempre por hash (nunca pelo token cru).
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  /// Marcado atomicamente na primeira consumacao. Nao-nulo => ja usado (rejeita replay).
+  consumedAt   DateTime?
+  /// IP do solicitante (auditoria / rate-limit forense). Pode ser 'unknown'.
+  requesterIp  String?   @db.VarChar(64)
+  createdAt    DateTime  @default(now())
+
+  user User @relation("MagicLinkTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("magic_link_tokens")
 }
 
 model CreditBatch {
@@ -744,6 +773,42 @@ model AuditLog {
 
   @@index([adminId, createdAt])
   @@map("audit_logs")
+}
+
+/// MFA TOTP por usuario (obrigatorio para admin — T-043).
+/// O segredo TOTP e cifrado em repouso (AES-256-GCM via ENCRYPTION_KEY).
+model UserMfa {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  /// Segredo TOTP cifrado: formato ivHex:tagHex:ctHex.
+  secretEnc       String    @db.Text
+  /// PENDING ate a primeira verificacao confirmar; depois ACTIVE.
+  status          String    @default("PENDING")
+  confirmedAt     DateTime?
+  lastVerifiedAt  DateTime?
+  /// Ultimo time-step TOTP consumido — guarda anti-replay.
+  lastUsedCounter BigInt?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recoveryCodes MfaRecoveryCode[]
+
+  @@map("user_mfa")
+}
+
+/// Codigos de recuperacao MFA de uso unico (armazenados apenas como hash bcrypt).
+model MfaRecoveryCode {
+  id        String    @id @default(uuid())
+  mfaId     String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  mfa UserMfa @relation(fields: [mfaId], references: [id], onDelete: Cascade)
+
+  @@index([mfaId])
+  @@map("mfa_recovery_codes")
 }
 
 enum SupportTicketStatus {

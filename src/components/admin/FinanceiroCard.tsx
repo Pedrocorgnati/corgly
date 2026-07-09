@@ -2,6 +2,8 @@
 
 import { useAdminMetrics, type MetricPeriod } from '@/hooks/useAdminMetrics';
 import { MetricCardShell } from './MetricCardShell';
+import { getRegionalDisplay } from '@/lib/billing/currency-policy';
+import { toCurrency } from '@/lib/currency';
 
 interface FinancialsData {
   revenue:       Array<{ currency: string; amount: number; count: number }>;
@@ -11,11 +13,10 @@ interface FinancialsData {
   subscriptions: { active: number; cancelledInPeriod: number; activeAtPeriodStart: number };
 }
 
-const CURRENCY_SYMBOLS: Record<string, string> = { usd: '$', brl: 'R$', eur: '€', usdc: 'USDC ' };
-
+// Exibicao de moeda via politica canonica (ADR-0006 §3/§4): mesma `getRegionalDisplay`
+// usada por checkout; sem tabela de simbolos nem formatacao reimplementada.
 function formatAmount(cents: number, currency: string) {
-  const amount = (cents / 100).toFixed(2);
-  return `${CURRENCY_SYMBOLS[currency.toLowerCase()] ?? ''}${amount}`;
+  return getRegionalDisplay(cents, toCurrency(currency), 'pt-BR').formatted;
 }
 
 export function FinanceiroCard({ period, refreshKey }: { period: MetricPeriod; refreshKey: number }) {

@@ -3,8 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getStripe } from '@/lib/stripe';
 import { env } from '@/lib/env';
 import { AppError } from '@/lib/errors';
+import { CUSTOMER_PORTAL_DEFAULT_RETURN_PATH } from '@/lib/billing/customer-portal.config';
 
-const DEFAULT_RETURN_PATH = '/billing/subscription';
+// Modo de integração e path de retorno são centralizados em customer-portal.config.ts
+// (decisão canônica: ADR-0003 — redirect, sem embed).
+const DEFAULT_RETURN_PATH = CUSTOMER_PORTAL_DEFAULT_RETURN_PATH;
 
 function resolveSafeReturnUrl(returnTo?: string | null): string {
   const appUrl = new URL(env.NEXT_PUBLIC_APP_URL);

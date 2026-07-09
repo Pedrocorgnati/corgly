@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatCurrency } from '@/lib/format-currency';
+import { getRegionalDisplay } from '@/lib/billing/currency-policy';
+import { toCurrency } from '@/lib/currency';
 import { cn } from '@/lib/utils';
 
 type PaymentStatus = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED';
-type Currency = 'usd' | 'brl' | 'eur' | 'usdc';
 
 interface HistoryItem {
   id: string;
@@ -43,11 +43,6 @@ const STATUS_CLASS: Record<PaymentStatus, string> = {
   REFUNDED: 'border-blue-200 bg-blue-50 text-blue-700',
 };
 
-function normalizeCurrency(currency: string): Currency {
-  const value = currency.toLowerCase();
-  if (value === 'brl' || value === 'eur' || value === 'usdc') return value;
-  return 'usd';
-}
 
 export default function BillingPaymentDetailPage() {
   const params = useParams<{ paymentId: string }>();
@@ -62,7 +57,7 @@ export default function BillingPaymentDetailPage() {
   const eligible = payment?.refundEligible ?? payment?.status === 'SUCCEEDED';
   const formattedAmount = useMemo(() => {
     if (!payment) return '';
-    return formatCurrency(payment.amount, normalizeCurrency(payment.currency));
+    return getRegionalDisplay(payment.amount, toCurrency(payment.currency), 'pt-BR').formatted;
   }, [payment]);
 
   const loadPayment = useCallback(async () => {

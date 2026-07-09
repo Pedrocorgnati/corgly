@@ -8,19 +8,12 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { CookieCustomizeDialog } from "@/components/ui/cookie-customize-dialog"
 
-import { API } from "@/lib/constants/routes";
-const COOKIE_NAME = "corgly_consent"
-const COOKIE_MAX_AGE = 31536000 // 1 year in seconds
-
-function getCookie(name: string): string | null {
-  if (typeof document === "undefined") return null
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
-  return match ? decodeURIComponent(match[1]) : null
-}
-
-function setCookie(name: string, value: string) {
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`
-}
+import { API, ROUTES } from "@/lib/constants/routes"
+import {
+  getConsentCookie,
+  setConsentCookie,
+  serializeConsent,
+} from "@/lib/legal/consent-cookie"
 
 interface CookieBannerProps {
   className?: string
@@ -32,7 +25,7 @@ function CookieBanner({ className }: CookieBannerProps) {
   const [customizeOpen, setCustomizeOpen] = React.useState(false)
 
   React.useEffect(() => {
-    const consent = getCookie(COOKIE_NAME)
+    const consent = getConsentCookie()
     if (!consent) {
       setVisible(true)
     }
@@ -47,18 +40,18 @@ function CookieBanner({ className }: CookieBannerProps) {
       body: JSON.stringify({ analytics, marketing }),
       signal: AbortSignal.timeout(10_000),
     }).catch(() => {
-      // Silently ignore — cookie is the primary store
+      // Silently ignore: cookie is the primary store
     })
   }
 
   const handleAcceptAll = () => {
-    setCookie(COOKIE_NAME, "all")
+    setConsentCookie(serializeConsent({ analytics: true, marketing: true }))
     setVisible(false)
     syncConsentToApi(true, true)
   }
 
   const handleReject = () => {
-    setCookie(COOKIE_NAME, "essential")
+    setConsentCookie(serializeConsent({ analytics: false, marketing: false }))
     setVisible(false)
     syncConsentToApi(false, false)
   }
@@ -73,16 +66,7 @@ function CookieBanner({ className }: CookieBannerProps) {
   }) => {
     const { analytics, marketing } = preferences
 
-    if (analytics && marketing) {
-      setCookie(COOKIE_NAME, "all")
-    } else if (!analytics && !marketing) {
-      setCookie(COOKIE_NAME, "essential")
-    } else {
-      const parts: string[] = []
-      if (analytics) parts.push("analytics")
-      if (marketing) parts.push("marketing")
-      setCookie(COOKIE_NAME, `custom:${parts.join(",")}`)
-    }
+    setConsentCookie(serializeConsent({ analytics, marketing }))
 
     setCustomizeOpen(false)
     setVisible(false)
@@ -109,10 +93,17 @@ function CookieBanner({ className }: CookieBannerProps) {
             <p className="text-sm text-muted-foreground">
               {t("description")}{" "}
               <Link
-                href="/privacy"
+                href={ROUTES.PRIVACY}
                 className="underline underline-offset-4 hover:text-foreground"
               >
                 {t("privacy_link")}
+              </Link>
+              .{" "}
+              <Link
+                href={ROUTES.COOKIE_PREFERENCES}
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                {t("manage_preferences")}
               </Link>
               .
             </p>

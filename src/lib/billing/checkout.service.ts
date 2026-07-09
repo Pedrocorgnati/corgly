@@ -12,6 +12,7 @@ import type {
 import { resolveIdempotencyKey } from '@/lib/billing/idempotency.service';
 import { SubscriptionStatus } from '@/lib/constants/enums';
 import { calculateSubscriptionMonthlyAmountCents } from '@/lib/billing/subscription-pricing';
+import { resolveChargeCurrency } from '@/lib/billing/currency-policy';
 
 /**
  * Checkout service idempotente (T-028 / §12.4.1).
@@ -51,7 +52,7 @@ export class CheckoutService {
   ): Promise<CheckoutResult> {
     const isPromo = isFirstPurchase && data.packageType === 'SINGLE';
     const resolvedType = isPromo ? 'PROMO' : data.packageType;
-    const currency: Currency = data.currency ?? 'USD';
+    const currency: Currency = resolveChargeCurrency({ explicit: data.currency });
     const price = resolvePrice(resolvedType, currency);
     const creditQty = PACKAGE_CREDITS[resolvedType];
 
@@ -109,7 +110,7 @@ export class CheckoutService {
       throw new AppError('PAYMENT_050', 'Usuário já possui assinatura ativa.', 409);
     }
 
-    const currency: Currency = data.currency ?? 'USD';
+    const currency: Currency = resolveChargeCurrency({ explicit: data.currency });
     const monthlyAmountCents = calculateSubscriptionMonthlyAmountCents(
       data.weeklyFrequency,
       currency,

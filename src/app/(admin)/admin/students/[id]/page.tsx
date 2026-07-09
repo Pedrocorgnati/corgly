@@ -9,6 +9,7 @@ import {
   XCircle,
   Star,
   MessageSquare,
+  StickyNote,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getAdminStudentDetail } from '@/actions/admin-students';
@@ -122,14 +123,23 @@ export default async function AdminStudentDetailPage({ params }: Props) {
             <h1 className="text-xl font-bold text-foreground">{user.name}</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
-          <div className="flex gap-2">
-            <StatusBadge
-              label={user.lastLoginAt ? 'Ativo' : 'Inativo'}
-              active={!!user.lastLoginAt}
-            />
-            {user.deletionRequestedAt && (
-              <Badge variant="destructive">Exclusão solicitada</Badge>
-            )}
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <div className="flex gap-2">
+              <StatusBadge
+                label={user.lastLoginAt ? 'Ativo' : 'Inativo'}
+                active={!!user.lastLoginAt}
+              />
+              {user.deletionRequestedAt && (
+                <Badge variant="destructive">Exclusão solicitada</Badge>
+              )}
+            </div>
+            <Link
+              href={ROUTES.ADMIN_STUDENT_NOTES(id)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <StickyNote className="h-4 w-4" aria-hidden="true" />
+              Notas internas
+            </Link>
           </div>
         </div>
 

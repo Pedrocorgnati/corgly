@@ -25,13 +25,30 @@ export const createReferralInviteSchema = z.object({
     .trim()
     .toLowerCase()
     .email('E-mail do convidado inválido'),
-  expiresAt: z.coerce.date().optional(),
+  expiresAt: z.coerce
+    .date()
+    .refine((d) => d.getTime() > Date.now(), 'A data de expiração deve ser futura')
+    .optional(),
 });
 
 /** Aceite de um convite (convidado registra/usa o código). */
 export const acceptReferralInviteSchema = z.object({
   referralCode: z.string().trim().min(4, 'Código inválido').max(32, 'Código excede 32 caracteres'),
   invitedUserId: z.string().uuid('invitedUserId inválido'),
+});
+
+/**
+ * Corpo de POST /api/v1/referrals/accept. O convidado autenticado informa apenas o
+ * código; o `invitedUserId` é derivado da sessão (nunca confiado do corpo) para impedir
+ * que alguém aceite um convite em nome de outra pessoa.
+ */
+export const acceptReferralRequestSchema = z.object({
+  referralCode: z.string().trim().min(4, 'Código inválido').max(32, 'Código excede 32 caracteres'),
+});
+
+/** Concessão de crédito de indicação (uma vez por convite aceito). */
+export const grantReferralCreditSchema = z.object({
+  inviteId: z.string().uuid('inviteId inválido'),
 });
 
 /** Consulta do programa de referrals (lista de convites/créditos do participante). */
@@ -46,6 +63,8 @@ export const referralProgramQuerySchema = z.object({
 
 export type CreateReferralInviteInput = z.infer<typeof createReferralInviteSchema>;
 export type AcceptReferralInviteInput = z.infer<typeof acceptReferralInviteSchema>;
+export type AcceptReferralRequestInput = z.infer<typeof acceptReferralRequestSchema>;
+export type GrantReferralCreditInput = z.infer<typeof grantReferralCreditSchema>;
 export type ReferralProgramQuery = z.infer<typeof referralProgramQuerySchema>;
 export type ReferralStatus = z.infer<typeof referralStatusSchema>;
 export type ReferralInviteStatus = z.infer<typeof referralInviteStatusSchema>;

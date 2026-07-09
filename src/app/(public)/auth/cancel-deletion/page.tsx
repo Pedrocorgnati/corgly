@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
-import { ROUTES } from '@/lib/constants/routes';
+import { ROUTES, API } from '@/lib/constants/routes';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { cn } from '@/lib/utils';
 import { apiClient, ApiError } from '@/lib/api-client';
@@ -23,8 +23,7 @@ function CancelDeletionContent() {
 
     async function cancelDeletion() {
       try {
-        // cancel-deletion API uses GET with query param
-        await apiClient.get(API.AUTH.CANCEL_DELETION, { params: { token } });
+        await apiClient.post(API.AUTH.CANCEL_DELETION, { token });
         setState('success');
       } catch (err) {
         setState('error');
@@ -80,8 +79,18 @@ function CancelDeletionContent() {
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Link inválido ou expirado</h1>
             <p className="text-sm text-muted-foreground">{errorMessage}</p>
+            <p className="text-sm text-muted-foreground">
+              Se a janela de cancelamento já expirou, entre em contato com o suporte para
+              verificar a situação da sua conta.
+            </p>
             <Link href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
               Ir para o login
+            </Link>
+            <Link
+              href={ROUTES.SUPPORT}
+              className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
+            >
+              Falar com o suporte
             </Link>
           </div>
         </div>

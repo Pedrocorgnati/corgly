@@ -9,6 +9,8 @@ import { PageWrapper } from '@/components/shared';
 import { API } from '@/lib/constants/routes';
 import { apiClient, ApiError } from '@/lib/api-client';
 import type { RefundAdminDisplayStatus } from '@/lib/billing/refund-admin.service';
+import { getRegionalDisplay } from '@/lib/billing/currency-policy';
+import { toCurrency } from '@/lib/currency';
 
 interface RefundAdminItem {
   id: string;
@@ -48,14 +50,10 @@ const FILTERS: Array<{ value: 'all' | RefundAdminDisplayStatus; label: string }>
 
 type RefundDecision = 'approve' | 'reject';
 
-function formatMoney(amount: number, currency: string): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    currencyDisplay: 'narrowSymbol',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
+// Exibicao de moeda via politica canonica (ADR-0006 §3/§4): admin e checkout
+// consomem a MESMA `getRegionalDisplay`; nada de formatacao reimplementada aqui.
+function formatMoney(amountCents: number, currency: string): string {
+  return getRegionalDisplay(amountCents, toCurrency(currency), 'pt-BR').formatted;
 }
 
 function statusColor(status: RefundAdminDisplayStatus): string {

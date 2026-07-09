@@ -12,6 +12,7 @@ export interface JwtPayload {
   sub: string;       // userId
   role: string;      // UserRole
   version: number;   // tokenVersion — invalidation on password reset
+  mfaAt?: number;    // epoch (s) da ultima verificacao MFA — "estado MFA recente" da sessao (T-043; consumido por T-045)
 }
 
 export function signJWT(payload: JwtPayload): string {

@@ -31,11 +31,13 @@ export const RATE_LIMITS = {
   AUTH_REGISTER:   { maxRequests: 5,   windowMs: 60_000 },
   AUTH_FORGOT:     { maxRequests: 3,   windowMs: 15 * 60_000 },
   AUTH_RESEND:     { maxRequests: 3,   windowMs: 15 * 60_000 },
+  AUTH_MAGIC_LINK: { maxRequests: 3,   windowMs: 10 * 60_000 },  // T-045: 3 req / 10 min por (email+IP)
   SESSIONS_CREATE: { maxRequests: 20,  windowMs: 60_000 },
   SIGNAL_POST:     { maxRequests: 60,  windowMs: 60_000 },  // WebRTC signaling POST
   SIGNAL_GET:      { maxRequests: 120, windowMs: 60_000 },  // WebRTC signaling GET (polling 2s)
   WEBHOOK:         { maxRequests: 100, windowMs: 60_000 },
   GENERAL:         { maxRequests: 100, windowMs: 60_000 },
+  LEADS_SUBMIT:    { maxRequests: 5,   windowMs: 60_000 },  // T-053: captação pública 5 req / 1 min por (IP+UA)
 } as const;
 
 // ---------------------------------------------------------------------------

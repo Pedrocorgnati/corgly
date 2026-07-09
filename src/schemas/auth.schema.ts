@@ -61,6 +61,10 @@ export const ResendConfirmationSchema = z.object({
   email: z.string().email(),
 });
 
+export const CancelDeletionSchema = z.object({
+  token: z.string().min(1),
+});
+
 export const DeleteAccountSchema = z.object({
   password: z.string().min(1),
   confirmation: z.literal('EXCLUIR', { message: 'Digite EXCLUIR para confirmar' }),
@@ -71,6 +75,11 @@ export const CookieConsentSchema = z.object({
   marketing: z.boolean(),
 });
 
+/** T-045: solicitação de magic-link (login sem senha). */
+export const MagicLinkRequestSchema = z.object({
+  email: z.string().email(),
+});
+
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type RegisterFormInput = z.infer<typeof RegisterFormSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
@@ -79,5 +88,7 @@ export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type ConfirmEmailInput = z.infer<typeof ConfirmEmailSchema>;
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
 export type ResendConfirmationInput = z.infer<typeof ResendConfirmationSchema>;
+export type CancelDeletionInput = z.infer<typeof CancelDeletionSchema>;
 export type DeleteAccountInput = z.infer<typeof DeleteAccountSchema>;
 export type CookieConsentInput = z.infer<typeof CookieConsentSchema>;
+export type MagicLinkRequestInput = z.infer<typeof MagicLinkRequestSchema>;

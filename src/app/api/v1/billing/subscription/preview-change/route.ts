@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { previewSubscriptionChange } from '@/lib/billing/subscription-preview.service';
 import { AppError } from '@/lib/errors';
 
-/** POST /api/v1/billing/subscription/preview-change — simula mudança de plano com proration. */
+/** POST /api/v1/billing/subscription/preview-change - simula mudança de plano com proration. */
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
   if (authResult instanceof NextResponse) return authResult;

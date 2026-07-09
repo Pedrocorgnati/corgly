@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { PageWrapper } from '@/components/shared';
 import { ContentEditor } from '@/components/admin/ContentEditor';
+import { AssetTranscriptionPanel } from '@/components/admin/AssetTranscriptionPanel';
 import { prisma } from '@/lib/prisma';
 
 export const metadata: Metadata = {
@@ -14,7 +15,10 @@ export default async function EditContentPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const content = await prisma.content.findUnique({
     where:   { id },
-    include: { translations: true },
+    include: {
+      translations: true,
+      assets: { orderBy: { uploadedAt: 'desc' } },
+    },
   });
   if (!content) notFound();
 
@@ -50,6 +54,32 @@ export default async function EditContentPage({ params }: { params: Promise<{ id
         youtubeUrl:  content.youtubeUrl ?? '',
         translations,
       }} />
+
+      <section className="mt-8" aria-label="Gravações, transcrições e legendas">
+        <h2 className="mb-1 text-lg font-semibold text-foreground">
+          Gravações, transcrições e legendas
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Dispare a transcrição de cada gravação, acompanhe o status do job e
+          publique as legendas por idioma separadamente.
+        </p>
+        {content.assets.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            Nenhuma gravação vinculada a este conteúdo ainda. Faça o upload de um
+            vídeo/áudio para habilitar a transcrição e as legendas.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {content.assets.map((asset) => (
+              <AssetTranscriptionPanel
+                key={asset.id}
+                assetId={asset.id}
+                assetLabel={`${asset.originalFilename} (${asset.type})`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </PageWrapper>
   );
 }

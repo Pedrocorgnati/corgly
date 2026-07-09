@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  LayoutDashboard, CalendarDays, Users, Video, CreditCard, BarChart3, BookOpen, MessageSquare, LogOut
+  LayoutDashboard, CalendarDays, Users, Video, CreditCard, BarChart3, BookOpen, Mail, LifeBuoy, ShieldCheck, Activity, LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants/routes';
@@ -26,6 +26,10 @@ function useNavItems() {
     { href: ROUTES.ADMIN_CREDITS, label: t('credits'), icon: CreditCard },
     { href: ROUTES.ADMIN_REPORTS, label: t('reports'), icon: BarChart3 },
     { href: ROUTES.ADMIN_CONTENT, label: t('content'), icon: BookOpen },
+    { href: ROUTES.ADMIN_EMAIL_TEMPLATES, label: t('emailTemplates'), icon: Mail },
+    { href: ROUTES.ADMIN_SUPPORT, label: t('support'), icon: LifeBuoy },
+    { href: ROUTES.ADMIN_HEALTH, label: t('health'), icon: Activity },
+    { href: ROUTES.ADMIN_ACCOUNT_SECURITY, label: t('security'), icon: ShieldCheck },
   ];
 }
 

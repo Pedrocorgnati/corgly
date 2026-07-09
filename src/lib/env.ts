@@ -21,6 +21,13 @@ const envSchema = z.object({
     .min(32, 'SESSION_ENTRY_TOKEN_SECRET deve ter no mínimo 32 caracteres')
     .optional(),
   ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY deve ter no mínimo 32 caracteres'),
+  // Secret dedicado para assinar URLs de upload/download de assets (T-058 / §12.4).
+  // Opcional no boot; o helper de storage cai em SESSION_ENTRY_TOKEN_SECRET ->
+  // JWT_SECRET quando ausente e exige presença (>=32) ao assinar (500 caso falte).
+  ASSET_URL_SIGNING_SECRET: z
+    .string()
+    .min(32, 'ASSET_URL_SIGNING_SECRET deve ter no mínimo 32 caracteres')
+    .optional(),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().startsWith('sk_', 'STRIPE_SECRET_KEY deve começar com sk_'),
@@ -39,6 +46,12 @@ const envSchema = z.object({
   // WebRTC TURN — opcional
   TURN_SERVER_URL: z.string().url().optional(),
   TURN_SERVER_SECRET: z.string().optional(),
+
+  // Captcha de formulário público (Cloudflare Turnstile) — OPCIONAL.
+  // Sem o secret, a verificação vira no-op e apenas o honeypot + rate limit
+  // protegem a captação pública de leads (T-053).
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
 
   // Variáveis públicas (NEXT_PUBLIC_*)
   NEXT_PUBLIC_APP_URL: z.string().url('NEXT_PUBLIC_APP_URL deve ser uma URL válida'),

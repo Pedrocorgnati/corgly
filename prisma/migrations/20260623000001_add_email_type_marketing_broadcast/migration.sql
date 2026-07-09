@@ -1,0 +1,51 @@
+-- T-055 (AD-33): adiciona MARKETING_BROADCAST ao enum EmailType.
+-- Broadcasts de marketing sao registrados em email_deliveries (logs de envio),
+-- portanto o valor precisa existir tanto em email_templates.type quanto em
+-- email_deliveries.type (ambas as colunas usam o enum EmailType inline no MySQL).
+-- Append-only: preserva a ordem dos valores existentes.
+
+ALTER TABLE `email_templates`
+  MODIFY COLUMN `type` ENUM(
+    'CONFIRM_EMAIL',
+    'BOOKING_CONFIRMED',
+    'BOOKING_CANCELLED',
+    'BOOKING_REMINDER_24H',
+    'BOOKING_REMINDER_1H',
+    'PASSWORD_RESET',
+    'CREDIT_EXPIRY_WARNING',
+    'PAYMENT_RECEIPT',
+    'SUBSCRIPTION_CANCELLED',
+    'BULK_CANCEL_NOTIFICATION',
+    'PURCHASE_CONFIRMED',
+    'SUBSCRIPTION_PAYMENT_FAILED',
+    'SESSION_INTERRUPTED',
+    'RECURRING_BOOKING_FAILED',
+    'ACCOUNT_DELETION_REQUESTED',
+    'DATA_EXPORT_READY',
+    'FEEDBACK_AVAILABLE',
+    'BOOKING_RESCHEDULED',
+    'MARKETING_BROADCAST'
+  ) NOT NULL;
+
+ALTER TABLE `email_deliveries`
+  MODIFY COLUMN `type` ENUM(
+    'CONFIRM_EMAIL',
+    'BOOKING_CONFIRMED',
+    'BOOKING_CANCELLED',
+    'BOOKING_REMINDER_24H',
+    'BOOKING_REMINDER_1H',
+    'PASSWORD_RESET',
+    'CREDIT_EXPIRY_WARNING',
+    'PAYMENT_RECEIPT',
+    'SUBSCRIPTION_CANCELLED',
+    'BULK_CANCEL_NOTIFICATION',
+    'PURCHASE_CONFIRMED',
+    'SUBSCRIPTION_PAYMENT_FAILED',
+    'SESSION_INTERRUPTED',
+    'RECURRING_BOOKING_FAILED',
+    'ACCOUNT_DELETION_REQUESTED',
+    'DATA_EXPORT_READY',
+    'FEEDBACK_AVAILABLE',
+    'BOOKING_RESCHEDULED',
+    'MARKETING_BROADCAST'
+  ) NOT NULL;

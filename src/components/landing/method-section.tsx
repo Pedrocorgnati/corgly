@@ -4,6 +4,7 @@ import { Target, Clock, RefreshCw, Users, MessageCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { LeadForm } from '@/components/public/LeadForm';
 
 const PILLARS = [
   { key: 'commitment', icon: Target },
@@ -47,6 +48,13 @@ export function MethodSection() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        <div className="mt-12 max-w-sm mx-auto border border-border rounded-xl p-6 bg-card shadow-sm">
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            Quer saber mais sobre o método? Entre em contato:
+          </p>
+          <LeadForm origin="METHOD" showMessage={false} submitLabel="Quero conhecer o método" />
         </div>
       </div>
     </section>

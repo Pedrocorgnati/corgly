@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatCurrency } from '@/lib/format-currency';
+import { getRegionalDisplay } from '@/lib/billing/currency-policy';
+import { toCurrency } from '@/lib/currency';
 
 type Status = 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED';
 
@@ -177,7 +178,7 @@ export function BillingHistoryClient() {
                   </td>
                   <td className="px-4 py-3">{it.description}</td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {formatCurrency(it.amount, it.currency as 'usd' | 'brl' | 'eur' | 'usdc')}
+                    {getRegionalDisplay(it.amount, toCurrency(it.currency), 'pt-BR').formatted}
                   </td>
                   <td className="px-4 py-3 uppercase">{it.currency}</td>
                   <td className={`px-4 py-3 font-medium ${STATUS_COLOR[it.status]}`}>

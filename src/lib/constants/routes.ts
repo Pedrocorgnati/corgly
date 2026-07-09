@@ -7,14 +7,20 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',
   RESEND_CONFIRMATION: '/auth/resend-confirmation',
+  MAGIC_LINK: '/auth/magic-link',
   CANCEL_DELETION: '/auth/cancel-deletion',
   ONBOARDING: '/auth/onboarding',
   TERMS: '/terms',
   PRIVACY: '/privacy',
+  COOKIES: '/cookies',
+  COOKIE_PREFERENCES: '/cookies/preferences',
+  DPA: '/dpa',
   CONTENT: '/content',
   CONTENT_DETAIL: (id: string) => `/content/${id}`,
   PRICING: '/#precos',
   SUPPORT: '/support',
+  SUPPORT_NEW: '/support/new',
+  CONTACT: '/contact',
   MAINTENANCE: '/maintenance',
 
   // Student
@@ -28,11 +34,14 @@ export const ROUTES = {
   SESSION_AUDIO_ONLY: (id: string) => `/session/${id}/audio-only`,
   SESSION_RECONNECTING: (id: string) => `/session/${id}/reconnecting`,
   SESSION_NOTES_RECOVERY: (id: string) => `/session/${id}/notes-recovery`,
+  RESCHEDULE_OPTIONS: (bookingId: string) => `/schedule/${bookingId}/reschedule`,
   ACCOUNT: '/account',
   ACCOUNT_BILLING: '/account/billing',
   BILLING_SUBSCRIPTION: '/billing/subscription',
   BILLING_SUBSCRIPTION_CHANGE: '/billing/subscription/change-plan',
   HISTORY: '/history',
+  LIBRARY: '/library',
+  LIBRARY_DETAIL: (slug: string) => `/library/${slug}`,
 
   // Admin
   ADMIN_DASHBOARD: '/admin/dashboard',
@@ -42,7 +51,13 @@ export const ROUTES = {
   ADMIN_CREDITS: '/admin/credits',
   ADMIN_REPORTS: '/admin/reports',
   ADMIN_CONTENT: '/admin/content',
+  ADMIN_EMAIL_TEMPLATES: '/admin/emails/templates',
+  ADMIN_SUPPORT: '/admin/support',
+  ADMIN_HEALTH: '/admin/health',
+  ADMIN_ACCOUNT_SECURITY: '/admin/account/security',
   ADMIN_FEEDBACK: (sessionId: string) => `/admin/feedback/${sessionId}`,
+  ADMIN_STUDENT_NOTES: (id: string) => `/admin/students/${id}/notes`,
+  MFA_CHALLENGE: '/auth/mfa/challenge',
 } as const;
 
 export const API = {
@@ -56,7 +71,10 @@ export const API = {
     RESEND_CONFIRMATION: '/api/v1/auth/resend-confirmation',
     FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
     RESET_PASSWORD: '/api/v1/auth/reset-password',
+    MAGIC_LINK_REQUEST: '/api/v1/auth/magic-link/request',
     ONBOARDING: '/api/v1/auth/onboarding',
+    MFA_TOTP_INIT: '/api/v1/auth/mfa/totp/init',
+    MFA_VERIFY: '/api/v1/auth/mfa/verify',
     DELETE_ACCOUNT: '/api/v1/auth/delete-account',
     EXPORT_DATA: '/api/v1/auth/export-data',
     COOKIE_CONSENT: '/api/v1/auth/cookie-consent',
@@ -87,6 +105,7 @@ export const API = {
   SUBSCRIPTIONS_CANCEL: '/api/v1/subscriptions/cancel',
   SUBSCRIPTIONS_UPDATE: '/api/v1/subscriptions/update',
   BILLING_SUBSCRIPTION_PREVIEW_CHANGE: '/api/v1/billing/subscription/preview-change',
+  LEADS: '/api/v1/leads',
   FEEDBACK: '/api/v1/feedback',
   FEEDBACK_HISTORY: '/api/v1/feedback/history',
   FEEDBACK_PROGRESS: '/api/v1/feedback/progress',
@@ -97,6 +116,12 @@ export const API = {
   CONTENT: '/api/v1/content',
   CONTENT_DETAIL: (id: string) => `/api/v1/content/${id}`,
   CONTENT_NOTES: (id: string) => `/api/v1/content/${id}/notes`,
+  REFERRALS: {
+    ME: '/api/v1/referrals/me',
+    INVITES: '/api/v1/referrals/invites',
+    CREDITS: '/api/v1/referrals/credits',
+    ACCEPT: '/api/v1/referrals/accept',
+  },
   ADMIN: {
     DASHBOARD: '/api/v1/admin/dashboard',
     USERS: '/api/v1/admin/users',
@@ -107,6 +132,9 @@ export const API = {
     SESSION: (id: string) => `/api/v1/admin/sessions/${id}`,
     SESSION_FEEDBACK: (id: string) => `/api/v1/admin/sessions/${id}/feedback`,
     FEEDBACK_REVIEW: (id: string) => `/api/v1/admin/feedback/${id}/review`,
+    SUPPORT_TICKETS: '/api/v1/admin/support/tickets',
+    SUPPORT_TICKET: (id: string) => `/api/v1/admin/support/tickets/${id}`,
+    STUDENT_NOTES: (id: string) => `/api/v1/admin/students/${id}/notes`,
     CREDITS_NOTIFY_EXPIRING: '/api/v1/admin/credits/notify-expiring',
     BILLING_REFUNDS: '/api/v1/admin/billing/refunds',
     STRIPE_WEBHOOKS: '/api/v1/admin/webhooks/stripe',
@@ -114,4 +142,6 @@ export const API = {
   WEBHOOKS: {
     STRIPE: '/api/v1/webhooks/stripe',
   },
+  FX_PREVIEW: '/api/v1/fx/preview',
+  BILLING_CHARGE_CURRENCY: '/api/v1/billing/charge-currency',
 } as const;

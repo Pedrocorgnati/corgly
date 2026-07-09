@@ -96,6 +96,23 @@ export const ContentType = {
 } as const;
 export type ContentType = (typeof ContentType)[keyof typeof ContentType];
 
+// Captação pública de leads (§12.4.3) - origem do formulário que gerou o lead.
+export const LeadOrigin = {
+  LANDING: 'LANDING',
+  METHOD: 'METHOD',
+  CONTACT: 'CONTACT',
+} as const;
+export type LeadOrigin = (typeof LeadOrigin)[keyof typeof LeadOrigin];
+
+export const LeadStatus = {
+  NEW: 'NEW',
+  CONTACTED: 'CONTACTED',
+  CONVERTED: 'CONVERTED',
+  SPAM: 'SPAM',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+export type LeadStatus = (typeof LeadStatus)[keyof typeof LeadStatus];
+
 export const CreditEventType = {
   PURCHASE: 'PURCHASE',
   CONSUMED: 'CONSUMED',
@@ -127,6 +144,10 @@ export const EmailType = {
   FEEDBACK_AVAILABLE: 'FEEDBACK_AVAILABLE',
   // Added by module-9-integration ST008 (reagendamento aprovado)
   BOOKING_RESCHEDULED: 'BOOKING_RESCHEDULED',
+  // Added by T-045 (magic-link / login sem senha)
+  MAGIC_LINK: 'MAGIC_LINK',
+  // Added by T-055 (AD-33: broadcasts de marketing + logs de envio em massa)
+  MARKETING_BROADCAST: 'MARKETING_BROADCAST',
 } as const;
 export type EmailType = (typeof EmailType)[keyof typeof EmailType];
 

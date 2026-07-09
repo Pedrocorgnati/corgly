@@ -24,7 +24,8 @@
       "history": "History",
       "buy": "Buy credits",
       "settings": "Settings",
-      "creditsBalance": "Balance: {count} credits"
+      "creditsBalance": "Balance: {count} credits",
+      "library": "Library"
     },
     "admin": {
       "dashboard": "Dashboard",
@@ -34,7 +35,11 @@
       "credits": "Credits",
       "reports": "Reports",
       "content": "Content",
-      "phase1Label": "Phase 1"
+      "support": "Support",
+      "health": "Health",
+      "security": "Security",
+      "phase1Label": "Phase 1",
+      "emailTemplates": "Emails"
     }
   },
   "darkMode": {
@@ -52,7 +57,8 @@
     "privacy": "Privacy Policy",
     "terms": "Terms of Use",
     "cookies": "Cookies",
-    "languageLabel": "Language"
+    "languageLabel": "Language",
+    "preferences": "Cookie preferences"
   },
   "creditBadge": {
     "credits": "{count} credits",
@@ -132,7 +138,8 @@
     "analytics_description": "Help us improve the site",
     "marketing_label": "Marketing",
     "marketing_description": "Allow personalized content",
-    "save_preferences": "Save preferences"
+    "save_preferences": "Save preferences",
+    "manage_preferences": "Manage preferences"
   },
   "privacy": {
     "title": "Privacy Policy",
@@ -588,5 +595,23 @@
       "message": "Open this page via the link sent to your email to confirm unsubscribing."
     },
     "backHome": "Back to home"
+  },
+  "library": {
+    "pageTitle": "Library",
+    "pageDescription": "Your recorded lessons, transcripts, captions and resources.",
+    "empty": "No recorded lessons available yet.",
+    "resourceCount": "{count, plural, =0 {No resources} one {# resource} other {# resources}}",
+    "backToLibrary": "Back to library",
+    "notFoundTitle": "Lesson not found",
+    "transcriptTitle": "Transcript",
+    "transcriptEmpty": "Transcript is not available for this lesson yet.",
+    "captionsTitle": "Captions",
+    "captionsEmpty": "No captions available for this lesson.",
+    "resourcesTitle": "Lesson resources",
+    "resourcesEmpty": "No resources linked to this lesson.",
+    "resourcesExpiringHint": "Download links expire for security and are refreshed automatically on each download.",
+    "resourcesDownload": "Download",
+    "resourcesDownloadAria": "Download resource {name}",
+    "resourcesError": "Could not generate the download link. Please try again."
   }
 }

@@ -9,7 +9,12 @@ import { PastDueBanner } from '@/components/billing/PastDueBanner';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { ROUTES } from '@/lib/constants/routes';
+import { CUSTOMER_PORTAL_RETURN_AFTER_PATH } from '@/lib/billing/customer-portal.config';
 import { cn } from '@/lib/utils';
+
+// ST-22 (Assinatura). Integração do Customer Portal = redirect para o portal
+// hospedado da Stripe (embed inviável, X-Frame-Options). Decisão canônica:
+// ADR-0003. Modo e path de retorno vêm de customer-portal.config.ts.
 
 interface PortalSessionResponse {
   data?: {
@@ -36,7 +41,7 @@ export default function BillingSubscriptionPage() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ returnTo: '/billing/subscription?portal=returned' }),
+        body: JSON.stringify({ returnTo: CUSTOMER_PORTAL_RETURN_AFTER_PATH }),
       });
       const payload = (await response.json().catch(() => ({}))) as PortalSessionResponse;
 

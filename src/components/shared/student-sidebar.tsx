@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  LayoutDashboard, CalendarDays, TrendingUp, History, CreditCard, Settings, LogOut
+  LayoutDashboard, CalendarDays, TrendingUp, History, CreditCard, Settings, LogOut, Library
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants/routes';
@@ -23,6 +23,7 @@ function useNavItems() {
     { href: ROUTES.SCHEDULE, label: t('schedule'), icon: CalendarDays },
     { href: ROUTES.PROGRESS, label: t('progress'), icon: TrendingUp },
     { href: '/history', label: t('history'), icon: History },
+    { href: ROUTES.LIBRARY, label: t('library'), icon: Library },
     { href: ROUTES.CREDITS, label: t('buy'), icon: CreditCard },
     { href: ROUTES.ACCOUNT, label: t('settings'), icon: Settings },
   ];
