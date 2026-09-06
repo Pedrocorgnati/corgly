@@ -1,54 +1,30 @@
 'use client';
 
-import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { LeadForm } from '@/components/public/LeadForm';
-import { ROUTES } from '@/lib/constants/routes';
+import { useLocale, useTranslations } from 'next-intl';
+import { ButtonLink } from '@/components/ui/button-link';
+import { firstLessonHref, formatUsd, FIRST_LESSON_USD } from '@/lib/constants/landing';
+import { useAuth } from '@/hooks/useAuth';
 
 export function CTASection() {
-  const t = useTranslations('landing');
+  const t = useTranslations('landing.cta');
+  const locale = useLocale();
+  const { isAuthenticated } = useAuth();
 
   return (
-    <section
-      className="py-20 bg-brand-gradient"
-      aria-labelledby="cta-heading"
-    >
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6 text-center">
-        <h2 id="cta-heading" className="text-3xl md:text-4xl font-bold text-white mb-4">
-          {t('cta.title')}
+    <section data-testid="landing-cta" className="py-11 md:py-12 bg-cta-lilac" aria-labelledby="cta-heading">
+      <div className="max-w-[1120px] mx-auto px-5 md:px-6 text-center">
+        <h2 id="cta-heading" className="text-[1.45rem] md:text-[1.85rem] font-semibold text-white tracking-tight">
+          {t('title')}
         </h2>
-        <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">
-          {t('cta.subtitle')}
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href={ROUTES.REGISTER}>
-            <Button
-              size="lg"
-              className="w-full sm:w-auto bg-white text-primary hover:bg-white/90 font-semibold min-h-[52px] shadow-lg"
-            >
-              {t('cta.button')}
-            </Button>
-          </Link>
-          <a href="#precos">
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full sm:w-auto border-white/50 text-white hover:bg-white/10 min-h-[52px]"
-            >
-              {t('cta.button_secondary')}
-            </Button>
-          </a>
-        </div>
-
-        <div className="mt-12 border-t border-white/20 pt-10">
-          <p className="text-white/70 text-sm mb-5">
-            Ainda com dúvidas? Deixe seu contato e entraremos em breve:
-          </p>
-          <div className="max-w-sm mx-auto bg-white rounded-xl p-5 shadow-lg">
-            <LeadForm origin="LANDING" showMessage={false} submitLabel="Receber informações" />
-          </div>
-        </div>
+        <p className="sr-only">{t('subtitle')}</p>
+        <ButtonLink
+          href={firstLessonHref(isAuthenticated)}
+          data-testid="landing-cta-primary-button"
+          size="lg"
+          className="mt-5 w-full sm:w-auto h-11 min-h-[44px] rounded-[10px] bg-white text-[#5b4a9a] hover:bg-white/90 font-semibold text-[15px] shadow-sm px-8"
+        >
+          {t('button', { price: formatUsd(FIRST_LESSON_USD, locale) })}
+        </ButtonLink>
       </div>
     </section>
   );

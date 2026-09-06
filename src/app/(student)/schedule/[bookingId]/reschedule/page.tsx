@@ -73,12 +73,17 @@ export default async function ReschedulePage({ params }: Props) {
   }
 
   return (
-    <PageWrapper className="max-w-3xl">
+    <PageWrapper data-testid="page-schedule-reschedule" className="max-w-3xl">
       <nav
+        data-testid="schedule-reschedule-breadcrumb"
         aria-label="Breadcrumb"
         className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground"
       >
-        <Link href={ROUTES.HISTORY} className="transition-colors hover:text-foreground">
+        <Link
+          data-testid="schedule-reschedule-breadcrumb-history-link"
+          href={ROUTES.HISTORY}
+          className="transition-colors hover:text-foreground"
+        >
           ← Histórico de aulas
         </Link>
         <span>/</span>
@@ -87,7 +92,7 @@ export default async function ReschedulePage({ params }: Props) {
         </span>
       </nav>
 
-      <header className="mb-6">
+      <header data-testid="schedule-reschedule-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Reagendar aula</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Escolha um novo horário entre as alternativas disponíveis.

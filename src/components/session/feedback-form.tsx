@@ -65,13 +65,13 @@ export function FeedbackForm({
 
   if (sent) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 text-center shadow-sm space-y-4">
+      <div data-testid="session-feedback-success" className="bg-card border border-border rounded-2xl p-6 text-center shadow-sm space-y-4">
         <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
         <h2 className="text-xl font-bold text-foreground">Avaliação enviada!</h2>
         <p className="text-sm text-muted-foreground">
           Obrigada pelo seu feedback. Ele nos ajuda a melhorar continuamente.
         </p>
-        <Link href={ROUTES.DASHBOARD} className={cn(buttonVariants(), 'w-full text-center')}>
+        <Link href={ROUTES.DASHBOARD} data-testid="session-feedback-dashboard-link" className={cn(buttonVariants(), 'w-full text-center')}>
           ← Voltar ao dashboard
         </Link>
       </div>
@@ -102,13 +102,13 @@ export function FeedbackForm({
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-      <h1 className="text-xl font-bold text-foreground mb-6">
+    <div data-testid="session-feedback-panel" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+      <h1 data-testid="session-feedback-header" className="text-xl font-bold text-foreground mb-6">
         {existingFeedback ? 'Sua avaliação' : 'Avaliar sua aula'}
       </h1>
 
       {isWindowExpired && !existingFeedback && (
-        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-6">
+        <div data-testid="session-feedback-window-expired" className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-6">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
           <p className="text-sm text-amber-800 dark:text-amber-200">
             O prazo para avaliar esta aula expirou.
@@ -116,7 +116,7 @@ export function FeedbackForm({
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form data-testid="session-feedback-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {DIMENSIONS.map((dim) => (
           <Controller
             key={dim.key}
@@ -130,6 +130,7 @@ export function FeedbackForm({
                 onChange={field.onChange}
                 disabled={isSubmitting || isReadonly}
                 error={fieldState.error?.message}
+                data-testid={`session-feedback-rating-${dim.key}`}
               />
             )}
           />
@@ -145,6 +146,7 @@ export function FeedbackForm({
               </label>
               <Textarea
                 id={dim.feedbackKey}
+                data-testid={`session-feedback-${dim.key}-comment`}
                 {...register(dim.feedbackKey)}
                 placeholder={`O que observou sobre ${dim.label.toLowerCase()}?`}
                 rows={2}
@@ -165,6 +167,7 @@ export function FeedbackForm({
           </label>
           <Textarea
             id="overallFeedback"
+            data-testid="session-feedback-overall-comment"
             {...register('overallFeedback')}
             placeholder="Compartilhe sua experiência geral..."
             rows={4}
@@ -189,6 +192,7 @@ export function FeedbackForm({
         {!isReadonly && (
           <Button
             type="submit"
+            data-testid="session-feedback-submit-button"
             disabled={isSubmitting}
             className="w-full h-12"
           >

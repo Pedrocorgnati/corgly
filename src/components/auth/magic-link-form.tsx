@@ -59,7 +59,7 @@ export function MagicLinkForm() {
 
   if (status === 'sent') {
     return (
-      <div className="text-center space-y-3 py-4" role="status">
+      <div data-testid="form-magic-link-success" className="text-center space-y-3 py-4" role="status">
         <MailCheck className="h-10 w-10 text-success mx-auto" />
         <h2 className="text-base font-semibold text-foreground">Verifique seu email</h2>
         <p className="text-sm text-muted-foreground">
@@ -71,13 +71,14 @@ export function MagicLinkForm() {
 
   if (status === 'rate-limited') {
     return (
-      <div className="text-center space-y-3 py-4" role="alert">
+      <div data-testid="form-magic-link-rate-limited" className="text-center space-y-3 py-4" role="alert">
         <CheckCircle2 className="h-10 w-10 text-muted-foreground mx-auto" />
         <h2 className="text-base font-semibold text-foreground">Muitas solicitações</h2>
         <p className="text-sm text-muted-foreground">
           Você atingiu o limite de solicitações. Aguarde alguns minutos antes de tentar novamente.
         </p>
         <Button
+          data-testid="form-magic-link-back-button"
           type="button"
           variant="outline"
           className="w-full min-h-[44px]"
@@ -90,9 +91,9 @@ export function MagicLinkForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form data-testid="form-magic-link" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {status === 'error' && (
-        <p className="text-sm text-destructive text-center" role="alert">
+        <p data-testid="form-magic-link-error" className="text-sm text-destructive text-center" role="alert">
           Não foi possível enviar o link. Verifique sua conexão e tente novamente.
         </p>
       )}
@@ -101,6 +102,7 @@ export function MagicLinkForm() {
           Email
         </Label>
         <Input
+          data-testid="form-magic-link-email-input"
           id="email"
           type="email"
           placeholder="seu@email.com"
@@ -116,7 +118,7 @@ export function MagicLinkForm() {
           </p>
         )}
       </div>
-      <Button type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
+      <Button data-testid="form-magic-link-submit-button" type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin mr-2" />

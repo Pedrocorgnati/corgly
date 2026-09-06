@@ -138,18 +138,19 @@ export default function AdminRefundsPage() {
   };
 
   return (
-    <PageWrapper>
-      <div className="mb-6">
+    <PageWrapper data-testid="page-admin-refunds">
+      <div data-testid="admin-refunds-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Reembolsos Admin</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Aprovação administrativa, negação e reexecução com estado de falha de Stripe.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div data-testid="admin-refunds-filter-bar" className="flex flex-wrap gap-2 mb-6">
         {FILTERS.map((option) => (
           <Button
             key={option.value}
+            data-testid={`admin-refunds-filter-${option.value}-button`}
             size="sm"
             variant={filter === option.value ? 'default' : 'outline'}
             onClick={() => setFilter(option.value)}
@@ -159,19 +160,19 @@ export default function AdminRefundsPage() {
         ))}
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground">Carregando reembolsos...</p>}
+      {loading && <p data-testid="admin-refunds-loading" className="text-sm text-muted-foreground">Carregando reembolsos...</p>}
 
       {!loading && filteredItems.length === 0 && (
-        <div className="border border-dashed border-border rounded-xl p-8 text-sm text-muted-foreground text-center bg-card">
+        <div data-testid="admin-refunds-empty" className="border border-dashed border-border rounded-xl p-8 text-sm text-muted-foreground text-center bg-card">
           Nenhum item encontrado para o filtro atual.
         </div>
       )}
 
-      <div className="space-y-4">
+      <div data-testid="admin-refunds-list" className="space-y-4">
         {filteredItems.map((item) => {
           const busy = actionBusyById[item.id] === true;
           return (
-            <div key={item.id} className="bg-card border border-border rounded-xl p-4 sm:p-5">
+            <div key={item.id} data-testid={`admin-refunds-row-${item.id}`} className="bg-card border border-border rounded-xl p-4 sm:p-5">
               <div className="flex flex-wrap justify-between items-start gap-3 mb-3">
                 <div>
                   <p className="font-semibold text-sm text-foreground">Pedido {item.id}</p>
@@ -191,6 +192,7 @@ export default function AdminRefundsPage() {
               {(item.displayStatus === 'PENDING' || item.displayStatus === 'STRIPE_FAILURE') && (
                 <div className="space-y-3">
                   <Textarea
+                    data-testid={`form-refund-reason-${item.id}-textarea`}
                     value={reasonsById[item.id] ?? ''}
                     onChange={(event) => onReasonChange(item.id, event.target.value)}
                     placeholder="Motivo obrigatório para decisão"
@@ -200,6 +202,7 @@ export default function AdminRefundsPage() {
                   />
                   <div className="flex gap-2 justify-end">
                     <Button
+                      data-testid={`admin-refunds-reject-${item.id}-button`}
                       disabled={busy || isPending || !canSubmitReason(item.id)}
                       onClick={() => handleDecision(item, 'reject')}
                       variant="outline"
@@ -207,6 +210,7 @@ export default function AdminRefundsPage() {
                       Rejeitar
                     </Button>
                     <Button
+                      data-testid={`admin-refunds-approve-${item.id}-button`}
                       disabled={busy || isPending || !canSubmitReason(item.id)}
                       onClick={() => handleDecision(item, 'approve')}
                     >

@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 
 export default function CookiePreferencesPage() {
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-cookies-preferences" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
+        <div data-testid="cookies-preferences-header" className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Preferências de cookies</h1>
           <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
             Escolha quais categorias de cookies não essenciais você permite. Suas escolhas são salvas
@@ -26,17 +26,19 @@ export default function CookiePreferencesPage() {
         <div className="mt-8 pt-6 border-t border-border">
           <Link
             href={ROUTES.COOKIES}
+            data-testid="cookies-preferences-cookies-link"
             className="text-primary text-sm font-medium hover:underline mr-4"
           >
             Política de Cookies
           </Link>
           <Link
             href={ROUTES.PRIVACY}
+            data-testid="cookies-preferences-privacy-link"
             className="text-muted-foreground text-sm hover:underline mr-4"
           >
             Política de Privacidade
           </Link>
-          <Link href={ROUTES.HOME} className="text-muted-foreground text-sm hover:underline">
+          <Link href={ROUTES.HOME} data-testid="cookies-preferences-back-link" className="text-muted-foreground text-sm hover:underline">
             &larr; Voltar ao início
           </Link>
         </div>

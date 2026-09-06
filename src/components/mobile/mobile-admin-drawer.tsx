@@ -42,11 +42,11 @@ export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProp
 
   return (
     <Sheet open={open} onOpenChange={(o: boolean) => !o && onClose()}>
-      <SheetContent side="left" className="w-72 p-0 flex flex-col lg:hidden">
+      <SheetContent data-testid="sidebar-mobile-drawer" side="left" className="w-72 p-0 flex flex-col lg:hidden">
         <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
 
         {/* User info + Admin badge */}
-        <div className="p-4 border-b border-border mt-10">
+        <div data-testid="sidebar-mobile-user-section" className="p-4 border-b border-border mt-10">
           <div className="flex items-center gap-3">
             <AvatarInitials name={user.name} size="md" />
             <div className="min-w-0">
@@ -62,14 +62,16 @@ export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProp
         </div>
 
         {/* Navigation */}
-        <nav aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        <nav data-testid="sidebar-mobile-nav" aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + '/');
+            const slug = href.replace(/^\//, '').replace(/\//g, '-');
             return (
               <Link
                 key={href}
                 href={href}
                 onClick={onClose}
+                data-testid={`sidebar-mobile-nav-item-${slug}`}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-[120ms]',
                   active
@@ -87,6 +89,7 @@ export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProp
         {/* Logout */}
         <div className="p-3 border-t border-border">
           <button
+            data-testid="sidebar-mobile-logout-button"
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             onClick={() => { logout(); onClose(); }}
           >

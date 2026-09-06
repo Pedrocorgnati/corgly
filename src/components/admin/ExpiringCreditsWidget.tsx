@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
+import { WidgetCard } from '@/components/shared/widget-card';
 import type { AdminDashboardData } from '@/actions/admin-dashboard';
 import { apiClient, ApiError } from '@/lib/api-client';
 
@@ -52,45 +53,47 @@ export function ExpiringCreditsWidget({ expiringCredits }: ExpiringCreditsWidget
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-warning" />
-          <h2 className="font-semibold text-foreground">Créditos Expirando</h2>
-        </div>
-        {count > 0 && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-medium">
+    <WidgetCard
+      data-testid="admin-dashboard-expiring-credits"
+      title="Créditos expirando"
+      icon={AlertTriangle}
+      accent={count > 0 ? 'amber' : 'brand'}
+      action={
+        count > 0 ? (
+          <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-warning/10 text-warning font-semibold">
             {count}
           </span>
-        )}
-      </div>
-
+        ) : undefined
+      }
+    >
       {items.length === 0 ? (
         <EmptyState
+          data-testid="admin-dashboard-expiring-credits-empty"
           icon={CreditCard}
           title="Nenhum crédito expirando"
           description="Nenhum lote de créditos vence nos próximos 7 dias."
           className="py-6"
         />
       ) : (
-        <ul className="space-y-3" role="list">
+        <ul data-testid="admin-dashboard-expiring-credits-list" className="space-y-2.5" role="list">
           {items.slice(0, 5).map((item) => (
             <li
               key={item.batchId}
-              className="flex items-center justify-between rounded-lg border border-border p-3 gap-3"
+              data-testid={`admin-dashboard-expiring-credits-item-${item.batchId}`}
+              className="flex items-center justify-between rounded-lg border border-border p-3.5 gap-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground truncate">
+                <p className="text-[13.5px] font-semibold text-ink truncate">
                   {item.student.name}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[12px] text-muted-foreground mt-0.5">
                   {item.remaining} {item.remaining === 1 ? 'crédito restante' : 'créditos restantes'}
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span
                   className={cn(
-                    'text-xs px-2 py-0.5 rounded-full font-medium',
+                    'text-[12px] px-2.5 py-0.5 rounded-full font-semibold',
                     daysColor(item.daysUntilExpiry),
                     daysBg(item.daysUntilExpiry),
                   )}
@@ -98,9 +101,10 @@ export function ExpiringCreditsWidget({ expiringCredits }: ExpiringCreditsWidget
                   {daysLabel(item.daysUntilExpiry)}
                 </span>
                 <Button
+                  data-testid={`admin-dashboard-expiring-credits-notify-${item.userId}-button`}
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2 text-xs"
+                  className="h-7 px-2 text-[12px] rounded-lg text-brand-500 hover:bg-brand-50"
                   disabled={notifying[item.userId]}
                   onClick={() => handleNotify(item.userId, item.student.name)}
                   aria-label={`Notificar ${item.student.name}`}
@@ -113,6 +117,6 @@ export function ExpiringCreditsWidget({ expiringCredits }: ExpiringCreditsWidget
           ))}
         </ul>
       )}
-    </div>
+    </WidgetCard>
   );
 }

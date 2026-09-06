@@ -9,9 +9,13 @@ import { SubscriptionStatus } from '@/lib/constants/enums';
 import { resolvePrice, toStripeCurrency } from '@/lib/pricing/config';
 import type { Currency } from '@/lib/currency';
 import {
+  calculateMonthlyLessonsAmountCents,
   calculateSubscriptionMonthlyAmountCents,
+  legacyWeeklyEquivalent,
+  resolveMonthlyCredits,
   stripeCurrencyToCurrency,
 } from '@/lib/billing/subscription-pricing';
+import type { MonthlyLessonsPlan } from '@/schemas/checkout.schema';
 
 const CREDIT_EXPIRY_6M_MS = 6 * 30 * 24 * 60 * 60 * 1000;
 const WEBHOOK_TERMINAL_STATUSES = new Set(['PROCESSED', 'IGNORED']);
@@ -105,7 +109,14 @@ export class StripeService {
 
   /**
    * Cria Stripe Checkout Session para assinatura mensal.
-   * Calcula preço com base em weeklyFrequency × $16/aula × 4.33 semanas/mês.
+   *
+   * Dois eixos mutuamente exclusivos (o schema garante exatamente um):
+   *  - `monthlyLessons` (canonico): 10 ou 20 aulas/mes, preco vindo de PRICING;
+   *  - `weeklyFrequency` (legado): 1..5 aulas/semana × $16/aula × 4.33 semanas.
+   *
+   * O eixo tambem viaja em `subscription_data.metadata`, para o objeto
+   * Subscription do Stripe carregar o plano e o webhook conseguir persistir
+   * `monthlyLessons` sem adivinhar.
    */
   async createSubscriptionCheckout(
     userId: string,
@@ -137,12 +148,34 @@ export class StripeService {
       await prisma.user.update({ where: { id: userId }, data: { stripeCustomerId } });
     }
 
-    // O priceId nao e usado aqui porque a assinatura e variavel (frequencia 1..5).
+    // O priceId pre-cadastrado nao e usado aqui porque o valor da assinatura
+    // varia por eixo; o preco sai sempre da tabela unica (PRICING) ou da regra
+    // legada, nunca de conversao local.
     const currency: Currency = data.currency ?? 'USD';
-    const monthlyAmountCents = calculateSubscriptionMonthlyAmountCents(
-      data.weeklyFrequency,
-      currency,
-    );
+
+    let amountCents: number;
+    let productName: string;
+    let planMetadata: Record<string, string>;
+
+    if (data.monthlyLessons !== undefined) {
+      const lessons = data.monthlyLessons;
+      amountCents = calculateMonthlyLessonsAmountCents(lessons, currency);
+      productName = `Corgly Assinatura — ${lessons} aulas por mês`;
+      planMetadata = { monthlyLessons: String(lessons) };
+    } else if (data.weeklyFrequency !== undefined) {
+      const weeklyFrequency = data.weeklyFrequency;
+      amountCents = calculateSubscriptionMonthlyAmountCents(weeklyFrequency, currency);
+      productName = `Corgly Assinatura — ${weeklyFrequency}× por semana`;
+      planMetadata = { weeklyFrequency: String(weeklyFrequency) };
+    } else {
+      throw new AppError(
+        'VAL_003',
+        'Informe monthlyLessons (10 ou 20 aulas por mês) ou weeklyFrequency (1 a 5 aulas por semana).',
+        400,
+      );
+    }
+
+    const sessionMetadata = { userId, ...planMetadata, currency };
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -151,10 +184,10 @@ export class StripeService {
         {
           price_data: {
             currency: toStripeCurrency(currency),
-            unit_amount: monthlyAmountCents,
+            unit_amount: amountCents,
             recurring: { interval: 'month' },
             product_data: {
-              name: `Corgly Assinatura — ${data.weeklyFrequency}× por semana`,
+              name: productName,
             },
           },
           quantity: 1,
@@ -163,11 +196,10 @@ export class StripeService {
       mode: 'subscription',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/credits?canceled=true`,
-      metadata: {
-        userId,
-        weeklyFrequency: String(data.weeklyFrequency),
-        currency,
-      },
+      metadata: sessionMetadata,
+      // Propaga o eixo para o objeto Subscription do Stripe: sem isso a
+      // metadata morre na sessao e o webhook nao sabe qual plano foi vendido.
+      subscription_data: { metadata: sessionMetadata },
     });
 
     return { url: session.url!, sessionId: session.id };
@@ -185,16 +217,31 @@ export class StripeService {
   }
 
   /**
-   * Atualiza frequência semanal de uma assinatura.
+   * Atualiza o plano de uma assinatura, em qualquer um dos dois eixos.
    * Cria prorações automaticamente (proration_behavior: 'create_prorations').
+   *
+   * `plan` aceita:
+   *  - `number` — cadencia semanal legada (1..5), assinatura antiga;
+   *  - `{ monthlyLessons }` — eixo canonico (10 ou 20 aulas/mes).
+   *
+   * O eixo escolhido e persistido no banco: trocar para o eixo mensal grava
+   * `monthlyLessons`; trocar para o legado zera `monthlyLessons` para NULL, de
+   * modo que a assinatura nunca fica com os dois eixos preenchidos ao mesmo
+   * tempo (preco e creditos deixariam de ser deterministicos).
    */
   async updateSubscription(
     stripeSubscriptionId: string,
-    newWeeklyFrequency: number,
+    plan: number | SubscriptionPlanUpdate,
     idempotencyKey?: string | null,
     options: { prorationDate?: number } = {},
   ): Promise<void> {
-    if (newWeeklyFrequency < 1 || newWeeklyFrequency > 5) {
+    const normalizedPlan: SubscriptionPlanUpdate =
+      typeof plan === 'number' ? { weeklyFrequency: plan } : plan;
+
+    if (
+      'weeklyFrequency' in normalizedPlan &&
+      (normalizedPlan.weeklyFrequency < 1 || normalizedPlan.weeklyFrequency > 5)
+    ) {
       throw new AppError('VAL_003', 'weeklyFrequency deve estar entre 1 e 5.', 400);
     }
 
@@ -214,10 +261,13 @@ export class StripeService {
     if (!productId) throw new AppError('PAYMENT_083', 'Produto da assinatura não encontrado no Stripe.', 500);
 
     const currentCurrency = stripeCurrencyToCurrency(subscriptionItem.price.currency);
-    const monthlyAmountCents = calculateSubscriptionMonthlyAmountCents(
-      newWeeklyFrequency,
-      currentCurrency,
-    );
+    const monthlyAmountCents =
+      'monthlyLessons' in normalizedPlan
+        ? calculateMonthlyLessonsAmountCents(normalizedPlan.monthlyLessons, currentCurrency)
+        : calculateSubscriptionMonthlyAmountCents(
+            normalizedPlan.weeklyFrequency,
+            currentCurrency,
+          );
 
     await stripe.subscriptions.update(
       stripeSubscriptionId,
@@ -236,14 +286,28 @@ export class StripeService {
             },
           },
         ],
+        // Mantem o eixo vigente na metadata do Stripe: o webhook de
+        // customer.subscription.updated le dali para reconciliar o banco.
+        metadata:
+          'monthlyLessons' in normalizedPlan
+            ? { monthlyLessons: String(normalizedPlan.monthlyLessons) }
+            : { weeklyFrequency: String(normalizedPlan.weeklyFrequency) },
       },
       idempotencyKey ? { idempotencyKey } : undefined,
     );
 
-    // Atualizar frequência no banco
+    // Persistir o eixo no banco. Apenas um dos dois vale por assinatura.
     await prisma.subscription.updateMany({
       where: { stripeSubscriptionId },
-      data: { weeklyFrequency: newWeeklyFrequency },
+      data:
+        'monthlyLessons' in normalizedPlan
+          ? {
+              monthlyLessons: normalizedPlan.monthlyLessons,
+              // Cadencia legada aproximada, so para o campo NOT NULL continuar
+              // coerente na UI antiga. NAO precifica nem concede credito.
+              weeklyFrequency: legacyWeeklyEquivalent(normalizedPlan.monthlyLessons),
+            }
+          : { weeklyFrequency: normalizedPlan.weeklyFrequency, monthlyLessons: null },
     });
   }
 
@@ -401,6 +465,14 @@ export class StripeService {
     session: Stripe.Checkout.Session,
     stripeEventId: string,
   ): Promise<void> {
+    // Sessao de assinatura nao gera lote de credito aqui: ela materializa o
+    // registro Subscription (com o eixo contratado) e os creditos vem depois,
+    // em invoice.paid.
+    if (session.mode === 'subscription') {
+      await this.upsertSubscriptionFromSession(session);
+      return;
+    }
+
     const { userId, packageType, creditQty } = session.metadata ?? {};
     if (!userId || !packageType || !creditQty) {
       console.error('[Webhook] checkout.session.completed: metadata incompleto', session.id);
@@ -469,8 +541,9 @@ export class StripeService {
       return;
     }
 
-    // Créditos mensais: weeklyFrequency × 4 semanas
-    const totalCredits = sub.weeklyFrequency * 4;
+    // Creditos mensais: `monthlyLessons` quando a assinatura foi contratada no
+    // eixo canonico; senao a regra legada (weeklyFrequency × 4 semanas).
+    const totalCredits = resolveMonthlyCredits(sub);
 
     await prisma.$transaction(async (tx) => {
       const batch = await tx.creditBatch.create({
@@ -498,13 +571,82 @@ export class StripeService {
   }
 
   private async onSubscriptionUpdated(stripeSub: Stripe.Subscription): Promise<void> {
+    // O eixo so e reconciliado quando a metadata do Stripe realmente carrega
+    // `monthlyLessons`; metadata ausente NAO apaga o eixo ja gravado.
+    const monthlyLessons = readMonthlyLessons(stripeSub.metadata);
+
     await prisma.subscription.updateMany({
       where: { stripeSubscriptionId: stripeSub.id },
       data: {
         status: this.mapSubscriptionStatus(stripeSub.status),
         currentPeriodStart: new Date((stripeSub as Stripe.Subscription & { current_period_start: number }).current_period_start * 1000),
         currentPeriodEnd: new Date((stripeSub as Stripe.Subscription & { current_period_end: number }).current_period_end * 1000),
+        ...(monthlyLessons !== null ? { monthlyLessons } : {}),
       },
+    });
+  }
+
+  /**
+   * Materializa/atualiza o registro local de Subscription a partir da sessao de
+   * checkout concluida. O eixo vem da metadata da sessao: `monthlyLessons`
+   * quando o plano canonico foi comprado, senao `weeklyFrequency` legado.
+   */
+  private async upsertSubscriptionFromSession(
+    session: Stripe.Checkout.Session,
+  ): Promise<void> {
+    const userId = session.metadata?.userId;
+    const stripeSubscriptionId = resolveStripeId(
+      session.subscription as string | { id?: string } | null | undefined,
+    );
+
+    if (!userId || !stripeSubscriptionId) {
+      console.error(
+        '[Webhook] checkout.session.completed (subscription): metadata/subscription ausente',
+        session.id,
+      );
+      return;
+    }
+
+    const monthlyLessons = readMonthlyLessons(session.metadata);
+    const weeklyFrequency =
+      monthlyLessons !== null
+        ? legacyWeeklyEquivalent(monthlyLessons)
+        : readWeeklyFrequency(session.metadata);
+
+    if (monthlyLessons === null && weeklyFrequency === null) {
+      console.error(
+        '[Webhook] checkout.session.completed (subscription): nenhum eixo de plano na metadata',
+        session.id,
+      );
+      return;
+    }
+
+    // Periodo e status reais vem do objeto Subscription do Stripe — nunca
+    // estimados localmente. Na API 2026-02-25.clover o periodo de cobranca mora
+    // no SubscriptionItem, nao na Subscription.
+    const stripeSub = await getStripe().subscriptions.retrieve(stripeSubscriptionId);
+    const periodItem = stripeSub.items.data[0];
+
+    if (!periodItem) {
+      console.error(
+        '[Webhook] checkout.session.completed (subscription): assinatura sem item no Stripe',
+        stripeSubscriptionId,
+      );
+      return;
+    }
+
+    const data = {
+      status: this.mapSubscriptionStatus(stripeSub.status),
+      currentPeriodStart: new Date(periodItem.current_period_start * 1000),
+      currentPeriodEnd: new Date(periodItem.current_period_end * 1000),
+      weeklyFrequency: weeklyFrequency ?? LEGACY_WEEKLY_FALLBACK,
+      monthlyLessons,
+    };
+
+    await prisma.subscription.upsert({
+      where: { stripeSubscriptionId },
+      create: { userId, stripeSubscriptionId, ...data },
+      update: data,
     });
   }
 
@@ -569,6 +711,50 @@ export class StripeService {
         return SubscriptionStatus.ACTIVE;
     }
   }
+}
+
+/** Eixo aceito por `updateSubscription`. Apenas um por chamada. */
+export type SubscriptionPlanUpdate =
+  | { monthlyLessons: MonthlyLessonsPlan }
+  | { weeklyFrequency: number };
+
+/**
+ * Cadencia semanal minima usada quando o plano mensal nao permite derivar nada
+ * melhor. Existe so porque `weeklyFrequency` e NOT NULL no banco (coluna legada).
+ */
+const LEGACY_WEEKLY_FALLBACK = 1;
+
+/**
+ * Le `monthlyLessons` de uma metadata Stripe. So aceita os volumes do catalogo
+ * (10 ou 20): valor fora disso nao tem preco e NAO e arredondado em silencio —
+ * vira null e o chamador trata como eixo ausente.
+ */
+function readMonthlyLessons(
+  metadata: Stripe.Metadata | null | undefined,
+): MonthlyLessonsPlan | null {
+  const raw = metadata?.monthlyLessons;
+  if (!raw) return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (parsed !== 10 && parsed !== 20) {
+    console.error('[Webhook] metadata.monthlyLessons fora do catalogo (10|20):', raw);
+    return null;
+  }
+  return parsed;
+}
+
+/**
+ * Le `weeklyFrequency` de uma metadata Stripe. Faixa legada fechada em 1..5;
+ * fora dela retorna null em vez de truncar (o preco seria inventado).
+ */
+function readWeeklyFrequency(metadata: Stripe.Metadata | null | undefined): number | null {
+  const raw = metadata?.weeklyFrequency;
+  if (!raw) return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 5) {
+    console.error('[Webhook] metadata.weeklyFrequency fora da faixa legada (1..5):', raw);
+    return null;
+  }
+  return parsed;
 }
 
 function resolveStripeId(value: string | { id?: string } | null | undefined): string | null {

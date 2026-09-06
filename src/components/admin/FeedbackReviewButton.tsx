@@ -1,6 +1,5 @@
 'use client';
 import { API } from '@/lib/constants/routes';
-import { API } from '@/lib/constants/routes';
 
 import { useState } from 'react';
 import { CheckCircle, Loader2 } from 'lucide-react';
@@ -19,7 +18,7 @@ export function FeedbackReviewButton({ feedbackId, initialReviewed }: FeedbackRe
 
   if (reviewed) {
     return (
-      <div className="flex items-center gap-2 text-sm text-success">
+      <div data-testid="admin-feedback-reviewed" className="flex items-center gap-2 text-sm text-success">
         <CheckCircle className="h-4 w-4" />
         <span>Revisado</span>
       </div>
@@ -41,8 +40,8 @@ export function FeedbackReviewButton({ feedbackId, initialReviewed }: FeedbackRe
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <Button onClick={handleReview} disabled={loading} size="sm">
+    <div data-testid="admin-feedback-review" className="flex flex-col gap-2">
+      <Button data-testid="admin-feedback-review-button" onClick={handleReview} disabled={loading} size="sm">
         {loading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -55,7 +54,7 @@ export function FeedbackReviewButton({ feedbackId, initialReviewed }: FeedbackRe
           </>
         )}
       </Button>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p data-testid="admin-feedback-review-error" className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

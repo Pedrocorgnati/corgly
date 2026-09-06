@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function AdminBroadcastsPage() {
   return (
-    <PageWrapper>
-      <div className="mb-6">
+    <PageWrapper data-testid="page-admin-broadcasts">
+      <div data-testid="admin-broadcasts-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Broadcasts de email</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Envie comunicacoes em massa para um segmento permitido. Cada envio exige

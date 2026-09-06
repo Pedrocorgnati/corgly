@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 
@@ -44,6 +45,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Raiz explicita do Turbopack. Sem isso, o Next infere a raiz pelo lockfile
+  // mais alto (/home/pedro/package-lock.json) e os idents de chunk passam a
+  // conter o caminho acentuado do repo, o que faz o Turbopack panicar em
+  // ident.rs ("byte index is not a char boundary").
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   reactStrictMode: true,
   output: 'standalone',
   // Removes X-Powered-By header to prevent technology fingerprinting (A05)

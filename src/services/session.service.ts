@@ -25,6 +25,83 @@ import type {
 
 const CANCEL_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 horas
 
+/**
+ * `where` do Prisma para Session. Extraido dos proprios tipos gerados: o
+ * argumento de `findMany` e opcional, por isso os dois `NonNullable` (indexar
+ * `Parameters<...>[0]['where']` direto nao compila).
+ */
+type SessionWhereInput = NonNullable<
+  NonNullable<Parameters<typeof prisma.session.findMany>[0]>['where']
+>;
+
+/**
+ * Estados em que a aula ainda esta "viva" (pode ser cancelada, iniciada ou
+ * marcada como no-show). Anotado como `SessionStatus[]` porque um literal cru
+ * seria inferido como `('SCHEDULED' | 'IN_PROGRESS')[]` e `includes` recusaria
+ * qualquer outro status vindo do banco.
+ */
+const ACTIVE_SESSION_STATUSES: readonly SessionStatus[] = [
+  SessionStatus.SCHEDULED,
+  SessionStatus.IN_PROGRESS,
+];
+
+/**
+ * Ordenacoes aceitas pela listagem de sessoes.
+ *
+ * Vocabulario FECHADO de proposito: `sort` chega como texto livre da querystring
+ * (GET /api/v1/sessions) e nada fora desta lista pode virar `orderBy` do Prisma.
+ *
+ * O default continua `startAt:desc` (historico primeiro) — comportamento de
+ * /history e do painel admin desde sempre. Quem precisa da PROXIMA aula pede
+ * `startAt:asc` explicitamente (consumidor: `getDashboardNextSession` em
+ * src/actions/dashboard.ts, que combina `sort=startAt:asc` + `from=<agora>` +
+ * `limit=1`). Antes disto o parametro era emitido e ignorado, e o `limit=1`
+ * devolvia a aula futura mais distante em vez da mais proxima.
+ */
+export const SESSION_SORTS = ['startAt:asc', 'startAt:desc'] as const;
+
+export type SessionSort = (typeof SESSION_SORTS)[number];
+
+export const DEFAULT_SESSION_SORT: SessionSort = 'startAt:desc';
+
+/**
+ * Traduz a querystring em ordenacao conhecida.
+ * Devolve `undefined` para ausente OU nao reconhecido — quem chama decide se
+ * cai no default ou recusa a requisicao (a rota recusa: ordenar errado em
+ * silencio foi exatamente a causa do bug da "proxima aula").
+ */
+export function parseSessionSort(raw: string | null | undefined): SessionSort | undefined {
+  if (!raw) return undefined;
+  return (SESSION_SORTS as readonly string[]).includes(raw) ? (raw as SessionSort) : undefined;
+}
+
+/**
+ * Parametros de listagem + ordenacao.
+ * `ListSessionsParams` e contrato cross-module (src/types/session.types.ts) e
+ * segue intocado; `sort` e opcional e local a este servico.
+ */
+export type ListSessionsParamsWithSort = ListSessionsParams & { sort?: SessionSort };
+
+function orderByFromSort(sort: SessionSort): { startAt: 'asc' | 'desc' } {
+  return { startAt: sort === 'startAt:asc' ? 'asc' : 'desc' };
+}
+
+/**
+ * ISO -> Date para os filtros `from`/`to`. Devolve `null` (com log) quando o
+ * texto nao parseia: um `Invalid Date` dentro de `where.startAt` faz o Prisma
+ * estourar e a rota devolver 500 sem dizer o motivo. A rota ja recusa lixo com
+ * 400; isto e a segunda barreira para os outros chamadores (cron/admin).
+ */
+function toRangeDate(raw: string | undefined, field: 'from' | 'to'): Date | null {
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    logger.warn('[SessionService] filtro de data ignorado', { action: 'list.range', field, raw });
+    return null;
+  }
+  return parsed;
+}
+
 function sessionToMeta(s: {
   id: string;
   studentId: string;
@@ -234,7 +311,7 @@ export class SessionService {
       throw new AppError('SESSION_011', 'Acesso negado.', 403);
     }
 
-    if (![SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS].includes(session.status)) {
+    if (!ACTIVE_SESSION_STATUSES.includes(session.status)) {
       throw new AppError('SESSION_012', 'Sessão não pode ser cancelada neste estado.', 422);
     }
 
@@ -515,25 +592,32 @@ export class SessionService {
   }
 
   /**
-   * Lista sessões do estudante com paginação e filtro por status.
+   * Lista sessões do estudante com paginação, filtro por status/janela e ordenação.
+   *
+   * `from`/`to` filtram por `startAt` (>= / <=) e `sort` escolhe a ordem — default
+   * `startAt:desc`. A combinação `status=SCHEDULED` + `from=<agora>` +
+   * `sort=startAt:asc` + `limit=1` é o que devolve a PRÓXIMA aula do aluno.
    */
   async listByStudent(
     studentId: string,
-    params: ListSessionsParams = {},
+    params: ListSessionsParamsWithSort = {},
   ): Promise<PaginatedSessions> {
-    const { page = 1, limit = 20, status, from, to } = params;
+    const { page = 1, limit = 20, status, from, to, sort = DEFAULT_SESSION_SORT } = params;
     const skip = (page - 1) * limit;
 
-    const where: Parameters<typeof prisma.session.findMany>[0]['where'] = { studentId };
+    const where: SessionWhereInput = { studentId };
     if (status) where.status = status as typeof SessionStatus[keyof typeof SessionStatus];
-    if (from || to) {
-      where.startAt = {};
-      if (from) (where.startAt as { gte?: Date }).gte = new Date(from);
-      if (to) (where.startAt as { lte?: Date }).lte = new Date(to);
+    const gte = toRangeDate(from, 'from');
+    const lte = toRangeDate(to, 'to');
+    if (gte || lte) {
+      const range: { gte?: Date; lte?: Date } = {};
+      if (gte) range.gte = gte;
+      if (lte) range.lte = lte;
+      where.startAt = range;
     }
 
     const [data, total] = await prisma.$transaction([
-      prisma.session.findMany({ where, skip, take: limit, orderBy: { startAt: 'desc' } }),
+      prisma.session.findMany({ where, skip, take: limit, orderBy: orderByFromSort(sort) }),
       prisma.session.count({ where }),
     ]);
 
@@ -548,21 +632,25 @@ export class SessionService {
 
   /**
    * Admin: lista todas as sessões com filtros avançados.
+   * Mesmo contrato de `from`/`to`/`sort` do `listByStudent` (default `startAt:desc`).
    */
-  async listAll(params: ListSessionsParams = {}): Promise<PaginatedSessions> {
-    const { page = 1, limit = 20, status, from, to } = params;
+  async listAll(params: ListSessionsParamsWithSort = {}): Promise<PaginatedSessions> {
+    const { page = 1, limit = 20, status, from, to, sort = DEFAULT_SESSION_SORT } = params;
     const skip = (page - 1) * limit;
 
-    const where: Parameters<typeof prisma.session.findMany>[0]['where'] = {};
+    const where: SessionWhereInput = {};
     if (status) where.status = status as typeof SessionStatus[keyof typeof SessionStatus];
-    if (from || to) {
-      where.startAt = {};
-      if (from) (where.startAt as { gte?: Date }).gte = new Date(from);
-      if (to) (where.startAt as { lte?: Date }).lte = new Date(to);
+    const gte = toRangeDate(from, 'from');
+    const lte = toRangeDate(to, 'to');
+    if (gte || lte) {
+      const range: { gte?: Date; lte?: Date } = {};
+      if (gte) range.gte = gte;
+      if (lte) range.lte = lte;
+      where.startAt = range;
     }
 
     const [data, total] = await prisma.$transaction([
-      prisma.session.findMany({ where, skip, take: limit, orderBy: { startAt: 'desc' } }),
+      prisma.session.findMany({ where, skip, take: limit, orderBy: orderByFromSort(sort) }),
       prisma.session.count({ where }),
     ]);
 
@@ -624,7 +712,7 @@ export class SessionService {
   async startSession(sessionId: string): Promise<SessionWithMeta> {
     const session = await prisma.session.findUnique({ where: { id: sessionId }, select: { status: true } });
     if (!session) throw new AppError('SESSION_001', 'Sessão não encontrada.', 404);
-    if (![SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS].includes(session.status)) {
+    if (!ACTIVE_SESSION_STATUSES.includes(session.status)) {
       throw new AppError('SESSION_060', 'Sessão não pode ser iniciada neste estado.', 409);
     }
     const updated = await prisma.session.update({
@@ -739,7 +827,7 @@ export class SessionService {
 
     if (!session) throw new AppError('SESSION_001', 'Sessão não encontrada.', 404);
 
-    if (![SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS].includes(session.status)) {
+    if (!ACTIVE_SESSION_STATUSES.includes(session.status)) {
       throw new AppError('SESSION_030', 'Sessão não pode ser marcada como no-show neste status.', 409);
     }
 

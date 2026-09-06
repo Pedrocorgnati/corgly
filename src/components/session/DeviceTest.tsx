@@ -152,15 +152,15 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border bg-card p-4">
+    <div data-testid="device-test" className="space-y-6">
+      <section data-testid="device-test-camera" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold">Camera</h3>
-          <Badge state={cameraOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
+          <Badge testId="device-test-camera-status" state={cameraOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
         </header>
         <div className="aspect-video w-full overflow-hidden rounded bg-black/80">
           {device.stream ? (
-            <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+            <video data-testid="device-test-camera-preview" ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Clique em &quot;Iniciar teste&quot; para pre-visualizar.
@@ -171,6 +171,7 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
           <label className="mt-3 block text-sm">
             <span className="mb-1 block text-muted-foreground">Dispositivo</span>
             <select
+              data-testid="device-test-camera-select"
               className="w-full rounded border bg-background p-2 text-sm"
               value={device.selectedCameraId ?? ''}
               onChange={(e) => device.setSelectedCameraId(e.target.value)}
@@ -185,12 +186,12 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
         )}
       </section>
 
-      <section className="rounded-lg border bg-card p-4">
+      <section data-testid="device-test-microphone" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold">Microfone</h3>
-          <Badge state={micOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
+          <Badge testId="device-test-microphone-status" state={micOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
         </header>
-        <div className="h-3 w-full overflow-hidden rounded bg-muted">
+        <div data-testid="device-test-microphone-level" className="h-3 w-full overflow-hidden rounded bg-muted">
           <div
             className="h-full bg-primary transition-[width]"
             style={{ width: `${Math.round(device.audioLevel * 100)}%` }}
@@ -203,6 +204,7 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
           <label className="mt-3 block text-sm">
             <span className="mb-1 block text-muted-foreground">Dispositivo</span>
             <select
+              data-testid="device-test-microphone-select"
               className="w-full rounded border bg-background p-2 text-sm"
               value={device.selectedMicId ?? ''}
               onChange={(e) => device.setSelectedMicId(e.target.value)}
@@ -217,12 +219,13 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
         )}
       </section>
 
-      <section className="rounded-lg border bg-card p-4">
+      <section data-testid="device-test-speaker" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold">Audio de saida</h3>
-          <Badge state={audioOutputOk === true ? 'ok' : audioOutputOk === false ? 'fail' : 'idle'} />
+          <Badge testId="device-test-speaker-status" state={audioOutputOk === true ? 'ok' : audioOutputOk === false ? 'fail' : 'idle'} />
         </header>
         <button
+          data-testid="device-test-speaker-button"
           type="button"
           onClick={handleTestSpeaker}
           className="rounded border px-3 py-1.5 text-sm hover:bg-accent"
@@ -234,10 +237,11 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
         </p>
       </section>
 
-      <section className="rounded-lg border bg-card p-4">
+      <section data-testid="device-test-network" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
           <h3 className="font-semibold">Rede (STUN/TURN)</h3>
           <Badge
+            testId="device-test-network-status"
             state={
               networkChecking
                 ? 'checking'
@@ -252,7 +256,7 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
           />
         </header>
         {network ? (
-          <ul className="space-y-1 text-sm">
+          <ul data-testid="device-test-network-details" className="space-y-1 text-sm">
             <li>Candidates: {network.candidateTypes.join(', ') || 'nenhum'}</li>
             <li>STUN (srflx): {network.hasStun ? 'sim' : 'nao'}</li>
             <li>TURN (relay): {network.hasTurn ? 'sim' : 'nao — algumas redes corporativas podem falhar'}</li>
@@ -270,18 +274,19 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
       </section>
 
       {device.error && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <div data-testid="device-test-device-error" className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
           {device.error}
         </div>
       )}
       {networkError && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <div data-testid="device-test-network-error" className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
           {networkError}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div data-testid="device-test-actions" className="flex flex-wrap gap-2">
         <button
+          data-testid="device-test-start-button"
           type="button"
           onClick={handleStart}
           disabled={device.status === 'checking' || networkChecking}
@@ -291,6 +296,7 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
         </button>
         {device.stream && (
           <button
+            data-testid="device-test-stop-button"
             type="button"
             onClick={device.stop}
             className="rounded border px-4 py-2 text-sm"
@@ -318,7 +324,7 @@ async function fetchIceServers(): Promise<IceServersConfig[]> {
   return json.data.iceServers
 }
 
-function Badge({ state }: { state: 'ok' | 'warning' | 'fail' | 'checking' | 'idle' }) {
+function Badge({ state, testId }: { state: 'ok' | 'warning' | 'fail' | 'checking' | 'idle'; testId?: string }) {
   const map: Record<typeof state, { cls: string; label: string }> = {
     ok: { cls: 'bg-green-500/15 text-green-700 dark:text-green-400', label: 'OK' },
     warning: { cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400', label: 'Atencao' },
@@ -327,5 +333,5 @@ function Badge({ state }: { state: 'ok' | 'warning' | 'fail' | 'checking' | 'idl
     idle: { cls: 'bg-muted text-muted-foreground', label: 'Aguardando' },
   }
   const s = map[state]
-  return <span className={`rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>
+  return <span data-testid={testId} className={`rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>
 }

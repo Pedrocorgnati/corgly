@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function AdminEmailTemplatesPage() {
   return (
-    <PageWrapper>
-      <div className="mb-6">
+    <PageWrapper data-testid="page-admin-emails-templates">
+      <div data-testid="admin-emails-templates-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Templates de email</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Crie versoes, publique e arquive os templates transacionais. O preview

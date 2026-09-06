@@ -5,9 +5,15 @@ import { z } from 'zod';
 import { SubscriptionStatus } from '@/lib/constants/enums';
 import { AppError } from '@/lib/errors';
 import {
+  LEGACY_WEEKS_PER_MONTH_CREDITS,
+  calculateMonthlyLessonsAmountCents,
   calculateSubscriptionMonthlyAmountCents,
+  legacyWeeklyEquivalent,
+  normalizeMonthlyLessons,
+  resolveSubscriptionMonthlyAmountCents,
   stripeCurrencyToCurrency,
 } from '@/lib/billing/subscription-pricing';
+import { MonthlyLessonsEnum, type MonthlyLessonsPlan } from '@/schemas/checkout.schema';
 import { prisma } from '@/lib/prisma';
 import { toStripeCurrency } from '@/lib/pricing/config';
 import { getStripe } from '@/lib/stripe';
@@ -17,18 +23,47 @@ const ACTIVE_SUBSCRIPTION_STATUSES = [
   SubscriptionStatus.TRIAL,
 ];
 
-export const SubscriptionChangePreviewInputSchema = z.object({
-  weeklyFrequency: z.number().int().min(1).max(5, {
-    message: 'Frequência deve estar entre 1 e 5 aulas por semana.',
-  }),
-});
+/**
+ * Preview aceita os DOIS eixos de plano, exatamente como o checkout e o update:
+ *  - `monthlyLessons` (canonico): 10 ou 20 aulas por mes;
+ *  - `weeklyFrequency` (legado): 1 a 5 aulas por semana.
+ *
+ * Exatamente um por requisicao — com os dois o preco alvo seria ambiguo.
+ */
+export const SubscriptionChangePreviewInputSchema = z
+  .object({
+    monthlyLessons: MonthlyLessonsEnum.optional(),
+    weeklyFrequency: z
+      .number()
+      .int()
+      .min(1)
+      .max(5, { message: 'Frequência deve estar entre 1 e 5 aulas por semana.' })
+      .optional(),
+  })
+  .refine(
+    (data) => (data.monthlyLessons !== undefined) !== (data.weeklyFrequency !== undefined),
+    {
+      message:
+        'Informe exatamente um eixo: monthlyLessons (10 ou 20 aulas por mes) ou weeklyFrequency (1 a 5 aulas por semana).',
+      path: ['monthlyLessons'],
+    },
+  );
 
 export type SubscriptionChangeType = 'upgrade' | 'downgrade' | 'current_plan';
 
 export interface SubscriptionChangePreview {
   subscriptionId: string;
+  /** Cadencia semanal legada vigente na assinatura. */
   currentWeeklyFrequency: number;
+  /**
+   * Cadencia semanal que a assinatura tera apos a troca. No eixo mensal e a
+   * equivalencia legada gravada por `updateSubscription` (nao precifica nada).
+   */
   requestedWeeklyFrequency: number;
+  /** Volume mensal vigente; null quando a assinatura e legada (so cadencia). */
+  currentMonthlyLessons: number | null;
+  /** Volume mensal pedido; null quando o pedido veio pelo eixo legado. */
+  requestedMonthlyLessons: number | null;
   changeType: SubscriptionChangeType;
   currency: string;
   currentMonthlyAmountCents: number;
@@ -41,8 +76,13 @@ export interface SubscriptionChangePreview {
   effectiveAt: string;
   currentPeriodEnd: string;
   stripePreviewId: string | null;
+  /**
+   * Corpo pronto para o POST /api/v1/subscriptions/update. Carrega SOMENTE o
+   * eixo pedido: aquele endpoint recusa os dois campos juntos.
+   */
   previewPayload: {
-    weeklyFrequency: number;
+    weeklyFrequency?: number;
+    monthlyLessons?: MonthlyLessonsPlan;
     prorationDate: number;
   };
 }
@@ -124,7 +164,6 @@ export async function previewSubscriptionChange(
     );
   }
 
-  const requestedWeeklyFrequency = parsed.data.weeklyFrequency;
   const subscription = await prisma.subscription.findFirst({
     where: {
       userId,
@@ -151,38 +190,86 @@ export async function previewSubscriptionChange(
 
   const currentCurrency = stripeCurrencyToCurrency(subscriptionItem.price.currency);
   const stripeCurrency = toStripeCurrency(currentCurrency);
+
+  // ── Eixo vigente da assinatura ────────────────────────────────────────────
   const currentWeeklyFrequency = subscription.weeklyFrequency;
-  const currentMonthlyAmountCents = calculateSubscriptionMonthlyAmountCents(
-    currentWeeklyFrequency,
+  const currentMonthlyLessons =
+    subscription.monthlyLessons != null
+      ? normalizeMonthlyLessons(subscription.monthlyLessons)
+      : null;
+  const currentMonthlyAmountCents = resolveSubscriptionMonthlyAmountCents(
+    subscription,
     currentCurrency,
   );
-  const nextMonthlyAmountCents = calculateSubscriptionMonthlyAmountCents(
-    requestedWeeklyFrequency,
-    currentCurrency,
-  );
+  const currentMonthlyCredits =
+    currentMonthlyLessons ?? currentWeeklyFrequency * LEGACY_WEEKS_PER_MONTH_CREDITS;
+
+  // ── Eixo pedido ───────────────────────────────────────────────────────────
+  const requestedMonthlyLessons = parsed.data.monthlyLessons ?? null;
+  const requestedWeeklyFrequency =
+    requestedMonthlyLessons !== null
+      ? // Equivalencia legada — e exatamente o valor que `updateSubscription`
+        // grava na coluna `weeklyFrequency` quando o plano mensal e aplicado.
+        legacyWeeklyEquivalent(requestedMonthlyLessons)
+      : (parsed.data.weeklyFrequency as number);
+  const nextMonthlyAmountCents =
+    requestedMonthlyLessons !== null
+      ? calculateMonthlyLessonsAmountCents(requestedMonthlyLessons, currentCurrency)
+      : calculateSubscriptionMonthlyAmountCents(requestedWeeklyFrequency, currentCurrency);
+  const requestedMonthlyCredits =
+    requestedMonthlyLessons ?? requestedWeeklyFrequency * LEGACY_WEEKS_PER_MONTH_CREDITS;
+
   const prorationDate = Math.floor(Date.now() / 1000);
   const effectiveAt = new Date(prorationDate * 1000).toISOString();
   const currentPeriodEnd = subscription.currentPeriodEnd.toISOString();
-  const changeType: SubscriptionChangeType =
-    requestedWeeklyFrequency === currentWeeklyFrequency
-      ? 'current_plan'
-      : requestedWeeklyFrequency > currentWeeklyFrequency
-        ? 'upgrade'
-        : 'downgrade';
+
+  /**
+   * Classificacao da troca — regra explicita para nao ficar ambigua entre eixos:
+   *
+   *  1. Mesmo eixo E mesmo valor  -> `current_plan`: nada muda, proracao zero e
+   *     nenhuma chamada ao Stripe.
+   *  2. Caso contrario, criterio primario e o VALOR MENSAL em centavos, unica
+   *     grandeza comparavel entre um plano por cadencia e um plano por volume:
+   *     maior = `upgrade`, menor = `downgrade`.
+   *  3. Empate de valor entre eixos diferentes -> desempata pelo VOLUME DE
+   *     CREDITOS mensais concedidos (monthlyLessons, ou weeklyFrequency x 4).
+   *  4. Empate tambem nos creditos -> e uma migracao de eixo sem efeito
+   *     financeiro; classificada como `upgrade` (proracao esperada de zero)
+   *     porque o item ainda precisa ser atualizado no Stripe, e `current_plan`
+   *     significa "nao chamar o Stripe".
+   */
+  const isSameAxisAndValue =
+    requestedMonthlyLessons !== null
+      ? currentMonthlyLessons === requestedMonthlyLessons
+      : currentMonthlyLessons === null && currentWeeklyFrequency === requestedWeeklyFrequency;
+
+  let changeType: SubscriptionChangeType;
+  if (isSameAxisAndValue) {
+    changeType = 'current_plan';
+  } else if (nextMonthlyAmountCents !== currentMonthlyAmountCents) {
+    changeType = nextMonthlyAmountCents > currentMonthlyAmountCents ? 'upgrade' : 'downgrade';
+  } else if (requestedMonthlyCredits !== currentMonthlyCredits) {
+    changeType = requestedMonthlyCredits > currentMonthlyCredits ? 'upgrade' : 'downgrade';
+  } else {
+    changeType = 'upgrade';
+  }
 
   const basePreview = {
     subscriptionId: subscription.id,
     currentWeeklyFrequency,
     requestedWeeklyFrequency,
+    currentMonthlyLessons,
+    requestedMonthlyLessons,
     changeType,
     currentMonthlyAmountCents,
     nextMonthlyAmountCents,
     effectiveAt,
     currentPeriodEnd,
-    previewPayload: {
-      weeklyFrequency: requestedWeeklyFrequency,
-      prorationDate,
-    },
+    // Somente o eixo pedido viaja no payload: o endpoint de update recusa os dois.
+    previewPayload:
+      requestedMonthlyLessons !== null
+        ? { monthlyLessons: requestedMonthlyLessons, prorationDate }
+        : { weeklyFrequency: requestedWeeklyFrequency, prorationDate },
   };
 
   if (changeType === 'current_plan') {

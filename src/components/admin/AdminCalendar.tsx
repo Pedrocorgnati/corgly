@@ -62,7 +62,7 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
   };
 
   return (
-    <div className="space-y-6">
+    <div data-testid="admin-calendar" className="space-y-6">
       <CalendarView
         currentMonth={currentMonth}
         currentYear={currentYear}
@@ -76,8 +76,8 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
 
       {/* Slot details for selected date */}
       {selectedDate && (
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
-          <h3 className="font-semibold text-foreground mb-3">
+        <div data-testid="admin-calendar-day-details" className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+          <h3 data-testid="admin-calendar-day-details-header" className="font-semibold text-foreground mb-3">
             Detalhes — {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', {
               weekday: 'long',
               day: 'numeric',
@@ -86,9 +86,9 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
           </h3>
 
           {slotsForDate.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum slot neste dia.</p>
+            <p data-testid="admin-calendar-day-empty" className="text-sm text-muted-foreground">Nenhum slot neste dia.</p>
           ) : (
-            <div className="space-y-2">
+            <div data-testid="admin-calendar-slot-list" className="space-y-2">
               {slotsForDate.map((slot) => {
                 const colors = getSlotColor(slot);
                 const session = sessionBySlotTime.get(slot.startAt);
@@ -99,6 +99,7 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
                 return (
                   <button
                     key={slot.id}
+                    data-testid={`admin-calendar-slot-${slot.id}`}
                     onClick={() => onSlotClick?.(slot, session)}
                     className={cn(
                       'w-full flex items-center justify-between p-3 rounded-lg border border-border text-left transition-colors hover:border-primary',
@@ -137,7 +138,7 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 text-xs">
+      <div data-testid="admin-calendar-legend" className="flex flex-wrap gap-3 text-xs">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-emerald-500" /> Disponível
         </span>

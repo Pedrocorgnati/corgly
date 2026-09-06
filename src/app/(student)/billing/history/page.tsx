@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function BillingHistoryPage() {
   return (
-    <PageWrapper className="max-w-5xl">
-      <div className="mb-6 flex items-center gap-3">
+    <PageWrapper data-testid="page-billing-history" className="max-w-5xl">
+      <div data-testid="billing-history-header" className="mb-6 flex items-center gap-3">
         <Receipt className="h-6 w-6 text-primary" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">Extrato Financeiro</h1>

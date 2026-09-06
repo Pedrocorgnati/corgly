@@ -100,6 +100,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: content.title,
     description: content.description,
+    robots: { index: false, follow: false },
     alternates: {
       canonical: url,
     },
@@ -142,7 +143,7 @@ export default async function ContentDetailPage({ params }: PageProps) {
   });
 
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-content-detail" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <JsonLd schemas={[videoSchema]} />
 
       <div className="max-w-4xl mx-auto space-y-8">
@@ -150,7 +151,7 @@ export default async function ContentDetailPage({ params }: PageProps) {
         <VideoPlayer videoId={content.videoId} title={content.title} />
 
         {/* Content Info */}
-        <div>
+        <div data-testid="content-detail-header">
           <div className="flex items-center gap-3 mb-3">
             <Badge variant="secondary">{content.category}</Badge>
             <span className="text-sm text-muted-foreground">{content.duration}</span>

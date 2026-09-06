@@ -29,9 +29,9 @@ export default async function CookiesPolicyPage() {
   const doc = await getActiveLegalDoc('COOKIES', toLegalLocale(locale));
 
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-cookies" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
+        <div data-testid="cookies-header" className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">{doc?.title ?? FALLBACK_TITLE}</h1>
           {doc ? (
             <p className="text-sm text-muted-foreground mt-2">
@@ -58,6 +58,7 @@ export default async function CookiesPolicyPage() {
           </p>
           <Link
             href={ROUTES.COOKIE_PREFERENCES}
+            data-testid="cookies-preferences-link"
             className="mt-3 inline-flex text-primary text-sm font-medium hover:underline"
           >
             Abrir preferências de cookies
@@ -67,11 +68,12 @@ export default async function CookiesPolicyPage() {
         <div className="mt-8 pt-6 border-t border-border">
           <Link
             href={ROUTES.PRIVACY}
+            data-testid="cookies-privacy-link"
             className="text-primary text-sm font-medium hover:underline mr-4"
           >
             Política de Privacidade
           </Link>
-          <Link href={ROUTES.HOME} className="text-muted-foreground text-sm hover:underline">
+          <Link href={ROUTES.HOME} data-testid="cookies-back-link" className="text-muted-foreground text-sm hover:underline">
             &larr; Voltar ao início
           </Link>
         </div>

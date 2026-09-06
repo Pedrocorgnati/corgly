@@ -83,6 +83,7 @@ function ConfirmModal({
 
   return (
     <div
+      data-testid="modal-leave-session"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
@@ -104,11 +105,12 @@ function ConfirmModal({
         <p className="mt-2 text-sm text-muted-foreground">{body}</p>
 
         <div className="mt-6 flex justify-end gap-3">
-          <Button variant="outline" size="sm" onClick={onCancel}>
+          <Button data-testid="modal-leave-session-cancel-button" variant="outline" size="sm" onClick={onCancel}>
             {cancelLabel}
           </Button>
           <Button
             ref={confirmRef}
+            data-testid="modal-leave-session-confirm-button"
             size="sm"
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={onConfirm}
@@ -147,9 +149,10 @@ export function SessionControls({
 
   return (
     <>
-      <div className="flex items-center justify-center gap-4 bg-card border-t border-border px-4 py-3">
+      <div data-testid="session-controls" className="flex items-center justify-center gap-4 bg-card border-t border-border px-4 py-3">
         {/* Mute toggle */}
         <button
+          data-testid="session-controls-audio-button"
           type="button"
           onClick={onToggleAudio}
           className={cn(
@@ -169,6 +172,7 @@ export function SessionControls({
 
         {/* Camera toggle */}
         <button
+          data-testid="session-controls-video-button"
           type="button"
           onClick={onToggleVideo}
           className={cn(
@@ -188,6 +192,7 @@ export function SessionControls({
 
         {/* Leave button */}
         <button
+          data-testid="session-controls-leave-button"
           type="button"
           onClick={handleLeaveClick}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"

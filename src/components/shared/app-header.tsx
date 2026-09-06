@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
+import { BrandLogo } from '@/components/brand/brand-logo';
 import { useTranslations } from 'next-intl';
 import { Menu, Bell } from 'lucide-react';
 import { ROUTES } from '@/lib/constants/routes';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { AvatarInitials } from '@/components/ui/avatar-initials';
 import { CreditBadge } from '@/components/ui/credit-badge';
 import { ThemeToggle } from './theme-toggle';
+import { LanguageFlags } from '@/components/landing/language-flags';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,11 +31,12 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
   const isAdmin = user.role === UserRole.ADMIN;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-border bg-background/80 backdrop-blur-sm">
+    <header data-testid="header" className="fixed top-0 left-0 right-0 z-40 h-16 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="h-full flex items-center justify-between px-4 md:px-6">
         {/* Left: hamburger (mobile/tablet) + logo */}
-        <div className="flex items-center gap-3">
+        <div data-testid="header-logo" className="flex items-center gap-3">
           <Button
+            data-testid="header-menu-toggle-button"
             variant="ghost"
             size="icon"
             className="lg:hidden h-9 w-9"
@@ -44,36 +46,38 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <Link href={isAdmin ? ROUTES.ADMIN_DASHBOARD : ROUTES.DASHBOARD} className="flex items-center gap-2">
-            <Image src="/images/logo.svg" alt="Corgly" width={100} height={28} className="dark:hidden" />
-            <Image src="/images/logo-dark.svg" alt="Corgly" width={100} height={28} className="hidden dark:block" />
+            <BrandLogo variant="dark" className="dark:hidden" />
+            <BrandLogo variant="light" className="hidden dark:inline-flex" />
           </Link>
         </div>
 
         {/* Right: credits (student only) + notifications + avatar + theme */}
-        <div className="flex items-center gap-2">
+        <div data-testid="header-actions" className="flex items-center gap-2">
           {!isAdmin && (
-            <CreditBadge balance={user.creditBalance} className="hidden sm:inline-flex" />
+            <CreditBadge data-testid="header-credit-badge" balance={user.creditBalance} className="hidden sm:inline-flex" />
           )}
           {isAdmin && (
-            <Badge variant="outline" className="hidden sm:inline-flex border-primary text-primary text-xs">
+            <Badge data-testid="header-admin-badge" variant="outline" className="hidden sm:inline-flex border-primary text-primary text-xs">
               ADMIN
             </Badge>
           )}
-          <Button variant="ghost" size="icon" className="h-9 w-9 relative" aria-label={t('notifications')}>
+          <Button data-testid="header-notification-button" variant="ghost" size="icon" className="h-9 w-9 relative" aria-label={t('notifications')}>
             <Bell className="h-4 w-4" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
           </Button>
-          <ThemeToggle />
+          <LanguageFlags persist="profile" />
+          <ThemeToggle data-testid="header-theme-toggle-button" />
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <button
-                className="flex items-center gap-2 rounded-full p-1 hover:bg-muted transition-colors"
-                aria-label={t('aria.userMenu')}
-              >
-                <AvatarInitials name={user.name} size="sm" />
-              </button>
+            {/* Sem `render`, o <button> interno viraria <button> dentro do
+                <button> do Trigger (HTML invalido -> hydration mismatch). */}
+            <DropdownMenuTrigger
+              data-testid="header-user-menu-button"
+              className="flex items-center gap-2 rounded-full p-1 hover:bg-muted transition-colors"
+              aria-label={t('aria.userMenu')}
+            >
+              <AvatarInitials name={user.name} size="sm" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent data-testid="header-user-menu" align="end" className="w-48">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{user.name}</p>
@@ -81,11 +85,11 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem data-testid="header-user-menu-settings-item" className="cursor-pointer">
                 <Link href={ROUTES.ACCOUNT}>{t('settings')}</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <DropdownMenuItem data-testid="header-user-menu-logout-item" className="text-destructive focus:text-destructive">
                 {t('logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>

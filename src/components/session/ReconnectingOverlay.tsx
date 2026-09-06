@@ -33,6 +33,7 @@ export function ReconnectingOverlay({
 
   return (
     <div
+      data-testid="session-reconnecting-overlay"
       className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm"
       role="alert"
       aria-live="assertive"
@@ -51,6 +52,7 @@ export function ReconnectingOverlay({
 
       {/* Countdown */}
       <p
+        data-testid="session-reconnecting-countdown"
         className={cn(
           'mt-2 font-mono text-lg text-white/80',
           isUrgent && 'animate-pulse text-red-400',
@@ -66,6 +68,7 @@ export function ReconnectingOverlay({
 
       {/* Botão cancelar */}
       <button
+        data-testid="session-reconnecting-cancel-button"
         type="button"
         onClick={onCancel}
         className={cn(

@@ -106,12 +106,13 @@ export function BillingHistoryClient() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div data-testid="billing-history-list" className="flex flex-col gap-4">
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4">
+      <div data-testid="billing-history-filter-bar" className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-muted-foreground">De</label>
           <input
+            data-testid="billing-history-filter-from-input"
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
@@ -121,6 +122,7 @@ export function BillingHistoryClient() {
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-muted-foreground">Até</label>
           <input
+            data-testid="billing-history-filter-to-input"
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
@@ -131,6 +133,7 @@ export function BillingHistoryClient() {
           {STATUS_FILTERS.map((s) => (
             <Button
               key={s.value || 'all'}
+              data-testid={`billing-history-filter-${(s.value || 'all').toLowerCase()}-button`}
               type="button"
               variant={status === s.value ? 'default' : 'outline'}
               size="sm"
@@ -144,6 +147,7 @@ export function BillingHistoryClient() {
 
       {error && (
         <div
+          data-testid="billing-history-error"
           role="alert"
           className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
         >
@@ -154,11 +158,12 @@ export function BillingHistoryClient() {
       {/* Table */}
       {items.length === 0 && !loading ? (
         <EmptyState
+          data-testid="billing-history-empty"
           title="Nenhum pagamento encontrado"
           description="Seus pagamentos aparecerão aqui."
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+        <div data-testid="billing-history-table" className="overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
               <tr>
@@ -172,7 +177,7 @@ export function BillingHistoryClient() {
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.id} className="border-t border-border">
+                <tr key={it.id} data-testid={`billing-history-row-${it.id}`} className="border-t border-border">
                   <td className="px-4 py-3 whitespace-nowrap">
                     {new Date(it.createdAt).toLocaleDateString()}
                   </td>
@@ -187,6 +192,7 @@ export function BillingHistoryClient() {
                   <td className="px-4 py-3 text-right">
                     {it.receiptAvailable ? (
                       <Button
+                        data-testid={`billing-history-download-${it.id}-button`}
                         type="button"
                         size="sm"
                         variant="outline"
@@ -212,14 +218,14 @@ export function BillingHistoryClient() {
       )}
 
       {/* Pagination */}
-      <div className="flex justify-center">
+      <div data-testid="billing-history-pagination" className="flex justify-center">
         {cursor && (
-          <Button type="button" variant="outline" onClick={() => load(false)} disabled={loading}>
+          <Button data-testid="billing-history-load-more-button" type="button" variant="outline" onClick={() => load(false)} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Carregar mais'}
           </Button>
         )}
         {loading && !cursor && items.length === 0 && (
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Loader2 data-testid="billing-history-loading" className="h-5 w-5 animate-spin text-muted-foreground" />
         )}
       </div>
     </div>

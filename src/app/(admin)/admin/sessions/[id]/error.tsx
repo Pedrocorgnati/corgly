@@ -21,7 +21,7 @@ export default function AdminSessionDetailError({
   }, [error, pathname]);
 
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8 max-w-6xl mx-auto">
+    <div data-testid="admin-session-detail-error" className="px-4 py-6 md:px-6 md:py-8 max-w-6xl mx-auto">
       <div className="bg-card border border-border rounded-2xl p-8 shadow-sm text-center">
         <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
         <h2 className="text-lg font-semibold text-foreground mb-2">Erro ao carregar detalhes da sessão</h2>
@@ -30,12 +30,14 @@ export default function AdminSessionDetailError({
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
           <button
+            data-testid="admin-session-detail-error-retry-button"
             onClick={reset}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             Tentar novamente
           </button>
           <Link
+            data-testid="admin-session-detail-error-all-link"
             href={ROUTES.ADMIN_SESSIONS}
             className="px-4 py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80 transition-colors"
           >

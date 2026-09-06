@@ -7,6 +7,7 @@ interface ErrorStateProps {
   message?: string;
   onRetry?: () => void;
   className?: string;
+  'data-testid'?: string;
 }
 
 export function ErrorState({
@@ -14,14 +15,15 @@ export function ErrorState({
   message = 'Ocorreu um erro. Tente novamente.',
   onRetry,
   className,
+  'data-testid': testId,
 }: ErrorStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-12 px-4 text-center', className)}>
+    <div data-testid={testId} className={cn('flex flex-col items-center justify-center py-12 px-4 text-center', className)}>
       <AlertTriangle className="h-10 w-10 text-destructive mb-3 opacity-80" />
       <h3 className="text-base font-semibold text-foreground mb-1">{title}</h3>
       <p className="text-sm text-muted-foreground mb-4 max-w-sm">{message}</p>
       {onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry}>
+        <Button data-testid={testId ? `${testId}-retry-button` : undefined} variant="outline" size="sm" onClick={onRetry}>
           Tentar novamente
         </Button>
       )}

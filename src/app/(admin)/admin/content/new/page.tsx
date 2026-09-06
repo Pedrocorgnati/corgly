@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function NewContentPage() {
   return (
-    <PageWrapper>
-      <div className="mb-6">
+    <PageWrapper data-testid="page-admin-content-new">
+      <div data-testid="admin-content-new-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Novo conteúdo</h1>
       </div>
       <ContentEditor />

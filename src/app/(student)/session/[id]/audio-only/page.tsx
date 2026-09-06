@@ -116,8 +116,8 @@ export default function SessionAudioOnlyPage() {
 
   if (!sessionId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
+      <main data-testid="page-session-audio-only" className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div data-testid="session-audio-only-error" className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
           <h1 className="mt-4 text-xl font-semibold text-foreground">
             Sessão não identificada
@@ -127,6 +127,7 @@ export default function SessionAudioOnlyPage() {
           </p>
           <Link
             href={ROUTES.DASHBOARD}
+            data-testid="session-audio-only-dashboard-link"
             className="mt-6 inline-flex rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Voltar ao Dashboard
@@ -138,8 +139,8 @@ export default function SessionAudioOnlyPage() {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="flex flex-col items-center gap-3" aria-live="polite">
+      <main data-testid="page-session-audio-only" className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div data-testid="session-audio-only-loading" className="flex flex-col items-center gap-3" aria-live="polite">
           <WifiOff className="h-10 w-10 animate-pulse text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Preparando o modo apenas áudio...</p>
         </div>
@@ -151,16 +152,16 @@ export default function SessionAudioOnlyPage() {
   const peerInitials = isAdmin ? 'AL' : 'PR'
 
   return (
-    <main className="flex min-h-screen flex-col bg-background">
+    <main data-testid="page-session-audio-only" className="flex min-h-screen flex-col bg-background">
       {/* Banner de contexto */}
-      <header className="border-b border-border bg-yellow-500/10 px-4 py-3 text-center">
+      <header data-testid="session-audio-only-header" className="border-b border-border bg-yellow-500/10 px-4 py-3 text-center">
         <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
           O vídeo está indisponível. Você continua na aula em modo apenas áudio.
         </p>
       </header>
 
       {/* Conteúdo principal: avatar + waveform */}
-      <section className="flex flex-1 items-center justify-center p-4">
+      <section data-testid="session-audio-only-overlay" className="flex flex-1 items-center justify-center p-4">
         <div className="h-72 w-full max-w-md overflow-hidden rounded-xl border border-border">
           <AudioOnlyOverlay
             peerName={peerName}
@@ -173,6 +174,7 @@ export default function SessionAudioOnlyPage() {
       {/* Aviso não-bloqueante de telemetria */}
       {healthNotice && (
         <p
+          data-testid="session-audio-only-notice"
           className="px-4 pb-2 text-center text-xs text-muted-foreground"
           aria-live="polite"
         >
@@ -181,7 +183,7 @@ export default function SessionAudioOnlyPage() {
       )}
 
       {/* Controles de contingência */}
-      <footer className="border-t border-border bg-card px-4 py-4">
+      <footer data-testid="session-audio-only-controls" className="border-t border-border bg-card px-4 py-4">
         <SessionFallbackControls
           isMuted={isMuted}
           onToggleAudio={handleToggleAudio}
@@ -189,6 +191,10 @@ export default function SessionAudioOnlyPage() {
           onSupport={handleSupport}
           onInterrupt={handleInterrupt}
           isBusy={isBusy}
+          toggleAudioTestId="session-audio-only-toggle-audio-button"
+          retryVideoTestId="session-audio-only-retry-video-button"
+          supportTestId="session-audio-only-support-button"
+          interruptTestId="session-audio-only-interrupt-button"
         />
         <p className="mt-3 text-center text-xs text-muted-foreground">
           Sua sessão permanece ativa. Reative o vídeo assim que sua conexão melhorar.

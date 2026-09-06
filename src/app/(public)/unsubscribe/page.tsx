@@ -27,12 +27,13 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
   const message = t(`${status}.message`);
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-card border border-border rounded-2xl p-8 text-center shadow-sm">
+    <div data-testid="page-unsubscribe" className="min-h-[60vh] flex items-center justify-center px-4">
+      <div data-testid={`unsubscribe-${status}`} className="max-w-md w-full bg-card border border-border rounded-2xl p-8 text-center shadow-sm">
         <h1 className="text-xl font-semibold text-foreground mb-3">{title}</h1>
         <p className="text-sm text-muted-foreground mb-6">{message}</p>
         <Link
           href="/"
+          data-testid="unsubscribe-back-link"
           className="inline-block text-sm text-primary hover:underline"
         >
           {t('backHome')}

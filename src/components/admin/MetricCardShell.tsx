@@ -1,7 +1,7 @@
 'use client';
 
 import { RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { WidgetCard } from '@/components/shared/widget-card';
 
 interface MetricCardShellProps {
   title:    string;
@@ -15,21 +15,22 @@ interface MetricCardShellProps {
 
 export function MetricCardShell({ title, loading, error, empty, onRetry, children, className }: MetricCardShellProps) {
   return (
-    <div className={cn('bg-card border border-border rounded-2xl p-6 shadow-sm', className)}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-semibold text-foreground">{title}</h2>
-        {onRetry && !loading && (
+    <WidgetCard
+      title={title}
+      className={className}
+      action={
+        onRetry && !loading ? (
           <button
             type="button"
             onClick={onRetry}
             aria-label="Atualizar"
-            className="text-muted-foreground hover:text-foreground transition"
+            className="text-muted-foreground hover:text-brand-500 transition"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
-        )}
-      </div>
-
+        ) : undefined
+      }
+    >
       {loading ? (
         <div className="animate-pulse space-y-3" data-testid="metric-skeleton">
           <div className="h-8 w-1/2 bg-muted rounded" />
@@ -37,7 +38,7 @@ export function MetricCardShell({ title, loading, error, empty, onRetry, childre
           <div className="h-4 w-2/3 bg-muted rounded" />
         </div>
       ) : error ? (
-        <div className="text-sm text-destructive">
+        <div className="text-[13.5px] text-destructive">
           {error}
           {onRetry && (
             <button type="button" onClick={onRetry} className="ml-2 underline">
@@ -46,10 +47,10 @@ export function MetricCardShell({ title, loading, error, empty, onRetry, childre
           )}
         </div>
       ) : empty ? (
-        <p className="text-sm text-muted-foreground">Sem dados no periodo selecionado.</p>
+        <p className="text-[13.5px] text-muted-foreground">Sem dados no periodo selecionado.</p>
       ) : (
         children
       )}
-    </div>
+    </WidgetCard>
   );
 }

@@ -19,7 +19,7 @@ export default function DashboardError({
   }, [error, pathname]);
 
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8 max-w-6xl mx-auto">
+    <div data-testid="dashboard-error" className="px-4 py-6 md:px-6 md:py-8 max-w-6xl mx-auto">
       <div className="bg-card border border-border rounded-2xl p-8 shadow-sm text-center">
         <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
         <h2 className="text-lg font-semibold text-foreground mb-2">Erro ao carregar o dashboard</h2>
@@ -27,6 +27,7 @@ export default function DashboardError({
           Ocorreu um erro inesperado. Tente novamente.
         </p>
         <button
+          data-testid="dashboard-error-retry-button"
           onClick={reset}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
         >

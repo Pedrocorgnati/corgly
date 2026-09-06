@@ -31,9 +31,11 @@ export default function OnboardingPage() {
   }, [router]);
 
   return (
-    <OnboardingSlides
-      onComplete={handleComplete}
-      onSkip={handleSkip}
-    />
+    <div data-testid="page-auth-onboarding">
+      <OnboardingSlides
+        onComplete={handleComplete}
+        onSkip={handleSkip}
+      />
+    </div>
   );
 }

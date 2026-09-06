@@ -12,6 +12,7 @@ interface EmptyStateProps {
   actionHref?: string;
   onAction?: () => void;
   className?: string;
+  'data-testid'?: string;
 }
 
 export function EmptyState({
@@ -22,9 +23,11 @@ export function EmptyState({
   actionHref,
   onAction,
   className,
+  'data-testid': testId,
 }: EmptyStateProps) {
   return (
     <div
+      data-testid={testId}
       className={cn(
         'flex flex-col items-center justify-center text-center py-12 px-4',
         className

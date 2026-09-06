@@ -178,7 +178,7 @@ export const CREDIT_TYPE_MAP: Record<CreditType, { label: string; count: number 
   SINGLE: { label: 'Aula avulsa', count: 1 },
   PACK_5: { label: 'Pack 5 aulas', count: 5 },
   PACK_10: { label: 'Pack 10 aulas', count: 10 },
-  MONTHLY: { label: 'Mensal 8 aulas', count: 8 },
+  MONTHLY: { label: 'Mensal', count: 10 },
   PROMO: { label: 'Promoção', count: 1 },
   MANUAL: { label: 'Manual', count: 1 },
   REFUND: { label: 'Reembolso', count: 1 },

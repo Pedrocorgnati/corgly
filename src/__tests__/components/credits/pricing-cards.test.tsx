@@ -22,7 +22,7 @@ const messages = {
       pack10Desc: '10 créditos',
       pack10Badge: 'Melhor custo-benefício',
       monthlyTitle: 'Mensal',
-      monthlyDesc: '8 créditos/mês',
+      monthlyDesc: '10 ou 20 créditos/mês',
       buyBtn: 'Comprar',
       subscribing: 'Assinando...',
       buying: 'Comprando...',

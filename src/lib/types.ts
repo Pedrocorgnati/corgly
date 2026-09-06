@@ -1,4 +1,5 @@
-import type { UserRole, SessionStatus, CreditType, CreditStatus, FeedbackDimension } from './constants/enums';
+import type { UserRole, CreditType, CreditStatus, FeedbackDimension } from './constants/enums';
+import type { SessionWithMeta } from '@/types/session.types';
 
 // ── Base ──
 export interface BaseEntity {
@@ -50,17 +51,19 @@ export interface User extends BaseEntity {
 }
 
 // ── Session ──
-export interface Session extends BaseEntity {
-  studentId: string;
-  student?: Pick<User, 'id' | 'name' | 'email' | 'timezone'>;
-  scheduledAt: string; // UTC ISO
-  durationMinutes: number;
-  status: SessionStatus;
-  creditBatchId?: string;
-  documentId?: string;
-  feedbackId?: string;
-  rtcState?: 'WAITING' | 'CONNECTED' | 'ENDED';
-}
+//
+// Fonte unica de verdade: `SessionWithMeta` em src/types/session.types.ts, que
+// espelha campo a campo o serializador `sessionToMeta`
+// (src/services/session.service.ts) — o unico shape de sessao que a API emite.
+//
+// O shape legado que vivia aqui (`scheduledAt`, `durationMinutes`, `student`,
+// `documentId`, `feedbackId`, `rtcState`) nunca saiu de nenhuma rota: era um
+// contrato paralelo que competia com o canonico. Reexportamos em vez de
+// duplicar para que so exista um lugar onde a sessao muda de forma.
+export type { SessionWithMeta } from '@/types/session.types';
+
+/** @deprecated Prefira importar `SessionWithMeta` de '@/types/session.types'. */
+export type Session = SessionWithMeta;
 
 // ── Credit ──
 export interface Credit extends BaseEntity {
@@ -69,7 +72,8 @@ export interface Credit extends BaseEntity {
   status: CreditStatus;
   quantity: number;
   usedQuantity: number;
-  expiresAt: string;
+  /** Nulo em lote sem validade (assinatura) — prisma/schema.prisma: `expiresAt DateTime?`. */
+  expiresAt: string | null;
   stripePaymentIntentId?: string;
 }
 

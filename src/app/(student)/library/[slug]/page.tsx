@@ -43,7 +43,7 @@ export default async function LibraryDetailPage({ params }: PageProps) {
   }
 
   return (
-    <PageWrapper className="max-w-4xl">
+    <PageWrapper data-testid="page-library-detail" className="max-w-4xl">
       <Link
         href="/library"
         className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -54,10 +54,14 @@ export default async function LibraryDetailPage({ params }: PageProps) {
 
       <div className="space-y-8">
         {/* Player (apenas quando ha video associado) */}
-        {entry.videoId && <VideoPlayer videoId={entry.videoId} title={entry.title} />}
+        {entry.videoId && (
+          <div data-testid="library-detail-player">
+            <VideoPlayer videoId={entry.videoId} title={entry.title} />
+          </div>
+        )}
 
         {/* Cabecalho */}
-        <div>
+        <div data-testid="library-detail-header">
           {entry.category && (
             <Badge variant="secondary" className="mb-3">
               {entry.category}
@@ -72,7 +76,7 @@ export default async function LibraryDetailPage({ params }: PageProps) {
         </div>
 
         {/* Transcript */}
-        <section aria-labelledby="library-transcript-title" className="rounded-2xl border border-border bg-card p-5">
+        <section data-testid="library-detail-transcript" aria-labelledby="library-transcript-title" className="rounded-2xl border border-border bg-card p-5">
           <div className="mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" aria-hidden />
             <h2 id="library-transcript-title" className="text-sm font-semibold text-foreground">
@@ -89,7 +93,7 @@ export default async function LibraryDetailPage({ params }: PageProps) {
         </section>
 
         {/* Captions */}
-        <section aria-labelledby="library-captions-title" className="rounded-2xl border border-border bg-card p-5">
+        <section data-testid="library-detail-captions" aria-labelledby="library-captions-title" className="rounded-2xl border border-border bg-card p-5">
           <div className="mb-3 flex items-center gap-2">
             <Captions className="h-4 w-4 text-primary" aria-hidden />
             <h2 id="library-captions-title" className="text-sm font-semibold text-foreground">
@@ -120,7 +124,7 @@ export default async function LibraryDetailPage({ params }: PageProps) {
         </section>
 
         {/* Recursos da aula (ST-33) com URLs assinadas renovadas sob demanda */}
-        <section aria-labelledby="library-resources-title">
+        <section data-testid="library-detail-resources" aria-labelledby="library-resources-title">
           <h2 id="library-resources-title" className="mb-3 text-sm font-semibold text-foreground">
             {t('resourcesTitle')}
           </h2>
@@ -128,7 +132,9 @@ export default async function LibraryDetailPage({ params }: PageProps) {
         </section>
 
         {/* Notas pessoais (autenticadas) */}
-        <NotesEditor contentId={entry.contentId} isAuthenticated />
+        <div data-testid="library-detail-notes">
+          <NotesEditor contentId={entry.contentId} isAuthenticated />
+        </div>
       </div>
     </PageWrapper>
   );

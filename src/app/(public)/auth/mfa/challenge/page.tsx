@@ -1,135 +1,87 @@
-'use client';
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { getAuthUser } from '@/lib/data/auth';
+import { ROUTES } from '@/lib/constants/routes';
+import { UserRole } from '@/lib/constants/enums';
+import { mfaService, type MfaStatusView } from '@/services/mfa.service';
+import { sanitizeAdminRedirectTo, withRedirectTo } from '@/lib/auth/safe-redirect';
+import { AuthPageWrapper } from '@/components/shared';
+import { MfaChallengeForm } from '@/components/auth/mfa-challenge-form';
+import { MfaLoadError } from '@/components/auth/mfa-load-error';
+import { MfaExitRow } from '@/components/auth/mfa-exit-row';
 
-import { useState, useTransition, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+export const metadata: Metadata = {
+  title: 'Verificação em duas etapas',
+  description: 'Confirme sua identidade para acessar a área administrativa.',
+  robots: { index: false, follow: false },
+};
 
-const MFA_VERIFY_URL = '/api/v1/auth/mfa/verify';
-const SAFE_FALLBACK = '/admin';
-const HOME_FALLBACK = '/';
+// Depende da sessao/DB: nao prerenderizar.
+export const dynamic = 'force-dynamic';
 
-function isSafeRedirectTo(redirectTo: string | null): boolean {
-  if (!redirectTo) return false;
-  // Aceitar apenas paths relativos internos; rejeitar URLs externas e protocolo js:
-  return redirectTo.startsWith('/') && !redirectTo.startsWith('//');
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
-export default function MfaChallengeClient() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo');
+/**
+ * Verificacao em duas etapas (step-up) do admin. Destino do redirect do proxy
+ * (src/proxy.ts) quando o JWT admin nao tem `mfaAt` recente.
+ *
+ * Redirects (fora do try/catch: redirect() lanca NEXT_REDIRECT):
+ * - anonimo -> login (redirectTo preservado);
+ * - nao-admin -> dashboard do aluno;
+ * - MFA nao ACTIVE (NONE/PENDING) -> /auth/mfa/setup (redirectTo preservado).
+ *   Complementar ao setup, que so redireciona para ca... nunca: ele envia ACTIVE
+ *   para /admin/account/security. Sem loop possivel.
+ * - status ilegivel (DB fora) -> fail-closed: mostra erro com retry, nao o form.
+ */
+export default async function MfaChallengePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const redirectTo = sanitizeAdminRedirectTo(firstParam(params.redirectTo));
 
-  const [code, setCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  // Auto-focus no input ao montar
-  useEffect(() => {
-    document.getElementById('mfa-code')?.focus();
-  }, []);
-
-  const safeRedirect = isSafeRedirectTo(redirectTo) ? redirectTo! : SAFE_FALLBACK;
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    const trimmed = code.replace(/\s/g, '');
-    if (trimmed.length === 0) {
-      setError('Informe o codigo de 6 digitos ou um codigo de recuperacao.');
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await fetch(MFA_VERIFY_URL, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: trimmed }),
-        });
-
-        if (res.ok) {
-          // JWT reemitido com mfaAt atualizado — redirecionar para destino
-          router.replace(safeRedirect);
-          return;
-        }
-
-        const data = await res.json().catch(() => ({}));
-        setError(
-          data?.error ?? 'Codigo invalido. Verifique e tente novamente.',
-        );
-      } catch {
-        setError('Falha de conexao. Tente novamente.');
-      }
-    });
+  const user = await getAuthUser();
+  if (!user?.id) {
+    redirect(withRedirectTo(ROUTES.LOGIN, redirectTo));
+  }
+  if (user.role !== UserRole.ADMIN) {
+    redirect(ROUTES.DASHBOARD);
   }
 
-  function handleCancel() {
-    router.replace(HOME_FALLBACK);
+  let status: MfaStatusView | null = null;
+  try {
+    status = await mfaService.getMfaStatus(user.id);
+  } catch {
+    status = null;
+  }
+
+  if (status && status.status !== 'ACTIVE') {
+    redirect(withRedirectTo(ROUTES.MFA_SETUP, redirectTo));
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-[384px]">
+    <AuthPageWrapper>
+      <div data-testid="page-auth-mfa-challenge" className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">
-              Verificacao em duas etapas
+          <header data-testid="auth-mfa-challenge-header" className="mb-6">
+            <h1 className="text-2xl md:text-[26px] font-bold text-foreground">
+              Verificação em duas etapas
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Informe o codigo do seu aplicativo autenticador ou um codigo de
-              recuperacao para continuar.
+              Confirme sua identidade para acessar a área administrativa.
             </p>
-          </div>
+          </header>
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            <div>
-              <label
-                htmlFor="mfa-code"
-                className="block text-sm font-medium text-foreground mb-1"
-              >
-                Codigo
-              </label>
-              <input
-                id="mfa-code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                disabled={isPending}
-                maxLength={32}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              />
-            </div>
-
-            {/* Estado de erro: feedback explicito (Zero Silencio) */}
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={isPending}
-              className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-            >
-              {isPending ? 'Verificando...' : 'Verificar'}
-            </button>
-          </form>
-
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isPending}
-            className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Cancelar e voltar ao inicio
-          </button>
+          {status === null ? <MfaLoadError /> : <MfaChallengeForm redirectTo={redirectTo} />}
         </div>
+
+        <MfaExitRow />
       </div>
-    </div>
+    </AuthPageWrapper>
   );
 }

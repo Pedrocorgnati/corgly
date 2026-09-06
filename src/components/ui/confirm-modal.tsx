@@ -24,6 +24,8 @@ interface ConfirmModalProps {
   cancelText?: string
   dangerLevel?: "low" | "high"
   isLoading?: boolean
+  confirmTestId?: string
+  cancelTestId?: string
 }
 
 function ConfirmModal({
@@ -36,6 +38,8 @@ function ConfirmModal({
   cancelText = "Cancelar",
   dangerLevel = "low",
   isLoading = false,
+  confirmTestId,
+  cancelTestId,
 }: ConfirmModalProps) {
   const cancelRef = React.useRef<HTMLButtonElement>(null)
 
@@ -57,6 +61,7 @@ function ConfirmModal({
         <DialogFooter>
           <Button
             ref={cancelRef}
+            data-testid={cancelTestId}
             variant="outline"
             onClick={onClose}
             disabled={isLoading}
@@ -64,6 +69,7 @@ function ConfirmModal({
             {cancelText}
           </Button>
           <Button
+            data-testid={confirmTestId}
             variant={dangerLevel === "high" ? "destructive" : "default"}
             onClick={handleConfirm}
             disabled={isLoading}

@@ -25,6 +25,7 @@ export function AdminAppShell({ user, children }: AdminAppShellProps) {
       />
       <main
         id="main-content"
+        data-testid="main-content"
         className="pt-16 lg:ml-60 min-h-dvh"
       >
         <div className="p-4 md:p-6">

@@ -142,24 +142,24 @@ export function ContentEditor({ initial }: { initial?: ContentFormValue }) {
     }));
 
   return (
-    <div className="space-y-4">
-      {error && <div className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm">{error}</div>}
+    <div data-testid="admin-content-editor" className="space-y-4">
+      {error && <div data-testid="admin-content-editor-error" role="alert" className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm">{error}</div>}
 
       {/* Meta */}
-      <div className="bg-card border border-border rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div data-testid="admin-content-editor-meta" className="bg-card border border-border rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Titulo interno</span>
-          <input type="text" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+          <input data-testid="form-content-title-input" type="text" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                  className="w-full rounded-lg border border-border bg-background px-3 py-2" />
         </label>
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Categoria</span>
-          <input type="text" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+          <input data-testid="form-content-category-input" type="text" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                  className="w-full rounded-lg border border-border bg-background px-3 py-2" />
         </label>
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Tipo</span>
-          <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as typeof f.type }))}
+          <select data-testid="form-content-type-select" value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as typeof f.type }))}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2">
             <option value="ARTICLE">Artigo</option>
             <option value="VIDEO">Video</option>
@@ -167,16 +167,16 @@ export function ContentEditor({ initial }: { initial?: ContentFormValue }) {
         </label>
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">YouTube URL (se video)</span>
-          <input type="url" value={form.youtubeUrl} onChange={(e) => setForm((f) => ({ ...f, youtubeUrl: e.target.value }))}
+          <input data-testid="form-content-youtube-url-input" type="url" value={form.youtubeUrl} onChange={(e) => setForm((f) => ({ ...f, youtubeUrl: e.target.value }))}
                  className="w-full rounded-lg border border-border bg-background px-3 py-2" />
         </label>
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Publicar em (agendar)</span>
-          <input type="datetime-local" value={form.publishedAt}
+          <input data-testid="form-content-published-at-input" type="datetime-local" value={form.publishedAt}
                  onChange={(e) => setForm((f) => ({ ...f, publishedAt: e.target.value }))}
                  className="w-full rounded-lg border border-border bg-background px-3 py-2" />
         </label>
-        <div className="text-sm">
+        <div data-testid="admin-content-editor-status" className="text-sm">
           <span className="block mb-1 text-muted-foreground">Status atual</span>
           <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium">{form.status}</span>
         </div>
@@ -184,12 +184,13 @@ export function ContentEditor({ initial }: { initial?: ContentFormValue }) {
 
       {/* Locale tabs */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="flex border-b border-border">
+        <div data-testid="admin-content-editor-tabs" className="flex border-b border-border">
           {LOCALES.map((l) => {
             const hasContent = form.translations[l.value].title.trim().length > 0;
             return (
               <button
                 key={l.value}
+                data-testid={`admin-content-editor-tab-${l.value.toLowerCase()}-button`}
                 type="button"
                 onClick={() => setActiveLocale(l.value)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
@@ -209,51 +210,52 @@ export function ContentEditor({ initial }: { initial?: ContentFormValue }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="text-sm">
               <span className="block mb-1 text-muted-foreground">Titulo ({activeLocale})</span>
-              <input type="text" value={t.title}
+              <input data-testid="form-content-locale-title-input" type="text" value={t.title}
                      onChange={(e) => updateT({ title: e.target.value, slug: t.slug || slugify(e.target.value) })}
                      className="w-full rounded-lg border border-border bg-background px-3 py-2" />
             </label>
             <label className="text-sm">
               <span className="block mb-1 text-muted-foreground">Slug</span>
-              <input type="text" value={t.slug}
+              <input data-testid="form-content-locale-slug-input" type="text" value={t.slug}
                      onChange={(e) => updateT({ slug: e.target.value })}
                      className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs" />
             </label>
           </div>
           <label className="text-sm block">
             <span className="block mb-1 text-muted-foreground">Resumo</span>
-            <textarea value={t.excerpt} onChange={(e) => updateT({ excerpt: e.target.value })} rows={2}
+            <textarea data-testid="form-content-locale-excerpt-input" value={t.excerpt} onChange={(e) => updateT({ excerpt: e.target.value })} rows={2}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2" />
           </label>
 
-          <div className="border border-border rounded-lg">
+          <div data-testid="admin-content-editor-body" className="border border-border rounded-lg">
             {editor && <EditorContent editor={editor} />}
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={saving || !canSave}
+      <div data-testid="admin-content-editor-actions" className="flex flex-wrap gap-2">
+        <button data-testid="admin-content-editor-save-draft-button" type="button" disabled={saving || !canSave}
                 onClick={() => save('DRAFT')}
                 className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm disabled:opacity-50">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {saving ? <Loader2 data-testid="admin-content-editor-loading" className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Salvar rascunho
         </button>
-        <button type="button" disabled={saving || !canSave || !form.publishedAt}
+        <button data-testid="admin-content-editor-schedule-button" type="button" disabled={saving || !canSave || !form.publishedAt}
                 onClick={() => save('SCHEDULED')}
                 className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm disabled:opacity-50">
           <Calendar className="h-4 w-4" />
           Agendar
         </button>
-        <button type="button" disabled={saving || !canSave}
+        <button data-testid="admin-content-editor-publish-button" type="button" disabled={saving || !canSave}
                 onClick={() => save('PUBLISHED', new Date().toISOString())}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm disabled:opacity-50">
           <Send className="h-4 w-4" />
           Publicar
         </button>
         {form.id && t.slug && (
-          <a href={`/${activeLocale.toLowerCase().replace('_', '-')}/blog/${t.slug}?preview=1`}
+          <a data-testid="admin-content-editor-preview-link"
+             href={`/${activeLocale.toLowerCase().replace('_', '-')}/blog/${t.slug}?preview=1`}
              target="_blank" rel="noopener"
              className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm">
             <Eye className="h-4 w-4" />
@@ -261,7 +263,7 @@ export function ContentEditor({ initial }: { initial?: ContentFormValue }) {
           </a>
         )}
         {form.id && (
-          <button type="button" onClick={() => save('ARCHIVED')}
+          <button data-testid="admin-content-editor-archive-button" type="button" onClick={() => save('ARCHIVED')}
                   className="inline-flex items-center gap-2 rounded-lg border border-destructive text-destructive px-4 py-2 text-sm ml-auto">
             <Trash2 className="h-4 w-4" />
             Arquivar

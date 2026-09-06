@@ -31,6 +31,13 @@ export interface SessionFallbackControlsProps {
   /** Desabilita as ações enquanto uma transição está em andamento. */
   isBusy?: boolean
   className?: string
+
+  /** Overrides de data-testid por botão (default: `session-fallback-*`). */
+  toggleAudioTestId?: string
+  retryVideoTestId?: string
+  retryConnectionTestId?: string
+  supportTestId?: string
+  interruptTestId?: string
 }
 
 // ── Button helper ───────────────────────────────────────────────────────────
@@ -42,6 +49,7 @@ interface FallbackButtonProps {
   ariaLabel?: string
   variant: 'neutral' | 'primary' | 'danger'
   disabled?: boolean
+  'data-testid'?: string
 }
 
 function FallbackButton({
@@ -51,6 +59,7 @@ function FallbackButton({
   ariaLabel,
   variant,
   disabled,
+  'data-testid': testId,
 }: FallbackButtonProps) {
   return (
     <button
@@ -58,6 +67,7 @@ function FallbackButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel ?? label}
+      data-testid={testId}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium',
         'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -97,6 +107,11 @@ export function SessionFallbackControls({
   interruptLabel = 'Encerrar sessão',
   isBusy = false,
   className,
+  toggleAudioTestId = 'session-fallback-toggle-audio-button',
+  retryVideoTestId = 'session-fallback-retry-video-button',
+  retryConnectionTestId = 'session-fallback-retry-connection-button',
+  supportTestId = 'session-fallback-support-button',
+  interruptTestId = 'session-fallback-interrupt-button',
 }: SessionFallbackControlsProps) {
   return (
     <div
@@ -115,6 +130,7 @@ export function SessionFallbackControls({
           icon={isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           label={isMuted ? 'Ativar microfone' : 'Silenciar microfone'}
           ariaLabel={isMuted ? 'Ativar microfone' : 'Silenciar microfone'}
+          data-testid={toggleAudioTestId}
         />
       )}
 
@@ -125,6 +141,7 @@ export function SessionFallbackControls({
           variant="primary"
           icon={<RefreshCw className={cn('h-4 w-4', isBusy && 'animate-spin')} />}
           label={retryConnectionLabel}
+          data-testid={retryConnectionTestId}
         />
       )}
 
@@ -135,6 +152,7 @@ export function SessionFallbackControls({
           variant="primary"
           icon={<Video className="h-4 w-4" />}
           label={retryLabel}
+          data-testid={retryVideoTestId}
         />
       )}
 
@@ -144,6 +162,7 @@ export function SessionFallbackControls({
         variant="neutral"
         icon={<LifeBuoy className="h-4 w-4" />}
         label="Falar com suporte"
+        data-testid={supportTestId}
       />
 
       <FallbackButton
@@ -152,6 +171,7 @@ export function SessionFallbackControls({
         variant="danger"
         icon={<PhoneOff className="h-4 w-4" />}
         label={interruptLabel}
+        data-testid={interruptTestId}
       />
     </div>
   )

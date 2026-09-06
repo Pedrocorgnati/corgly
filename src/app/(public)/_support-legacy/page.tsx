@@ -11,24 +11,28 @@ export const metadata: Metadata = {
 
 export default function SupportPage() {
   return (
-    <main className="min-h-dvh bg-background">
+    <main data-testid="page-support-legacy" className="min-h-dvh bg-background">
       <div className="max-w-2xl mx-auto px-4 py-16">
         <Link
           href={ROUTES.HOME}
+          data-testid="support-legacy-back-link"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Link>
 
-        <h1 className="text-3xl font-bold text-foreground mb-3">Suporte</h1>
-        <p className="text-muted-foreground mb-10">
-          Precisa de ajuda? Estamos aqui para você.
-        </p>
+        <div data-testid="support-legacy-header">
+          <h1 className="text-3xl font-bold text-foreground mb-3">Suporte</h1>
+          <p className="text-muted-foreground mb-10">
+            Precisa de ajuda? Estamos aqui para você.
+          </p>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <a
             href="mailto:suporte@corgly.app"
+            data-testid="support-legacy-email-link"
             className="flex items-start gap-4 rounded-2xl border border-border p-6 hover:bg-muted/50 transition-colors"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
@@ -45,7 +49,7 @@ export default function SupportPage() {
             </div>
           </a>
 
-          <div className="flex items-start gap-4 rounded-2xl border border-border p-6">
+          <div data-testid="support-legacy-chat-card" className="flex items-start gap-4 rounded-2xl border border-border p-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
               <MessageCircle className="h-5 w-5 text-primary" />
             </div>
@@ -61,12 +65,12 @@ export default function SupportPage() {
           </div>
         </div>
 
-        <div className="mt-10 rounded-2xl border border-border bg-muted/30 p-6">
+        <div data-testid="support-legacy-faq" className="mt-10 rounded-2xl border border-border bg-muted/30 p-6">
           <h2 className="font-semibold text-foreground mb-2">Perguntas frequentes</h2>
           <p className="text-sm text-muted-foreground mb-4">
             Confira nossas respostas para as dúvidas mais comuns.
           </p>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" data-testid="support-legacy-faq-button">
             <Link href={ROUTES.HOME + '#faq'}>Ver FAQ</Link>
           </Button>
         </div>

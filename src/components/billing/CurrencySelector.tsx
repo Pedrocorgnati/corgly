@@ -1,22 +1,10 @@
 'use client';
 
-import { useTransition } from 'react';
-import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { SUPPORTED_CURRENCIES, type Currency } from '@/lib/currency';
-import { useUserCurrency } from '@/lib/hooks/use-user-currency';
-import { apiClient } from '@/lib/api-client';
-import { API } from '@/lib/constants/routes';
-
-const CHARGE_CURRENCY_URL = API.BILLING_CHARGE_CURRENCY;
-
-interface CurrencySelectorProps {
-  /** Moedas disponiveis para selecao. Default: todas as suportadas. */
-  available?: readonly Currency[];
-  className?: string;
-  /** Persistir preferencia no servidor alem do localStorage. Default: true. */
-  persist?: boolean;
-}
+import type { CurrencyErrorKind } from '@/lib/hooks/use-user-currency';
 
 const CURRENCY_LABELS: Record<Currency, string> = {
   USD: 'USD $',
@@ -25,78 +13,141 @@ const CURRENCY_LABELS: Record<Currency, string> = {
   USDC: 'USDC',
 };
 
+interface CurrencySelectorProps {
+  /** Moeda selecionada. Componente CONTROLADO: quem manda e o dono do estado. */
+  value: Currency;
+  /** Chamado com a nova moeda. A persistencia e responsabilidade do dono. */
+  onChange: (currency: Currency) => void;
+  /** Moedas disponiveis para selecao. Default: todas as suportadas. */
+  available?: readonly Currency[];
+  className?: string;
+  /** Preferencia ainda carregando (GET em voo). */
+  isLoading?: boolean;
+  /** Persistencia em voo (PATCH). */
+  isSaving?: boolean;
+  /** Falha de carga ou de gravacao, para mensagem traduzida + retry. */
+  error?: CurrencyErrorKind | null;
+  /** Acao do botao "tentar novamente" quando `error` esta presente. */
+  onRetry?: () => void;
+  /** Testid do grupo. Os botoes derivam `${testId}-${moeda}-button`. */
+  'data-testid'?: string;
+}
+
+/**
+ * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
+ * Em desenvolvimento estoura no primeiro render; em producao devolve string
+ * vazia — a chave crua NUNCA aparece para o usuario final.
+ *
+ * DUPLICADO em `src/components/student/pricing-cards.tsx`: extrair para um
+ * modulo compartilhado sairia da lista de arquivos deste work package.
+ */
+function missingMessage(fullKey: string): string {
+  if (process.env.NODE_ENV !== 'production') {
+    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
+  }
+  return '';
+}
+
 /**
  * Seletor de moeda de exibicao/cobranca (ADR-0006 §2).
  *
- * - Exibe apenas as moedas passadas em `available` (default: todas as 4 suportadas).
- * - Usa `useUserCurrency` para ler/gravar a preferencia no localStorage.
- * - Quando `persist=true` (default), chama PATCH /api/v1/billing/charge-currency
- *   para persistir no servidor tambem.
- * - USDC e exibido quando presente em `available`; a nota de disponibilidade
- *   condicional fica no tooltip/disclaimer, nao oculta o botao.
+ * - Apresentacional e controlado: nao le nem grava preferencia por conta
+ *   propria. Isso evita a gravacao dupla que existia quando o componente
+ *   chamava o PATCH sozinho alem do hook.
  * - Nenhuma promessa de que a cobranca sera feita nessa moeda (Zero Assumido):
- *   a moeda de registro efetiva e confirmada no checkout por `resolveChargeCurrency`.
+ *   a moeda de registro efetiva e confirmada no checkout.
  */
 export function CurrencySelector({
+  value,
+  onChange,
   available = SUPPORTED_CURRENCIES,
   className,
-  persist = true,
+  isLoading = false,
+  isSaving = false,
+  error = null,
+  onRetry,
+  'data-testid': testId = 'currency-selector',
 }: CurrencySelectorProps) {
-  const { currency, setCurrency } = useUserCurrency();
-  const [isPending, startTransition] = useTransition();
+  const t = useTranslations('credits.currency');
+  const text = (key: string, values?: Record<string, string | number>): string =>
+    t.has(key) ? t(key, values) : missingMessage(`credits.currency.${key}`);
 
-  function handleSelect(next: Currency) {
-    if (next === currency) return;
-    setCurrency(next);
-
-    if (!persist) return;
-
-    startTransition(async () => {
-      try {
-        await apiClient.patch(CHARGE_CURRENCY_URL, {
-          currency: next,
-        });
-      } catch {
-        toast.error('Nao foi possivel salvar sua preferencia de moeda. Tente novamente.');
-      }
-    });
-  }
+  const busy = isLoading || isSaving;
 
   return (
-    <div
-      role="group"
-      aria-label="Selecionar moeda"
-      className={cn('flex flex-wrap gap-2', className)}
-    >
-      {available.map((c) => {
-        const isSelected = c === currency;
-        return (
-          <button
-            key={c}
-            type="button"
-            onClick={() => handleSelect(c)}
-            disabled={isPending}
-            aria-pressed={isSelected}
-            aria-label={`Selecionar ${c}`}
-            className={cn(
-              'inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              'disabled:pointer-events-none disabled:opacity-50',
-              isSelected
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-border bg-background text-foreground hover:bg-muted',
-            )}
+    <div className={cn('flex flex-col gap-1.5', className)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">{text('label')}</span>
+        <div
+          data-testid={testId}
+          role="group"
+          aria-label={text('groupAria')}
+          aria-busy={busy}
+          className="flex flex-wrap gap-2"
+        >
+          {available.map((currency) => {
+            const isSelected = currency === value;
+            return (
+              <button
+                key={currency}
+                data-testid={`${testId}-${currency.toLowerCase()}-button`}
+                type="button"
+                onClick={() => {
+                  if (currency !== value) onChange(currency);
+                }}
+                disabled={busy}
+                aria-pressed={isSelected}
+                aria-label={text('optionAria', { currency })}
+                className={cn(
+                  'inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                  'disabled:pointer-events-none disabled:opacity-50',
+                  isSelected
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-foreground hover:bg-muted',
+                )}
+              >
+                {CURRENCY_LABELS[currency]}
+              </button>
+            );
+          })}
+        </div>
+        {busy && (
+          <span
+            data-testid={`${testId}-status`}
+            role="status"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
           >
-            {CURRENCY_LABELS[c]}
-          </button>
-        );
-      })}
-      {persist && (
-        <p className="w-full text-xs text-muted-foreground mt-1">
-          Preferencia salva. A moeda de registro efetiva e confirmada no checkout.
-          {available.includes('USDC') && ' USDC disponivel conforme suporte do gateway.'}
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            {isSaving ? text('saving') : text('loading')}
+          </span>
+        )}
+      </div>
+
+      {error && (
+        <p
+          data-testid={`${testId}-error`}
+          role="alert"
+          className="flex flex-wrap items-center gap-2 text-xs text-destructive"
+        >
+          {error === 'load' ? text('loadError', { currency: value }) : text('saveError')}
+          {onRetry && (
+            <button
+              data-testid={`${testId}-retry-button`}
+              type="button"
+              onClick={onRetry}
+              className="underline underline-offset-2 hover:no-underline"
+            >
+              {text('retry')}
+            </button>
+          )}
         </p>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        {text('note')}
+        {available.includes('USDC') && ` ${text('usdcNote')}`}
+      </p>
     </div>
   );
 }

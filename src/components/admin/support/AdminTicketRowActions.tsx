@@ -94,9 +94,10 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
   };
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div data-testid={`admin-support-ticket-${ticketId}-actions`} className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap justify-end gap-1.5">
         <Button
+          data-testid={`admin-support-ticket-${ticketId}-reply-button`}
           type="button"
           variant="outline"
           size="sm"
@@ -111,6 +112,7 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
           Responder
         </Button>
         <Button
+          data-testid={`admin-support-ticket-${ticketId}-note-button`}
           type="button"
           variant="outline"
           size="sm"
@@ -126,6 +128,7 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
         </Button>
         {status !== 'RESOLVED' && status !== 'CLOSED' && (
           <Button
+            data-testid={`admin-support-ticket-${ticketId}-resolve-button`}
             type="button"
             variant="outline"
             size="sm"
@@ -139,6 +142,7 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
         )}
         {(status === 'RESOLVED' || status === 'CLOSED') && (
           <Button
+            data-testid={`admin-support-ticket-${ticketId}-reopen-button`}
             type="button"
             variant="outline"
             size="sm"
@@ -152,6 +156,7 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
         )}
         {!isClosed && (
           <Button
+            data-testid={`admin-support-ticket-${ticketId}-close-button`}
             type="button"
             variant="outline"
             size="sm"
@@ -166,13 +171,14 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
       </div>
 
       {open && (
-        <div className="w-full max-w-md rounded-xl border border-border bg-muted/20 p-3">
+        <div data-testid={`admin-support-ticket-${ticketId}-compose`} className="w-full max-w-md rounded-xl border border-border bg-muted/20 p-3">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             {mode === 'note'
               ? 'Nota interna (não visível ao aluno)'
               : 'Resposta ao aluno'}
           </label>
           <Textarea
+            data-testid={`admin-support-ticket-${ticketId}-compose-input`}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={3}
@@ -184,8 +190,9 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
             }
             disabled={pending}
           />
-          <div className="mt-2 flex justify-end gap-2">
+          <div data-testid={`admin-support-ticket-${ticketId}-compose-actions`} className="mt-2 flex justify-end gap-2">
             <Button
+              data-testid={`admin-support-ticket-${ticketId}-compose-cancel-button`}
               type="button"
               variant="ghost"
               size="sm"
@@ -197,8 +204,8 @@ export function AdminTicketRowActions({ ticketId, status }: AdminTicketRowAction
             >
               Cancelar
             </Button>
-            <Button type="button" size="sm" className="gap-1.5" disabled={pending} onClick={submitMessage}>
-              {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            <Button data-testid={`admin-support-ticket-${ticketId}-compose-submit-button`} type="button" size="sm" className="gap-1.5" disabled={pending} onClick={submitMessage}>
+              {pending && <Loader2 data-testid={`admin-support-ticket-${ticketId}-compose-loading`} className="h-3.5 w-3.5 animate-spin" />}
               {mode === 'note' ? 'Salvar nota' : 'Enviar resposta'}
             </Button>
           </div>

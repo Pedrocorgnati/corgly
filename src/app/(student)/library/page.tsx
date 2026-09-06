@@ -33,8 +33,8 @@ export default async function LibraryPage() {
   const items = await loadItems();
 
   return (
-    <PageWrapper className="max-w-5xl">
-      <div className="mb-6 flex items-center gap-3">
+    <PageWrapper data-testid="page-library" className="max-w-5xl">
+      <div data-testid="library-header" className="mb-6 flex items-center gap-3">
         <Library className="h-6 w-6 text-primary" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('pageTitle')}</h1>
@@ -43,16 +43,16 @@ export default async function LibraryPage() {
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
+        <div data-testid="library-empty" className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
           <Library className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
           <p className="mt-3 text-sm text-muted-foreground">{t('empty')}</p>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul data-testid="library-list" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => {
             const Icon = item.type === 'VIDEO' ? Video : FileText;
             return (
-              <li key={item.contentId}>
+              <li key={item.contentId} data-testid={`library-card-${item.slug}`}>
                 <Link
                   href={`/library/${item.slug}`}
                   className={cn(

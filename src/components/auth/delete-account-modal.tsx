@@ -75,7 +75,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent showCloseButton={false} className="sm:max-w-md">
+      <DialogContent data-testid="modal-delete-account" showCloseButton={false} className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
@@ -89,12 +89,13 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2" noValidate>
+        <form data-testid="form-delete-account" onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2" noValidate>
           <div className="space-y-1.5">
             <Label htmlFor="delete-password" className="text-sm font-medium">
               Confirme sua senha
             </Label>
             <Input
+              data-testid="form-delete-account-password-input"
               id="delete-password"
               type="password"
               placeholder="Digite sua senha"
@@ -105,7 +106,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
               {...register('password')}
             />
             {errors.password && (
-              <p id="delete-password-error" className="text-xs text-destructive" role="alert">
+              <p data-testid="form-delete-account-password-error" id="delete-password-error" className="text-xs text-destructive" role="alert">
                 {errors.password.message}
               </p>
             )}
@@ -116,6 +117,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
               Digite <strong>EXCLUIR</strong> para confirmar
             </Label>
             <Input
+              data-testid="form-delete-account-confirmation-input"
               id="delete-confirmation"
               type="text"
               placeholder="EXCLUIR"
@@ -125,17 +127,18 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
               {...register('confirmation')}
             />
             {errors.confirmation && (
-              <p id="delete-confirmation-error" className="text-xs text-destructive" role="alert">
+              <p data-testid="form-delete-account-confirmation-error" id="delete-confirmation-error" className="text-xs text-destructive" role="alert">
                 {errors.confirmation.message}
               </p>
             )}
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            <Button data-testid="form-delete-account-cancel-button" type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
               Cancelar
             </Button>
             <Button
+              data-testid="form-delete-account-submit-button"
               type="submit"
               variant="destructive"
               disabled={isSubmitting || !isValid}

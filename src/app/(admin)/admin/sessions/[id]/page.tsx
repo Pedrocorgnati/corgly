@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
+import { internalApiOrigin } from '@/lib/internal-api';
 import { ArrowLeft, Calendar, User, CreditCard, MessageSquare } from 'lucide-react';
 import { SESSION_STATUS_MAP } from '@/lib/constants/enums';
 import { PageWrapper } from '@/components/shared';
@@ -18,7 +19,7 @@ interface PageProps {
 
 async function getSession(id: string) {
   const headersList = await headers();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  const baseUrl = await internalApiOrigin();
 
   const res = await fetch(`${baseUrl}/api/v1/admin/sessions/${id}`, {
     headers: {
@@ -45,10 +46,11 @@ export default async function AdminSessionDetailPage({ params }: PageProps) {
   const statusInfo = SESSION_STATUS_MAP[session.status as keyof typeof SESSION_STATUS_MAP];
 
   return (
-    <PageWrapper className="max-w-3xl">
-      <div className="mb-6 flex items-center gap-3">
+    <PageWrapper data-testid="page-admin-session-detail" className="max-w-3xl">
+      <div data-testid="admin-session-detail-header" className="mb-6 flex items-center gap-3">
         <Link
           href={ROUTES.ADMIN_SESSIONS}
+          data-testid="admin-session-detail-back-link"
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Voltar para lista de sessões"
         >
@@ -60,7 +62,7 @@ export default async function AdminSessionDetailPage({ params }: PageProps) {
 
       <div className="space-y-4">
         {/* Data e hora */}
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div data-testid="admin-session-detail-datetime" className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-3">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <h2 className="font-semibold text-foreground">Data e Hora</h2>
@@ -102,7 +104,7 @@ export default async function AdminSessionDetailPage({ params }: PageProps) {
         </div>
 
         {/* Aluno */}
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div data-testid="admin-session-detail-student" className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center gap-2 mb-3">
             <User className="h-4 w-4 text-muted-foreground" />
             <h2 className="font-semibold text-foreground">Aluno</h2>
@@ -116,7 +118,7 @@ export default async function AdminSessionDetailPage({ params }: PageProps) {
 
         {/* Crédito */}
         {session.creditBatch && (
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div data-testid="admin-session-detail-credit" className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-3">
               <CreditCard className="h-4 w-4 text-muted-foreground" />
               <h2 className="font-semibold text-foreground">Crédito Consumido</h2>
@@ -132,7 +134,7 @@ export default async function AdminSessionDetailPage({ params }: PageProps) {
 
         {/* Feedback */}
         {session.feedback ? (
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div data-testid="admin-session-detail-feedback" className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-3">
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
               <h2 className="font-semibold text-foreground">Feedback</h2>
@@ -163,7 +165,7 @@ export default async function AdminSessionDetailPage({ params }: PageProps) {
             )}
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-card p-5">
+          <div data-testid="admin-session-detail-feedback" className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
               <h2 className="font-semibold text-foreground">Feedback</h2>

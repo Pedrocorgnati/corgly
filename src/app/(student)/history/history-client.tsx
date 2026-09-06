@@ -84,8 +84,9 @@ export function HistoryClient({
   return (
     <>
       {/* Status filters */}
-      <div className="flex items-center gap-2 flex-wrap mb-6">
+      <div data-testid="history-filters" className="flex items-center gap-2 flex-wrap mb-6">
         <button
+          data-testid="history-filter-all-button"
           onClick={() => handleStatusFilter(null)}
           className={cn(
             'px-3 py-1.5 rounded-full text-xs border transition-colors',
@@ -101,6 +102,7 @@ export function HistoryClient({
           return (
             <button
               key={status}
+              data-testid={`history-filter-${status.toLowerCase()}-button`}
               onClick={() => handleStatusFilter(status)}
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs border transition-colors',
@@ -118,6 +120,7 @@ export function HistoryClient({
       {/* Sessions list */}
       {data.length === 0 ? (
         <EmptyState
+          data-testid="history-empty"
           icon={History}
           title="Nenhuma aula no histórico"
           description="Após concluir sua primeira aula, ela aparecerá aqui com o feedback da sessão."
@@ -125,9 +128,9 @@ export function HistoryClient({
           actionHref="/schedule"
         />
       ) : (
-        <div className="space-y-3">
+        <div data-testid="history-list" className="space-y-3">
           {data.map((session) => (
-            <div key={session.id}>
+            <div key={session.id} data-testid={`history-row-${session.id}`}>
               <RescheduleRequestBadge status={session.status} />
               <SessionCard
                 session={session}
@@ -149,12 +152,13 @@ export function HistoryClient({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6">
+        <div data-testid="history-pagination" className="flex items-center justify-between mt-6">
           <p className="text-xs text-muted-foreground">
             Página {currentPage} de {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <Button
+              data-testid="history-pagination-prev-button"
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(currentPage - 1)}
@@ -164,6 +168,7 @@ export function HistoryClient({
             </Button>
             <span className="text-sm text-foreground">{currentPage}</span>
             <Button
+              data-testid="history-pagination-next-button"
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(currentPage + 1)}

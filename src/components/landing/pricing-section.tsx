@@ -1,148 +1,209 @@
 'use client';
 
-import Link from 'next/link';
-import { CheckCircle2, Star, AlertCircle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ROUTES } from '@/lib/constants/routes';
+import { useState } from 'react';
+import { Calendar, Clock, Layers, RefreshCw, Star, Ticket, TrendingUp } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { ButtonLink } from '@/components/ui/button-link';
+import {
+  FIRST_LESSON_USD,
+  SINGLE_USD,
+  PACK10_USD,
+  PACK10_PER,
+  MONTHLY_OPTIONS,
+  type MonthlyLessons,
+  monthlyTotalUsd,
+  monthlyPerUsd,
+  formatUsd,
+  planHref,
+} from '@/lib/constants/landing';
+import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
 
-const PLANS = [
-  {
-    id: 'SINGLE',
-    i18nKey: 'single',
-    price: 25,
-    pricePerLesson: 25,
-    credits: 1,
-    popular: false,
-    highlight: false,
-  },
-  {
-    id: 'PACK_5',
-    i18nKey: 'pack5',
-    price: 110,
-    pricePerLesson: 22,
-    credits: 5,
-    popular: false,
-    highlight: false,
-  },
-  {
-    id: 'PACK_10',
-    i18nKey: 'pack10',
-    price: 190,
-    pricePerLesson: 19,
-    credits: 10,
-    popular: true,
-    highlight: true,
-  },
-  {
-    id: 'MONTHLY',
-    i18nKey: 'monthly',
-    price: 139, // Math.ceil(2 × $16/aula × 4.33 sem/mês) — 2×/semana
-    pricePerLesson: 17, // ~$139 / 8 aulas
-    credits: 8,
-    popular: false,
-    highlight: false,
-  },
-] as const;
+const FEATURE_ICONS = {
+  SINGLE: [Calendar, Clock],
+  PACK_10: [Layers, Calendar],
+  MONTHLY: [TrendingUp, RefreshCw],
+} as const;
 
-interface PricingSectionProps {
-  isFirstPurchase?: boolean;
-  isAuthenticated?: boolean;
-}
-
-export function PricingSection({
-  isFirstPurchase,
-  isAuthenticated,
-}: PricingSectionProps) {
-  const t = useTranslations('landing');
-  const showDiscount = isFirstPurchase !== false;
-  const ctaHref = isAuthenticated ? ROUTES.CREDITS : ROUTES.REGISTER;
+export function PricingSection() {
+  const t = useTranslations('landing.pricing');
+  const locale = useLocale();
+  const { isAuthenticated } = useAuth();
+  const [monthlyLessons, setMonthlyLessons] = useState<MonthlyLessons>(MONTHLY_OPTIONS[0].lessons);
+  const monthlyTotal = monthlyTotalUsd(monthlyLessons);
+  const monthlyPer = monthlyPerUsd(monthlyLessons);
 
   return (
-    <section className="py-20 bg-background" id="precos" aria-labelledby="pricing-heading">
-      {/* Discount Banner */}
-      {showDiscount && (
-        <div className="bg-warning/10 dark:bg-warning/10 border-y border-warning/30 py-3 mb-12">
-          <div className="max-w-[1200px] mx-auto px-4 md:px-6 flex items-center justify-center gap-2 flex-wrap">
-            <AlertCircle className="h-4 w-4 text-warning" />
-            <span className="text-sm font-medium text-warning">
-              {t('pricing.discount_banner')}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-        <div className="text-center mb-12">
-          <Badge className="bg-accent text-accent-foreground hover:bg-accent mb-4">
-            {t('pricing.badge')}
-          </Badge>
-          <h2 id="pricing-heading" className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            {t('pricing.title')}
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            {t('pricing.subtitle')}
+    <section data-testid="landing-pricing" className="py-[4.5rem] md:py-20 bg-white" id="precos" aria-labelledby="pricing-heading">
+      <div className="max-w-[1120px] mx-auto px-5 md:px-6">
+        <div className="bg-pricing-banner rounded-[10px] py-2.5 px-5 mb-10 text-white">
+          <p className="flex items-center justify-center gap-2 text-[13px] md:text-[15px] font-semibold text-center">
+            <Ticket className="h-4 w-4 flex-shrink-0" />
+            {t('discount_banner')}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          {PLANS.map((plan) => {
-            const features = t.raw(`pricing.packages.${plan.i18nKey}.features`) as string[];
+        <h2 id="pricing-heading" className="text-[2rem] md:text-[2.6rem] font-bold text-[#1B2140] tracking-tight mb-9">
+          {t('title')}
+        </h2>
 
-            return (
-              <Card
-                key={plan.id}
-                className={`relative border flex flex-col ${
-                  plan.highlight
-                    ? 'border-2 border-primary shadow-lg'
-                    : 'border-border'
-                }`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground px-3 py-1 flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-current" />
-                      {t('pricing.most_popular')}
-                    </Badge>
-                  </div>
-                )}
-                <CardHeader className="pb-4 pt-8">
-                  <h3 className="text-lg font-bold text-foreground">
-                    {t(`pricing.packages.${plan.i18nKey}.name`)}
-                  </h3>
-                  <div className="mt-2">
-                    <span className="text-3xl font-bold text-foreground">${plan.price}</span>
-                    <span className="text-sm text-muted-foreground ml-1">
-                      / {plan.credits} {plan.credits > 1 ? t('pricing.lessons_suffix') : t('pricing.lesson_suffix')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ${plan.pricePerLesson}{t('pricing.per_lesson_suffix')}
-                  </p>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col gap-6">
-                  <ul className="space-y-2 flex-1">
-                    {features.map((feat) => (
-                      <li key={feat} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-foreground">{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href={ctaHref}>
-                    <Button
-                      className={`w-full ${plan.highlight ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
-                      variant={plan.highlight ? 'default' : 'outline'}
-                    >
-                      {t(`pricing.packages.${plan.i18nKey}.cta`)}
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+          <article
+            data-testid="landing-pricing-plan-single"
+            className="rounded-[10px] border border-slate-200 bg-white px-7 py-7 flex flex-col"
+          >
+            <h3 className="text-[1.2rem] font-bold text-[#1B2140]">{t('packages.single.name')}</h3>
+            <span className="mt-1.5 block h-[3px] w-9 rounded-full bg-amber-500" />
+            <p className="mt-6 text-[13px] text-slate-500">{t('first_lesson_label')}</p>
+            <p className="mt-1 flex items-baseline gap-2.5">
+              <span className="text-[2.15rem] font-bold tracking-tight text-[#1B2140]">{formatUsd(FIRST_LESSON_USD, locale)}</span>
+              <span className="text-[1.05rem] text-slate-400 line-through">{formatUsd(SINGLE_USD, locale)}</span>
+            </p>
+            <p className="mt-5 text-[13px] text-slate-500">{t('following_lessons_label')}</p>
+            <p className="text-[2.15rem] font-bold tracking-tight text-[#1B2140] leading-none">{formatUsd(SINGLE_USD, locale)}</p>
+            <p className="mt-1 text-[13px] text-slate-500">{t('per_lesson')}</p>
+            <ButtonLink
+              href={planHref(isAuthenticated, 'SINGLE')}
+              data-testid="landing-pricing-plan-single-cta-button"
+              variant="outline"
+              className="mt-7 w-full h-11 min-h-[44px] rounded-[10px] border-[1.5px] border-[#7c5cbf] text-[#7c5cbf] hover:bg-[#7c5cbf]/5 font-semibold"
+            >
+              {t('packages.single.cta')}
+            </ButtonLink>
+            <ul className="mt-5 space-y-2.5">
+              {(t.raw('packages.single.features') as string[]).map((feat, i) => {
+                const Icon = FEATURE_ICONS.SINGLE[i] ?? Calendar;
+                return (
+                  <li key={feat} className="flex items-center gap-2.5 text-[13.5px] text-slate-700">
+                    <Icon className="h-4 w-4 text-[#7c5cbf]" />
+                    {feat}
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+
+          <article
+            data-testid="landing-pricing-plan-pack-10"
+            className="relative rounded-[10px] border-2 border-[#7c5cbf] bg-white px-7 py-7 flex flex-col shadow-[0_12px_32px_rgba(124,92,191,0.12)]"
+          >
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
+              <span className="bg-[#7c5cbf] text-white px-3.5 py-1 rounded-[10px] text-[12px] font-semibold inline-flex items-center gap-1">
+                <Star className="h-3 w-3 fill-current" />
+                {t('most_chosen')}
+              </span>
+            </div>
+            <h3 className="text-[1.2rem] font-bold text-[#1B2140]">{t('packages.pack10.name')}</h3>
+            <span className="mt-1.5 block h-[3px] w-9 rounded-full bg-[#7c5cbf]" />
+            <p className="mt-6 text-[2.75rem] font-bold tracking-tight text-[#1B2140] leading-none">{formatUsd(PACK10_USD, locale)}</p>
+            <p className="mt-3 text-[13px] text-slate-500">{t('equivalent_to')}</p>
+            <p className="mt-1 text-[2.15rem] font-bold tracking-tight text-[#7c5cbf] leading-none">
+              {formatUsd(PACK10_PER, locale)}
+              <span className="text-[1rem] font-medium text-[#7c5cbf]/80">{t('per_lesson_suffix')}</span>
+            </p>
+            <ButtonLink
+              href={planHref(isAuthenticated, 'PACK_10')}
+              data-testid="landing-pricing-plan-pack-10-cta-button"
+              className="mt-7 w-full h-11 min-h-[44px] rounded-[10px] bg-[#7c5cbf] hover:bg-[#6d4fb0] font-semibold text-white"
+            >
+              {t('packages.pack10.cta')}
+            </ButtonLink>
+            <ul className="mt-5 space-y-2.5">
+              {(t.raw('packages.pack10.features') as string[]).map((feat, i) => {
+                const Icon = FEATURE_ICONS.PACK_10[i] ?? Layers;
+                return (
+                  <li key={feat} className="flex items-center gap-2.5 text-[13.5px] text-slate-700">
+                    <Icon className="h-4 w-4 text-[#7c5cbf]" />
+                    {feat}
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+
+          <article
+            data-testid="landing-pricing-plan-monthly"
+            className="rounded-[10px] border border-slate-200 bg-white px-7 py-7 flex flex-col"
+          >
+            <h3 className="text-[1.2rem] font-bold text-[#1B2140]">{t('packages.monthly.name')}</h3>
+            <span className="mt-1.5 block h-[3px] w-9 rounded-full bg-amber-500" />
+            <div
+              data-testid="landing-pricing-monthly-options"
+              className="mt-5 grid grid-cols-2 gap-2"
+              role="radiogroup"
+              aria-label={t('packages.monthly.name')}
+            >
+              {MONTHLY_OPTIONS.map((option) => {
+                const selected = monthlyLessons === option.lessons;
+                return (
+                  <button
+                    key={option.lessons}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    data-testid={`landing-pricing-monthly-option-${option.lessons}`}
+                    onClick={() => setMonthlyLessons(option.lessons)}
+                    className={cn(
+                      'rounded-[10px] border px-3 py-2.5 text-left transition-colors',
+                      selected
+                        ? 'border-[#7c5cbf] bg-[#7c5cbf]/10'
+                        : 'border-slate-200 bg-white hover:border-[#c4b0e8]',
+                    )}
+                  >
+                    <p className="text-[13px] font-semibold text-[#1B2140]">
+                      {option.lessons} {t('lessons_suffix')}
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-slate-500">
+                      {formatUsd(option.per, locale)}
+                      {t('per_lesson_suffix')}
+                    </p>
+                    {option.lessons === 20 && (
+                      <p className="mt-0.5 text-[11px] font-medium text-[#d97706]">{t('best_cost')}</p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-6 text-[2.75rem] font-bold tracking-tight text-[#1B2140] leading-none">
+              {formatUsd(monthlyTotal, locale)}
+            </p>
+            <p className="mt-2 text-[13px] text-slate-500">{t('per_month', { count: monthlyLessons })}</p>
+            <p className="mt-3 text-[2.15rem] font-bold tracking-tight text-[#d97706] leading-none">
+              {formatUsd(monthlyPer, locale)}
+              <span className="text-[1rem] font-medium">{t('per_lesson_suffix')}</span>
+            </p>
+            {monthlyLessons === 20 && (
+              <p className="mt-1 text-[13px] font-medium text-[#d97706]">{t('best_cost')}</p>
+            )}
+            <ButtonLink
+              href={planHref(isAuthenticated, 'MONTHLY', monthlyLessons)}
+              data-testid="landing-pricing-plan-monthly-cta-button"
+              variant="outline"
+              className="mt-7 w-full h-11 min-h-[44px] rounded-[10px] border-[1.5px] border-[#7c5cbf] text-[#7c5cbf] hover:bg-[#7c5cbf]/5 font-semibold"
+            >
+              {t('packages.monthly.cta')}
+            </ButtonLink>
+            <ul className="mt-5 space-y-2.5">
+              {(t.raw('packages.monthly.features') as string[]).map((feat, i) => {
+                const Icon = FEATURE_ICONS.MONTHLY[i] ?? TrendingUp;
+                return (
+                  <li key={feat} className="flex items-center gap-2.5 text-[13.5px] text-slate-700">
+                    <Icon className="h-4 w-4 text-[#7c5cbf]" />
+                    {feat}
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+        </div>
+        <div className="mt-10 flex items-center gap-4">
+          <span className="hidden sm:block h-px flex-1 bg-slate-200" />
+          <p data-testid="landing-pricing-footnote" className="text-center text-[13px] text-slate-500">
+            {t('footnote_credits')}
+            <span className="mx-1.5 text-amber-500">•</span>
+            {t('footnote_cancel')}
+          </p>
+          <span className="hidden sm:block h-px flex-1 bg-slate-200" />
         </div>
       </div>
     </section>

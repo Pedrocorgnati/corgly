@@ -21,7 +21,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
   }, [error, pathname]);
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4 bg-background">
+    <div data-testid="app-error" className="min-h-dvh flex flex-col items-center justify-center px-4 bg-background">
       <div className="text-center max-w-sm">
         <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10 mb-4">
           <AlertTriangle className="h-8 w-8 text-destructive" />
@@ -30,7 +30,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         <p className="text-muted-foreground mb-8">
           {t('serverError.description')}
         </p>
-        <Button onClick={reset} className="w-full">
+        <Button data-testid="app-error-retry-button" onClick={reset} className="w-full">
           {t('serverError.retry')}
         </Button>
       </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiResponse } from '@/lib/auth';
 import { requireAdmin } from '@/lib/auth-guard';
+import { logger } from '@/lib/logger';
 import { UserRole } from '@/lib/constants/enums';
 
 /** GET /api/v1/admin/students */
@@ -25,7 +26,9 @@ export async function GET(request: NextRequest) {
           country: true,
           timezone: true,
           preferredLanguage: true,
-          emailVerified: true,
+          // Nome real da coluna no model User (schema.prisma): emailConfirmed.
+          // `emailVerified` nao existe e derrubava esta rota com 500 no Prisma.
+          emailConfirmed: true,
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -36,7 +39,12 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json(apiResponse({ data: users, total, page, limit }));
-  } catch {
+  } catch (err) {
+    logger.error(
+      'GET /api/v1/admin/students',
+      { action: 'admin.students.list', route: '/api/v1/admin/students' },
+      err,
+    );
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
 }

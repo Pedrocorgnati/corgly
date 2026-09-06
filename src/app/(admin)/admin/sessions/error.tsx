@@ -14,13 +14,13 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   }, [error, pathname]);
 
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8 max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[400px] gap-4">
+    <div data-testid="admin-sessions-error" className="px-4 py-6 md:px-6 md:py-8 max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[400px] gap-4">
       <AlertTriangle className="h-10 w-10 text-destructive" />
       <h2 className="text-lg font-semibold text-foreground">Algo deu errado</h2>
       <p className="text-sm text-muted-foreground text-center max-w-md">
         Erro ao carregar as sessões. Tente novamente.
       </p>
-      <Button onClick={reset}>Tentar novamente</Button>
+      <Button data-testid="admin-sessions-error-retry-button" onClick={reset}>Tentar novamente</Button>
     </div>
   );
 }

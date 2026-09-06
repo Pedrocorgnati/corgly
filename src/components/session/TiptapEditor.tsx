@@ -58,11 +58,13 @@ interface ToolbarButtonProps {
   title: string
   children: React.ReactNode
   disabled?: boolean
+  testId?: string
 }
 
-function ToolbarButton({ onClick, isActive, title, children, disabled }: ToolbarButtonProps) {
+function ToolbarButton({ onClick, isActive, title, children, disabled, testId }: ToolbarButtonProps) {
   return (
     <button
+      data-testid={testId}
       type="button"
       onClick={onClick}
       aria-pressed={isActive}
@@ -120,13 +122,14 @@ export function TiptapEditor({
   }
 
   return (
-    <div className="flex flex-1 flex-col" aria-label="Editor de notas da aula">
+    <div data-testid="session-notes-editor" className="flex flex-1 flex-col" aria-label="Editor de notas da aula">
       {/* Inject cursor styles */}
       <style dangerouslySetInnerHTML={{ __html: CURSOR_STYLES }} />
 
       {/* Toolbar */}
       {!isReadOnly && editor && (
         <div
+          data-testid="session-notes-toolbar"
           role="toolbar"
           aria-label="Ferramentas de formatacao"
           className="flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/30 px-2 py-1"
@@ -135,6 +138,7 @@ export function TiptapEditor({
             onClick={() => editor.chain().focus().toggleBold().run()}
             isActive={editor.isActive('bold')}
             title="Negrito (Ctrl+B)"
+            testId="session-notes-bold-button"
           >
             B
           </ToolbarButton>
@@ -143,6 +147,7 @@ export function TiptapEditor({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             isActive={editor.isActive('italic')}
             title="Italico (Ctrl+I)"
+            testId="session-notes-italic-button"
           >
             <em>I</em>
           </ToolbarButton>
@@ -153,6 +158,7 @@ export function TiptapEditor({
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             isActive={editor.isActive('heading', { level: 1 })}
             title="Titulo 1"
+            testId="session-notes-heading1-button"
           >
             H1
           </ToolbarButton>
@@ -161,6 +167,7 @@ export function TiptapEditor({
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             isActive={editor.isActive('heading', { level: 2 })}
             title="Titulo 2"
+            testId="session-notes-heading2-button"
           >
             H2
           </ToolbarButton>
@@ -171,6 +178,7 @@ export function TiptapEditor({
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             isActive={editor.isActive('bulletList')}
             title="Lista com marcadores"
+            testId="session-notes-bullet-list-button"
           >
             &bull;
           </ToolbarButton>
@@ -179,6 +187,7 @@ export function TiptapEditor({
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             isActive={editor.isActive('orderedList')}
             title="Lista numerada"
+            testId="session-notes-ordered-list-button"
           >
             1.
           </ToolbarButton>
@@ -189,6 +198,7 @@ export function TiptapEditor({
             onClick={handleLinkInsert}
             isActive={editor.isActive('link')}
             title="Inserir link"
+            testId="session-notes-link-button"
           >
             Link
           </ToolbarButton>
@@ -196,7 +206,7 @@ export function TiptapEditor({
       )}
 
       {/* Editor content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div data-testid="session-notes-content" className="flex-1 overflow-y-auto p-4">
         <EditorContent
           editor={editor}
           className="prose prose-sm max-w-none dark:prose-invert focus:outline-none"

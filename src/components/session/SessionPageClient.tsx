@@ -279,16 +279,17 @@ export function SessionPageClient({
 
   if (pageState === 'WAITING') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div data-testid="page-session-waiting" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h1 className="mt-4 text-xl font-semibold text-foreground">
+          <h1 data-testid="session-waiting-header" className="mt-4 text-xl font-semibold text-foreground">
             A sala abre em {sessionAccess.formattedCountdown}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Você poderá entrar 5 minutos antes do horário agendado.
           </p>
           <Button
+            data-testid="session-waiting-enter-button"
             className="mt-6 w-full"
             disabled
             aria-disabled="true"
@@ -304,16 +305,17 @@ export function SessionPageClient({
 
   if (pageState === 'READY') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div data-testid="page-session-ready" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <Clock className="mx-auto h-12 w-12 text-primary" />
-          <h1 className="mt-4 text-xl font-semibold text-foreground">
+          <h1 data-testid="session-ready-header" className="mt-4 text-xl font-semibold text-foreground">
             A sala está disponível!
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Clique abaixo para entrar na aula.
           </p>
           <Button
+            data-testid="session-ready-enter-button"
             className="mt-6 w-full"
             onClick={handleEnterRoom}
           >
@@ -328,9 +330,9 @@ export function SessionPageClient({
 
   if (pageState === 'CONNECTING') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div data-testid="page-session-connecting" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <Loader2 data-testid="session-connecting-loading" className="h-12 w-12 animate-spin text-primary" />
           <p className="text-lg font-medium text-foreground">
             Conectando...
           </p>
@@ -346,21 +348,21 @@ export function SessionPageClient({
 
   if (pageState === 'ENDED') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div data-testid="page-session-ended" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
-          <h1 className="mt-4 text-2xl font-semibold text-foreground">
+          <h1 data-testid="session-ended-header" className="mt-4 text-2xl font-semibold text-foreground">
             Aula finalizada
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sua aula de {sessionDurationMinutes}min foi concluída com sucesso.
           </p>
-          <div className="mt-6 flex flex-col gap-3">
+          <div data-testid="session-ended-actions" className="mt-6 flex flex-col gap-3">
             <Link href={`/session/${session.id}/feedback`}>
-              <Button className="w-full">Avaliar aula</Button>
+              <Button data-testid="session-ended-feedback-button" className="w-full">Avaliar aula</Button>
             </Link>
             <Link href={ROUTES.DASHBOARD}>
-              <Button variant="outline" className="w-full">
+              <Button data-testid="session-ended-dashboard-button" variant="outline" className="w-full">
                 Voltar ao Dashboard
               </Button>
             </Link>
@@ -374,22 +376,22 @@ export function SessionPageClient({
 
   if (pageState === 'INTERRUPTED') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div data-testid="page-session-interrupted" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500" />
-          <h1 className="mt-4 text-2xl font-semibold text-foreground">
+          <h1 data-testid="session-interrupted-header" className="mt-4 text-2xl font-semibold text-foreground">
             Sessão interrompida
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sua sessão foi interrompida por problemas de conexão. 1 crédito foi
             devolvido à sua conta.
           </p>
-          <div className="mt-6 flex flex-col gap-3">
+          <div data-testid="session-interrupted-actions" className="mt-6 flex flex-col gap-3">
             <Link href={ROUTES.SUPPORT}>
-              <Button className="w-full">Contato</Button>
+              <Button data-testid="session-interrupted-support-button" className="w-full">Contato</Button>
             </Link>
             <Link href={ROUTES.DASHBOARD}>
-              <Button variant="outline" className="w-full">
+              <Button data-testid="session-interrupted-dashboard-button" variant="outline" className="w-full">
                 Voltar ao Dashboard
               </Button>
             </Link>
@@ -409,11 +411,11 @@ export function SessionPageClient({
     .toUpperCase()
 
   return (
-    <div className="flex h-[100dvh] flex-col lg:flex-row bg-background">
+    <div data-testid="page-session" className="flex h-[100dvh] flex-col lg:flex-row bg-background">
       {/* Video panel section */}
-      <div className="flex flex-col h-[40vh] lg:h-full lg:w-[35%] border-b lg:border-b-0 lg:border-r border-border relative">
+      <div data-testid="session-video-section" className="flex flex-col h-[40vh] lg:h-full lg:w-[35%] border-b lg:border-b-0 lg:border-r border-border relative">
         {pageState === 'AUDIO_ONLY' ? (
-          <div className="flex-1 relative">
+          <div data-testid="session-audio-only-section" className="flex-1 relative">
             <AudioOnlyOverlay
               peerName={isAdmin ? session.student.name : 'Professor'}
               peerInitials={isAdmin ? peerInitials : 'PR'}
@@ -446,7 +448,7 @@ export function SessionPageClient({
       </div>
 
       {/* Editor section */}
-      <div className="flex flex-1 flex-col h-[60vh] lg:h-full lg:w-[65%]">
+      <div data-testid="session-editor-section" className="flex flex-1 flex-col h-[60vh] lg:h-full lg:w-[65%]">
         <SessionTimer
           formattedTime={timer.formattedTime}
           timerColor={timer.timerColor}

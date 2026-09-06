@@ -12,7 +12,7 @@ describe('buildPersonSchema', () => {
 
     expect(schema['@context']).toBe('https://schema.org');
     expect(schema['@type']).toBe('Person');
-    expect(schema.name).toBe('Pedro Corgnati');
+    expect(schema.name).toBe('Pedro');
     expect(schema.jobTitle).toBe('Professor de Português Brasileiro');
   });
 
@@ -61,7 +61,7 @@ describe('buildCourseSchema', () => {
     const schema = buildCourseSchema();
 
     expect(schema.provider['@type']).toBe('Person');
-    expect(schema.provider.name).toBe('Pedro Corgnati');
+    expect(schema.provider.name).toBe('Pedro');
   });
 
   it('inclui oferta com preco em USD', () => {

@@ -1,20 +1,25 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Calendar, ShoppingCart } from 'lucide-react';
+import { AlertTriangle, Calendar, Coins, GraduationCap, ShoppingCart, Zap } from 'lucide-react';
+import { DEFAULT_TIMEZONE } from '@/lib/constants';
 import { ROUTES } from '@/lib/constants/routes';
 import { buttonVariants } from '@/components/ui/button-variants';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CreditWidget } from '@/components/student/credit-widget';
-import { NextSessionCard } from '@/components/student/next-session-card';
+import { NextSessionCard, type NextSessionView } from '@/components/student/next-session-card';
 import { QuickStats } from '@/components/student/quick-stats';
 import { CorglyCircle } from '@/components/dashboard/CorglyCircle';
 import { RecentFeedbackList } from '@/components/dashboard/RecentFeedbackList';
 import { WidgetErrorBoundary } from '@/components/ui/widget-error-boundary';
 import { CheckoutSuccessToast } from '@/components/student/checkout-success-toast';
 import { SessionErrorToast } from '@/components/student/session-error-toast';
-import { PageWrapper } from '@/components/shared';
+import {
+  DashboardHeaderChip,
+  DashboardPageHeader,
+  PageWrapper,
+  WidgetCard,
+} from '@/components/shared';
 import {
   getDashboardUser,
   getDashboardCredits,
@@ -29,45 +34,53 @@ export const metadata: Metadata = {
   title: 'Dashboard | Corgly',
 };
 
-const EXPIRY_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Janela do aviso de expiracao — a mesma de src/components/credits/credit-expiry-alert.tsx. */
+const EXPIRY_THRESHOLD_MS = 7 * DAY_MS;
+/** Antecedencia em que o botao "Entrar" da sala destrava. */
+const ENTER_WINDOW_MS = 15 * 60 * 1000;
 
-function CreditWidgetSkeleton() {
-  return (
-    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-      <Skeleton className="h-4 w-24 mb-3" />
-      <Skeleton className="h-10 w-16 mx-auto mb-2" />
-      <Skeleton className="h-3 w-12 mx-auto mb-4" />
-      <Skeleton className="h-9 w-full" />
-    </div>
-  );
-}
+/**
+ * Fuso em que a data e a hora da proxima aula sao escritas.
+ *
+ * A formatacao acontece no SERVIDOR (o card recebe o texto pronto MAIS o ISO
+ * cru), entao o fuso tem que ser explicito: sem ele o Node do deploy formata em
+ * UTC e a aula das 14h aparece as 17h. `getAuthUser` (src/lib/data/auth.ts) nao
+ * devolve `timezone`, entao vale o mesmo fallback de
+ * src/lib/bookings/reschedule-options.service.ts.
+ */
+const DISPLAY_TIMEZONE = DEFAULT_TIMEZONE;
 
-function NextSessionSkeleton() {
-  return (
-    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-      <Skeleton className="h-4 w-24 mb-3" />
-      <Skeleton className="h-6 w-32 mb-2" />
-      <Skeleton className="h-4 w-20 mb-3" />
-      <Skeleton className="h-8 w-24 mx-auto mb-4" />
-      <Skeleton className="h-9 w-full" />
-    </div>
-  );
-}
+/**
+ * Spans da grade. UMA convencao so: a GRADE manda no span, os cards nunca
+ * declaram `col-span` por conta propria (antes a pagina abria a grade de 3
+ * colunas e os filhos carregavam `lg:col-span-2` fixo, o que deixava buraco).
+ *
+ * Ordem no DOM: creditos, proxima aula, acoes, historico, circle, avaliacoes.
+ *   lg (3 col): [1+1+1] | [3] | [2+1]
+ *   md (2 col): [1+1] | [2] | [2] | [2] | [2]
+ *   base (1 col): tudo empilhado.
+ * Nenhuma linha fica com celula vazia em nenhum breakpoint.
+ */
+const SPAN = {
+  /** Linha inteira no md, um terco no lg. */
+  wideThird: 'md:col-span-2 lg:col-span-1',
+  /** Linha inteira no md, dois tercos no lg. */
+  wideTwoThirds: 'md:col-span-2 lg:col-span-2',
+  /** Linha inteira em md e lg. */
+  full: 'md:col-span-2 lg:col-span-3',
+} as const;
 
-function QuickStatsSkeleton() {
-  return (
-    <div className="md:col-span-2 lg:col-span-3 bg-card border border-border rounded-xl p-5 shadow-sm">
-      <Skeleton className="h-4 w-24 mb-4" />
-      <div className="grid grid-cols-3 gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <Skeleton className="h-8 w-12 mb-1" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+/**
+ * Instante desta renderizacao (Server Component: roda uma vez por request).
+ *
+ * Fica isolado numa funcao porque o lint de pureza do React proibe chamar
+ * `Date.now()` direto no corpo do componente. Toda a pagina usa ESTE valor,
+ * para que a janela de "entrar na sala", o predicado de expiracao e a contagem
+ * de dias enxerguem o mesmo relogio.
+ */
+function instanteDaRenderizacao(): number {
+  return Date.now();
 }
 
 export default async function DashboardPage() {
@@ -86,57 +99,90 @@ export default async function DashboardPage() {
   const progress = progressResult.data;
   const recentFeedbacks = recentResult.data;
 
-  // Extract first scheduled session
-  const nextSession = nextSessionData?.data?.[0] ?? null;
+  // Zero Silencio: painel que falhou nao pode virar "0" silencioso na tela.
+  // Cada fetcher devolve `{ data, error }` (src/actions/dashboard.ts) e o erro
+  // vira uma faixa nomeando o que nao carregou.
+  const failedPanels = [
+    { label: 'seu perfil', failed: Boolean(userResult.error) },
+    { label: 'créditos', failed: Boolean(creditsResult.error) },
+    { label: 'próxima aula', failed: Boolean(nextSessionResult.error) },
+    { label: 'progresso', failed: Boolean(progressResult.error) },
+    { label: 'avaliações recentes', failed: Boolean(recentResult.error) },
+  ]
+    .filter((panel) => panel.failed)
+    .map((panel) => panel.label);
 
-  // Format next session for the card
-  const nextSessionForCard = nextSession
+  // ── Proxima aula ───────────────────────────────────────────────────────────
+  // O campo canonico e `startAt` em ISO (produtor: `sessionToMeta`); `scheduledAt`
+  // nunca existiu e `new Date(undefined)` renderizava "Invalid Date" sem estourar.
+  // A API ja devolve a aula mais proxima: status=SCHEDULED + from=agora +
+  // sort=startAt:asc + limit=1.
+  const nextSession = nextSessionData?.data?.[0] ?? null;
+  const nextSessionStartMs = nextSession ? Date.parse(nextSession.startAt) : Number.NaN;
+  const hasReadableStart = Number.isFinite(nextSessionStartMs);
+
+  // Data/hora localizadas no SERVIDOR (evita divergencia de fuso na hidratacao),
+  // mas o ISO cru viaja junto: e ele que alimenta o contador do card.
+  const nextSessionForCard: NextSessionView | null = nextSession
     ? {
-        date: new Date(nextSession.scheduledAt).toLocaleDateString('pt-BR', {
-          weekday: 'long',
-          day: '2-digit',
-          month: 'long',
-        }),
-        time: new Date(nextSession.scheduledAt).toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
         sessionId: nextSession.id,
+        startAt: nextSession.startAt,
+        date: hasReadableStart
+          ? new Date(nextSessionStartMs).toLocaleDateString('pt-BR', {
+              timeZone: DISPLAY_TIMEZONE,
+              weekday: 'long',
+              day: '2-digit',
+              month: 'long',
+            })
+          : null,
+        time: hasReadableStart
+          ? new Date(nextSessionStartMs).toLocaleTimeString('pt-BR', {
+              timeZone: DISPLAY_TIMEZONE,
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : null,
       }
     : null;
 
-  // Determine if session can be entered (within 15 min window)
-  const canEnter = nextSession
-    ? new Date(nextSession.scheduledAt).getTime() - Date.now() <= 15 * 60 * 1000
-    : false;
+  const now = instanteDaRenderizacao();
+  const canEnter = hasReadableStart && nextSessionStartMs - now <= ENTER_WINDOW_MS;
 
-  // Credit expiring logic
+  // ── Creditos a expirar ─────────────────────────────────────────────────────
+  // Predicado canonico de src/components/credits/credit-expiry-alert.tsx:
+  // expira DENTRO da janela, ainda NAO expirou e sobrou credito no lote.
+  // `expiresAt: null` = lote de assinatura, que nao expira — antes disto o
+  // `new Date(null)` caia na epoch, passava no teste e o card dizia "0 dia".
   const balance = credits?.balance ?? 0;
-  const expiringBatch = credits?.breakdown?.find((batch) => {
+  const expiryThreshold = now + EXPIRY_THRESHOLD_MS;
+  const expiringBatch = (credits?.breakdown ?? []).find((batch) => {
+    if (!batch.expiresAt) return false;
     const expiresAt = new Date(batch.expiresAt).getTime();
-    return batch.remaining > 0 && expiresAt < Date.now() + EXPIRY_THRESHOLD_MS;
+    if (Number.isNaN(expiresAt)) return false;
+    return batch.remaining > 0 && expiresAt > now && expiresAt <= expiryThreshold;
   });
   const expiringCount = expiringBatch?.remaining ?? 0;
-  const expiringDays = expiringBatch
-    ? Math.max(0, Math.ceil((new Date(expiringBatch.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const expiringDays = expiringBatch?.expiresAt
+    ? Math.max(1, Math.ceil((new Date(expiringBatch.expiresAt).getTime() - now) / DAY_MS))
     : 0;
 
-  // CorglyCircle scores — null if no feedback yet
+  // ── Corgly Circle ──────────────────────────────────────────────────────────
+  // Vocabulario real do backend: listening/speaking/writing/vocabulary.
+  const averageScores = progress?.averageScores ?? null;
   const hasScores =
-    progress?.averageScores &&
-    (progress.averageScores.listening > 0 ||
-      progress.averageScores.speaking > 0 ||
-      progress.averageScores.writing > 0 ||
-      progress.averageScores.vocabulary > 0);
-  const circleScores = hasScores ? progress!.averageScores : null;
+    averageScores !== null &&
+    (averageScores.listening > 0 ||
+      averageScores.speaking > 0 ||
+      averageScores.writing > 0 ||
+      averageScores.vocabulary > 0);
+  const circleScores = hasScores ? averageScores : null;
 
-  // Stats
+  // ── Historico ──────────────────────────────────────────────────────────────
   const totalSessions = progress?.totalSessions ?? 0;
   const completedSessions = progress?.completedSessions ?? 0;
-  const completedPercent = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
-  const streak = user?.creditBalance ?? 0; // streak not available from current APIs; fallback
+  const completedPercent =
+    totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
 
-  // Recent feedbacks for list
   const feedbackList = (recentFeedbacks?.items ?? []).map((fb) => ({
     id: fb.id,
     sessionDate: fb.sessionDate,
@@ -144,8 +190,14 @@ export default async function DashboardPage() {
     sessionId: fb.sessionId,
   }));
 
+  const nextSessionChipLabel = nextSessionForCard
+    ? nextSessionForCard.time
+      ? `Próxima: ${nextSessionForCard.time}`
+      : 'Horário a confirmar'
+    : 'Sem aula agendada';
+
   return (
-    <PageWrapper className="max-w-5xl">
+    <PageWrapper data-testid="page-dashboard">
       <Suspense fallback={null}>
         <CheckoutSuccessToast />
       </Suspense>
@@ -153,19 +205,61 @@ export default async function DashboardPage() {
         <SessionErrorToast />
       </Suspense>
 
-      {/* Greeting */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">
-          Ola, {user?.name ?? 'Estudante'}!
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Bem-vinda de volta a sua jornada de aprendizado.
-        </p>
-      </div>
+      {/* Saudacao na faixa lilas do hero da landing */}
+      <DashboardPageHeader
+        data-testid="dashboard-header"
+        eyebrow="Sua jornada Corgly"
+        title={`Ola, ${user?.name ?? 'Estudante'}!`}
+        subtitle="Bem-vinda de volta a sua jornada de aprendizado."
+        chips={
+          <>
+            <DashboardHeaderChip icon={Coins} data-testid="dashboard-header-chip-credits">
+              {balance} credito{balance === 1 ? '' : 's'}
+            </DashboardHeaderChip>
+            <DashboardHeaderChip icon={Calendar} data-testid="dashboard-header-chip-next-session">
+              {nextSessionChipLabel}
+            </DashboardHeaderChip>
+            <DashboardHeaderChip icon={GraduationCap} data-testid="dashboard-header-chip-sessions">
+              {completedSessions} aula{completedSessions === 1 ? '' : 's'} concluida{completedSessions === 1 ? '' : 's'}
+            </DashboardHeaderChip>
+          </>
+        }
+        actions={
+          <Link
+            href={ROUTES.SCHEDULE}
+            data-testid="dashboard-header-schedule-button"
+            className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-lg bg-white px-5 text-[14.5px] font-semibold text-[#5b4a9a] shadow-[0_8px_24px_rgba(80,50,130,0.18)] transition-colors hover:bg-white/90"
+          >
+            <Calendar className="h-4 w-4" />
+            Agendar aula
+          </Link>
+        }
+      />
 
-      {/* Main grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Widget 1: Credits */}
+      {failedPanels.length > 0 && (
+        <div
+          data-testid="dashboard-data-error"
+          role="alert"
+          className="mb-6 flex items-start gap-2.5 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" aria-hidden="true" />
+          <p className="text-[13.5px] text-ink">
+            Não conseguimos carregar {failedPanels.join(', ')}. Os cartões abaixo podem estar
+            incompletos.{' '}
+            <a
+              href={ROUTES.DASHBOARD}
+              data-testid="dashboard-data-error-retry-button"
+              className="font-semibold text-brand-500 hover:underline"
+            >
+              Tentar de novo
+            </a>
+          </p>
+        </div>
+      )}
+
+      {/* Grade unica: 1 / 2 / 3 colunas. Os spans vem daqui (ver SPAN). */}
+      <div data-testid="dashboard-kpis" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* 1. Creditos */}
         <WidgetErrorBoundary>
           <CreditWidget
             balance={balance}
@@ -174,45 +268,64 @@ export default async function DashboardPage() {
           />
         </WidgetErrorBoundary>
 
-        {/* Widget 2: Next session */}
+        {/* 2. Proxima aula */}
         <WidgetErrorBoundary>
           <NextSessionCard session={nextSessionForCard} canEnter={canEnter} />
         </WidgetErrorBoundary>
 
-        {/* Widget 3: Corgly Circle */}
-        <WidgetErrorBoundary>
-          <CorglyCircle scores={circleScores} isLoading={false} />
-        </WidgetErrorBoundary>
+        {/* 3. Acoes rapidas */}
+        <WidgetCard
+          data-testid="dashboard-quick-actions"
+          title="Ações rápidas"
+          icon={Zap}
+          className={SPAN.wideThird}
+        >
+          <div className="flex flex-col gap-3">
+            <Link
+              href={ROUTES.SCHEDULE}
+              data-testid="dashboard-schedule-lesson-button"
+              className={cn(buttonVariants(), 'w-full h-11 min-h-[44px] rounded-lg justify-start font-semibold')}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Agendar aula
+            </Link>
+            <Link
+              href={ROUTES.CREDITS}
+              data-testid="dashboard-buy-credits-button"
+              className={cn(
+                buttonVariants({ variant: 'outline' }),
+                'w-full h-11 min-h-[44px] rounded-lg justify-start font-semibold border-[1.5px] border-brand-500 text-brand-500 hover:bg-brand-500/5',
+              )}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Comprar creditos
+            </Link>
+          </div>
+        </WidgetCard>
 
-        {/* Widget 4: Quick Stats */}
+        {/* 4. Historico */}
         <WidgetErrorBoundary>
           <QuickStats
             total={totalSessions}
             completedPercent={completedPercent}
             streak={completedSessions}
-            className="md:col-span-2 lg:col-span-3"
+            className={SPAN.full}
           />
         </WidgetErrorBoundary>
 
-        {/* Widget 5: Recent Feedback */}
+        {/* 5. Corgly Circle */}
         <WidgetErrorBoundary>
-          <RecentFeedbackList feedbacks={feedbackList} isLoading={false} />
+          <CorglyCircle scores={circleScores} isLoading={false} className={SPAN.wideTwoThirds} />
         </WidgetErrorBoundary>
 
-        {/* Quick Actions */}
-        <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5">
-          <h2 className="font-semibold text-foreground mb-3">Ações rápidas</h2>
-          <div className="flex flex-col gap-3">
-            <Link href={ROUTES.SCHEDULE} className={cn(buttonVariants({ size: 'sm' }), 'w-full justify-start')}>
-              <Calendar className="h-4 w-4 mr-2" />
-              Agendar aula
-            </Link>
-            <Link href={ROUTES.CREDITS} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-full justify-start')}>
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Comprar creditos
-            </Link>
-          </div>
-        </div>
+        {/* 6. Avaliacoes recentes */}
+        <WidgetErrorBoundary>
+          <RecentFeedbackList
+            feedbacks={feedbackList}
+            isLoading={false}
+            className={SPAN.wideThird}
+          />
+        </WidgetErrorBoundary>
       </div>
     </PageWrapper>
   );

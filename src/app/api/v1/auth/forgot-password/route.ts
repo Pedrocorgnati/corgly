@@ -7,7 +7,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 /** POST /api/v1/auth/forgot-password */
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-  const rl = checkRateLimit(`forgot:${ip}`, RATE_LIMITS.AUTH_FORGOT);
+  const rl = await checkRateLimit(`forgot:${ip}`, RATE_LIMITS.AUTH_FORGOT);
   if (!rl.allowed) {
     return NextResponse.json(
       apiResponse(null, 'Muitas tentativas. Aguarde 15 minutos.'),

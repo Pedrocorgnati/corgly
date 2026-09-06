@@ -20,8 +20,8 @@ export default function PreCheckPage() {
   }, [router, sessionId])
 
   return (
-    <main className="mx-auto w-full max-w-3xl p-4 md:p-8">
-      <header className="mb-6">
+    <main data-testid="page-session-pre-check" className="mx-auto w-full max-w-3xl p-4 md:p-8">
+      <header data-testid="session-pre-check-header" className="mb-6">
         <h1 className="text-2xl font-bold">Teste pre-aula</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Verifique camera, microfone e conexao antes de entrar na sala.
@@ -31,7 +31,7 @@ export default function PreCheckPage() {
       <DeviceTest onReady={setStatus} />
 
       {status === 'warning' && (
-        <label className="mt-6 flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+        <label data-testid="session-pre-check-warning-confirm" className="mt-6 flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
           <input
             type="checkbox"
             checked={confirmedWarning}
@@ -48,6 +48,7 @@ export default function PreCheckPage() {
       <div className="mt-8 flex items-center justify-between">
         <button
           type="button"
+          data-testid="session-pre-check-back-button"
           onClick={() => router.back()}
           className="rounded border px-4 py-2 text-sm"
         >
@@ -55,6 +56,7 @@ export default function PreCheckPage() {
         </button>
         <button
           type="button"
+          data-testid="session-pre-check-enter-button"
           onClick={handleEnter}
           disabled={!canEnter}
           className="rounded bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
@@ -63,7 +65,7 @@ export default function PreCheckPage() {
         </button>
       </div>
 
-      <p className="mt-6 text-xs text-muted-foreground">
+      <p data-testid="session-pre-check-status" className="mt-6 text-xs text-muted-foreground">
         Status geral: <span className="font-medium uppercase">{status}</span>
       </p>
     </main>

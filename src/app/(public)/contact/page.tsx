@@ -11,17 +11,18 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <main className="min-h-dvh bg-background">
+    <main data-testid="page-contact" className="min-h-dvh bg-background">
       <div className="max-w-xl mx-auto px-4 py-16">
         <Link
           href={ROUTES.HOME}
+          data-testid="contact-back-link"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Link>
 
-        <div className="flex items-center gap-3 mb-3">
+        <div data-testid="contact-header" className="flex items-center gap-3 mb-3">
           <span className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary">
             <Mail className="h-5 w-5" />
           </span>

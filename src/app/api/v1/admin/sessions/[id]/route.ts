@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-guard';
 import { apiResponse } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { AppError } from '@/lib/errors';
 
 interface RouteContext {
@@ -25,14 +26,17 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         creditBatch: {
           select: { id: true, type: true, totalCredits: true },
         },
+        // Dimensoes reais do model Feedback (schema.prisma): listening, speaking,
+        // writing e vocabulary. `comment` nao existe — o texto publico e
+        // overallFeedback; privateNote fica fora do payload por ser nota interna.
         feedback: {
           select: {
             id: true,
-            clarityScore: true,
-            didacticsScore: true,
-            punctualityScore: true,
-            engagementScore: true,
-            comment: true,
+            listeningScore: true,
+            speakingScore: true,
+            writingScore: true,
+            vocabularyScore: true,
+            overallFeedback: true,
             reviewed: true,
             reviewedAt: true,
           },
@@ -49,6 +53,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     if (err instanceof AppError) {
       return NextResponse.json(apiResponse(null, err.message), { status: err.status });
     }
+    logger.error(
+      'GET /api/v1/admin/sessions/[id]',
+      { action: 'admin.sessions.get', route: '/api/v1/admin/sessions/[id]' },
+      err,
+    );
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
 }

@@ -1,13 +1,17 @@
 import type { Metadata, Viewport } from 'next';
+import { NextIntlClientProvider } from 'next-intl';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { buildAlternates } from '@/lib/seo/metadata';
+import { SITE_URL } from '@/lib/constants/landing';
 import { ThemeProvider } from '@/components/shared/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/hooks/useAuth';
 import { CookieBanner } from '@/components/ui/cookie-banner';
 import { AnalyticsProvider } from '@/components/shared/AnalyticsProvider';
+import { DevOverlayLoader } from '@/components/dev/DevOverlayLoader';
 
 const inter = Inter({
   variable: '--font-sans',
@@ -34,28 +38,31 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: {
     template: '%s | Corgly',
-    default: 'Corgly — Aprenda Português com Professor Nativo',
+    default: 'Corgly — Brazilian Portuguese Tutor Online | Private Live Lessons',
   },
-  description: 'Aulas 1:1 ao vivo de português brasileiro com Pedro. Agende, aprenda e evolua com o Corgly Method.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://corgly.app'),
+  description:
+    'Learn Brazilian Portuguese with a native tutor. Private live lessons. First lesson 50% off at US$ 12.50.',
+  metadataBase: new URL(SITE_URL),
   alternates: buildAlternates('/'),
   openGraph: {
-    title: 'Corgly — Aprenda Português com Professor Nativo',
-    description: 'Aulas 1:1 ao vivo de português brasileiro com Pedro.',
+    title: 'Corgly — Brazilian Portuguese Tutor Online | Private Live Lessons',
+    description:
+      'Learn Brazilian Portuguese with a native tutor. Private live lessons. First lesson 50% off at US$ 12.50.',
     type: 'website',
     images: [
       {
         url: '/images/og-image-corgly.jpg',
         width: 1200,
         height: 630,
-        alt: 'Corgly — Aprenda Português com Professor Nativo',
+        alt: 'Corgly — Brazilian Portuguese Tutor Online | Private Live Lessons',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Corgly — Aprenda Português com Professor Nativo',
-    description: 'Aulas 1:1 ao vivo de português brasileiro com Pedro. Primeira aula 50% OFF.',
+    title: 'Corgly — Brazilian Portuguese Tutor Online | Private Live Lessons',
+    description:
+      'Learn Brazilian Portuguese with a native tutor. Private live lessons. First lesson 50% off at US$ 12.50.',
     images: ['/opengraph-image'],
     creator: '@corgly',
   },
@@ -66,38 +73,50 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+    ],
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.json',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Locale resolvido por cookie/Accept-Language em i18n/request.ts (nao ha
+  // segmento [locale] na URL).
+  const locale = await getLocale();
+  const tSkip = await getTranslations('skipNav');
+
   return (
     // suppressHydrationWarning: next-themes injeta a classe de tema no <html> antes da hydration
     <html
-      lang="pt-BR"
+      lang={locale}
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-dvh bg-background text-foreground antialiased">
-        <a href="#main-content" className="skip-nav">
-          Pular para o conteúdo principal
+      <body data-testid="app-body" className="min-h-dvh bg-background text-foreground antialiased">
+        <a data-testid="app-skip-nav-link" href="#main-content" className="skip-nav">
+          {tSkip('label')}
         </a>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <TooltipProvider>
-              {children}
-            </TooltipProvider>
-          </AuthProvider>
-          <Toaster position="top-right" richColors />
-          <CookieBanner />
-          <AnalyticsProvider />
-        </ThemeProvider>
+        <NextIntlClientProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <AuthProvider>
+              <TooltipProvider>
+                {children}
+              </TooltipProvider>
+            </AuthProvider>
+            <Toaster position="top-right" richColors />
+            <CookieBanner />
+            <AnalyticsProvider />
+          </ThemeProvider>
+        </NextIntlClientProvider>
+        {process.env.NODE_ENV === 'development' && <DevOverlayLoader />}
       </body>
     </html>
   );

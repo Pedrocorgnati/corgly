@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 
 export default function EmptyCreditsPage() {
   return (
-    <PageWrapper className="max-w-3xl">
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+    <PageWrapper data-testid="page-credits-empty" className="max-w-3xl">
+      <section data-testid="credits-empty" className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <CreditCard className="h-6 w-6" aria-hidden="true" />
@@ -28,6 +28,7 @@ export default function EmptyCreditsPage() {
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <Link
                 href={ROUTES.CREDITS}
+                data-testid="credits-empty-buy-button"
                 className={cn(buttonVariants(), 'min-h-[44px] w-full')}
               >
                 <CreditCard className="h-4 w-4" aria-hidden="true" />
@@ -35,6 +36,7 @@ export default function EmptyCreditsPage() {
               </Link>
               <Link
                 href={ROUTES.SCHEDULE}
+                data-testid="credits-empty-view-schedule-button"
                 className={cn(buttonVariants({ variant: 'outline' }), 'min-h-[44px] w-full')}
               >
                 <CalendarDays className="h-4 w-4" aria-hidden="true" />

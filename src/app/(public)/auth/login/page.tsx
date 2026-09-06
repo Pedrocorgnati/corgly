@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <AuthPageWrapper>
-      <div className="w-full max-w-[384px]">
+      <div data-testid="page-auth-login" className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
-          <div className="mb-6">
+          <div data-testid="auth-login-header" className="mb-6">
             <h1 className="text-2xl md:text-[26px] font-bold text-foreground">Entrar</h1>
             <p className="text-sm text-muted-foreground mt-1">Bem-vindo de volta</p>
           </div>

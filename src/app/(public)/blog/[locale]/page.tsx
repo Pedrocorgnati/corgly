@@ -32,9 +32,9 @@ export default async function BlogListPage({ params, searchParams }: PageProps) 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
 
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-blog-list" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="mx-auto max-w-3xl">
-        <header className="mb-8">
+        <header data-testid="blog-list-header" className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Blog</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {data.total} {data.total === 1 ? 'post' : 'posts'}
@@ -42,11 +42,11 @@ export default async function BlogListPage({ params, searchParams }: PageProps) 
         </header>
 
         {data.items.length === 0 ? (
-          <p className="text-muted-foreground">Nenhum post publicado ainda.</p>
+          <p data-testid="blog-list-empty" className="text-muted-foreground">Nenhum post publicado ainda.</p>
         ) : (
-          <ul className="space-y-6">
+          <ul data-testid="blog-list" className="space-y-6">
             {data.items.map((post) => (
-              <li key={post.id} className="border-b border-border pb-6 last:border-0">
+              <li key={post.id} data-testid={`blog-list-card-${post.slug}`} className="border-b border-border pb-6 last:border-0">
                 <Link href={`/blog/${locale}/${post.slug}`} className="group">
                   <h2 className="text-xl font-semibold text-foreground group-hover:text-primary transition">
                     {post.title}
@@ -67,15 +67,15 @@ export default async function BlogListPage({ params, searchParams }: PageProps) 
         )}
 
         {totalPages > 1 && (
-          <nav className="mt-8 flex items-center justify-between text-sm">
+          <nav data-testid="blog-list-pagination" className="mt-8 flex items-center justify-between text-sm">
             {page > 1 ? (
-              <Link href={`/blog/${locale}?page=${page - 1}`} className="text-primary hover:underline">
+              <Link href={`/blog/${locale}?page=${page - 1}`} data-testid="blog-list-pagination-prev" className="text-primary hover:underline">
                 &larr; Anterior
               </Link>
             ) : <span />}
             <span className="text-muted-foreground">Pagina {page} de {totalPages}</span>
             {page < totalPages ? (
-              <Link href={`/blog/${locale}?page=${page + 1}`} className="text-primary hover:underline">
+              <Link href={`/blog/${locale}?page=${page + 1}`} data-testid="blog-list-pagination-next" className="text-primary hover:underline">
                 Proxima &rarr;
               </Link>
             ) : <span />}

@@ -44,13 +44,14 @@ export function RescheduleOptionsClient(props: RescheduleOptionsClientProps) {
     const copy = ERROR_COPY[props.errorKind];
     return (
       <div
+        data-testid="schedule-reschedule-error"
         role="alert"
         className="flex flex-col items-center rounded-2xl border border-border bg-card px-6 py-12 text-center"
       >
         <XCircle className="mb-4 h-10 w-10 text-destructive" />
         <p className="font-medium text-foreground">{copy.title}</p>
         <p className="mt-1 text-sm text-muted-foreground">{copy.description}</p>
-        <Button variant="outline" className="mt-6" onClick={() => router.push(ROUTES.HISTORY)}>
+        <Button data-testid="schedule-reschedule-back-button" variant="outline" className="mt-6" onClick={() => router.push(ROUTES.HISTORY)}>
           Voltar ao histórico
         </Button>
       </div>
@@ -115,7 +116,7 @@ export function RescheduleOptionsClient(props: RescheduleOptionsClientProps) {
       )}
 
       {options.length === 0 ? (
-        <div className="flex flex-col items-center rounded-2xl border border-dashed border-border px-6 py-12 text-center">
+        <div data-testid="schedule-reschedule-empty" className="flex flex-col items-center rounded-2xl border border-dashed border-border px-6 py-12 text-center">
           <CalendarX2 className="mb-4 h-10 w-10 text-muted-foreground" />
           <p className="font-medium text-foreground">Sem horários alternativos no momento</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -123,7 +124,7 @@ export function RescheduleOptionsClient(props: RescheduleOptionsClientProps) {
           </p>
         </div>
       ) : (
-        <fieldset className="space-y-2">
+        <fieldset data-testid="schedule-reschedule-options" className="space-y-2">
           <legend className="mb-2 text-sm font-medium text-foreground">
             Escolha um novo horário
           </legend>
@@ -132,6 +133,7 @@ export function RescheduleOptionsClient(props: RescheduleOptionsClientProps) {
             return (
               <label
                 key={slot.availability_slot_id}
+                data-testid={`schedule-reschedule-slot-${slot.availability_slot_id}`}
                 className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                   selected
                     ? 'border-primary bg-primary/5'
@@ -155,6 +157,7 @@ export function RescheduleOptionsClient(props: RescheduleOptionsClientProps) {
 
       <div className="flex gap-3">
         <Button
+          data-testid="schedule-reschedule-cancel-button"
           variant="outline"
           className="flex-1"
           onClick={() => router.push(ROUTES.HISTORY)}
@@ -163,6 +166,7 @@ export function RescheduleOptionsClient(props: RescheduleOptionsClientProps) {
           Cancelar
         </Button>
         <Button
+          data-testid="schedule-reschedule-confirm-button"
           className="flex-1"
           onClick={handleConfirm}
           disabled={!selectedSlotId || submitting || options.length === 0}

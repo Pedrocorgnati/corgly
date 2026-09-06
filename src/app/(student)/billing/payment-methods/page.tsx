@@ -212,8 +212,8 @@ export default function BillingPaymentMethodsPage() {
   }
 
   return (
-    <PageWrapper className="max-w-4xl">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <PageWrapper data-testid="page-billing-payment-methods" className="max-w-4xl">
+      <div data-testid="billing-payment-methods-header" className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <CreditCard className="mt-1 h-6 w-6 text-primary" aria-hidden="true" />
           <div>
@@ -225,6 +225,7 @@ export default function BillingPaymentMethodsPage() {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
+            data-testid="billing-payment-methods-prepare-button"
             type="button"
             variant="outline"
             onClick={prepareSetupIntent}
@@ -239,6 +240,7 @@ export default function BillingPaymentMethodsPage() {
             Preparar método
           </Button>
           <Button
+            data-testid="billing-payment-methods-portal-button"
             type="button"
             onClick={openCustomerPortal}
             disabled={isOpeningPortal}
@@ -256,7 +258,7 @@ export default function BillingPaymentMethodsPage() {
 
       <div className="space-y-4">
         {defaultPaymentMethod && (
-          <section className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <section data-testid="billing-payment-methods-default-summary" className="rounded-lg border border-primary/20 bg-primary/5 p-4">
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" aria-hidden="true" />
               <div>
@@ -272,6 +274,7 @@ export default function BillingPaymentMethodsPage() {
 
         {error && (
           <section
+            data-testid="billing-payment-methods-error"
             className="rounded-lg border border-destructive/30 bg-destructive/10 p-4"
             role="alert"
           >
@@ -290,6 +293,7 @@ export default function BillingPaymentMethodsPage() {
               </div>
               <Link
                 href={supportHref}
+                data-testid="billing-payment-methods-support-link"
                 className="inline-flex min-h-[40px] items-center justify-center rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 <LifeBuoy className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -300,10 +304,11 @@ export default function BillingPaymentMethodsPage() {
         )}
 
         {isLoading ? (
-          <LoadingState variant="skeleton" message="Carregando métodos de pagamento" />
+          <LoadingState data-testid="billing-payment-methods-loading" variant="skeleton" message="Carregando métodos de pagamento" />
         ) : !hasPaymentMethods && !error ? (
           <section className="rounded-lg border border-border bg-card">
             <EmptyState
+              data-testid="billing-payment-methods-empty"
               icon={CreditCard}
               title="Nenhum método salvo"
               description="Abra o portal para adicionar ou revisar cartões vinculados à assinatura."
@@ -313,15 +318,15 @@ export default function BillingPaymentMethodsPage() {
           </section>
         ) : error && !hasPaymentMethods ? (
           <section className="rounded-lg border border-border bg-card">
-            <ErrorState message={error} onRetry={loadPaymentMethods} />
+            <ErrorState data-testid="billing-payment-methods-error-state" message={error} onRetry={loadPaymentMethods} />
           </section>
         ) : (
-          <section className="grid gap-3">
+          <section data-testid="billing-payment-methods-list" className="grid gap-3">
             {paymentMethods.map((paymentMethod) => {
               const isUpdating = updatingPaymentMethodId === paymentMethod.id;
 
               return (
-                <Card key={paymentMethod.id} size="sm" className="rounded-lg">
+                <Card key={paymentMethod.id} data-testid={`billing-payment-method-card-${paymentMethod.id}`} size="sm" className="rounded-lg">
                   <CardHeader className="gap-3 sm:grid-cols-[1fr_auto]">
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -338,12 +343,13 @@ export default function BillingPaymentMethodsPage() {
                       </div>
                     </div>
                     {paymentMethod.isDefault ? (
-                      <Badge variant="secondary" className="justify-self-start sm:justify-self-end">
+                      <Badge data-testid={`billing-payment-method-default-badge-${paymentMethod.id}`} variant="secondary" className="justify-self-start sm:justify-self-end">
                         <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
                         Padrão
                       </Badge>
                     ) : (
                       <Button
+                        data-testid={`billing-payment-method-set-default-${paymentMethod.id}-button`}
                         type="button"
                         variant="outline"
                         size="sm"

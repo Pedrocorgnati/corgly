@@ -25,7 +25,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
   const parsed = MfaVerifySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      apiResponse(null, 'Informe um codigo valido.'),
+      apiResponse(null, 'Informe um código válido.'),
       { status: 400 },
     );
   }
@@ -65,7 +65,7 @@ export const POST = withApiHandler(async (request: NextRequest) => {
         null,
         result.justEnrolled
           ? 'MFA ativado com sucesso.'
-          : 'Verificacao MFA concluida.',
+          : 'Verificação MFA concluída.',
       ),
     );
     setAuthCookie(response, token);
@@ -75,27 +75,27 @@ export const POST = withApiHandler(async (request: NextRequest) => {
       switch (err.code) {
         case MfaErrorCode.NOT_INITIALIZED:
           return NextResponse.json(
-            apiResponse(null, 'MFA nao iniciado. Inicie o cadastro antes de verificar.'),
+            apiResponse(null, 'MFA não iniciado. Inicie o cadastro antes de verificar.'),
             { status: 409 },
           );
         case MfaErrorCode.CODE_REPLAYED:
           return NextResponse.json(
-            apiResponse(null, 'Este codigo ja foi utilizado. Aguarde o proximo codigo.'),
+            apiResponse(null, 'Este código já foi utilizado. Aguarde o próximo código.'),
             { status: 400 },
           );
         case MfaErrorCode.RECOVERY_NOT_AVAILABLE:
           return NextResponse.json(
-            apiResponse(null, 'Codigos de recuperacao so podem ser usados apos ativar o MFA.'),
+            apiResponse(null, 'Códigos de recuperação só podem ser usados após ativar o MFA.'),
             { status: 400 },
           );
         case MfaErrorCode.INVALID_CODE:
           return NextResponse.json(
-            apiResponse(null, 'Codigo invalido. Tente novamente.'),
+            apiResponse(null, 'Código inválido. Tente novamente.'),
             { status: 400 },
           );
         default:
           return NextResponse.json(
-            apiResponse(null, 'Falha na verificacao MFA.'),
+            apiResponse(null, 'Falha na verificação MFA.'),
             { status: 400 },
           );
       }

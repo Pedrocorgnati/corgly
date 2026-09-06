@@ -11,8 +11,8 @@ export default async function SchedulePage() {
   const user = await getAuthUser();
 
   return (
-    <PageWrapper className="max-w-5xl">
-      <div className="mb-6">
+    <PageWrapper data-testid="page-schedule" className="max-w-5xl">
+      <div data-testid="schedule-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Agendar Aula</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Horários em {Intl.DateTimeFormat().resolvedOptions().timeZone}

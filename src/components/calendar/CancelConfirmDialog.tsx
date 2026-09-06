@@ -49,6 +49,7 @@ export function CancelConfirmDialog({
 
   return (
     <div
+      data-testid="modal-cancel-session"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
@@ -60,7 +61,7 @@ export function CancelConfirmDialog({
         </h3>
 
         {isLateCancellation ? (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4">
+          <div data-testid="modal-cancel-session-late-warning" className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4">
             <p className="text-sm text-destructive font-medium">
               Cancelamento tardio — crédito não será reembolsado
             </p>
@@ -69,7 +70,7 @@ export function CancelConfirmDialog({
             </p>
           </div>
         ) : (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-4">
+          <div data-testid="modal-cancel-session-refund-notice" className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-4">
             <p className="text-sm text-emerald-700 font-medium">
               Seu crédito será reembolsado
             </p>
@@ -81,6 +82,7 @@ export function CancelConfirmDialog({
             Motivo (opcional)
           </label>
           <Textarea
+            data-testid="modal-cancel-session-reason-input"
             id="cancel-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -91,6 +93,7 @@ export function CancelConfirmDialog({
 
         <div className="flex gap-3">
           <Button
+            data-testid="modal-cancel-session-back-button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
@@ -99,6 +102,7 @@ export function CancelConfirmDialog({
             Voltar
           </Button>
           <Button
+            data-testid="modal-cancel-session-confirm-button"
             variant="destructive"
             onClick={handleCancel}
             disabled={isPending}

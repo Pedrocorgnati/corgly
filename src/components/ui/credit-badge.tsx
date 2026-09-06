@@ -5,14 +5,16 @@ interface CreditBadgeProps {
   balance: number;
   className?: string;
   showIcon?: boolean;
+  'data-testid'?: string;
 }
 
-export function CreditBadge({ balance, className, showIcon = true }: CreditBadgeProps) {
+export function CreditBadge({ balance, className, showIcon = true, 'data-testid': testId }: CreditBadgeProps) {
   const isLow = balance <= 2;
   const isEmpty = balance === 0;
 
   return (
     <span
+      data-testid={testId}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium',
         isEmpty

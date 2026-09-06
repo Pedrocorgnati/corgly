@@ -41,8 +41,8 @@ function CancelDeletionContent() {
   if (state === 'loading') {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
+          <div data-testid="auth-cancel-deletion-loading" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <Loader2 className="h-10 w-10 text-primary mx-auto animate-spin" />
             <h1 className="text-xl font-bold text-foreground">Cancelando exclusão...</h1>
             <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
@@ -55,14 +55,14 @@ function CancelDeletionContent() {
   if (state === 'success') {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
+          <div data-testid="auth-cancel-deletion-success" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Sua conta foi restaurada</h1>
             <p className="text-sm text-muted-foreground">
               A solicitação de exclusão foi cancelada com sucesso. Sua conta está ativa novamente.
             </p>
-            <Link href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
+            <Link data-testid="auth-cancel-deletion-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
               Ir para o login
             </Link>
           </div>
@@ -74,8 +74,8 @@ function CancelDeletionContent() {
   if (state === 'error') {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
+          <div data-testid="auth-cancel-deletion-error" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Link inválido ou expirado</h1>
             <p className="text-sm text-muted-foreground">{errorMessage}</p>
@@ -83,10 +83,11 @@ function CancelDeletionContent() {
               Se a janela de cancelamento já expirou, entre em contato com o suporte para
               verificar a situação da sua conta.
             </p>
-            <Link href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
+            <Link data-testid="auth-cancel-deletion-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
               Ir para o login
             </Link>
             <Link
+              data-testid="auth-cancel-deletion-support-link"
               href={ROUTES.SUPPORT}
               className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
             >
@@ -101,14 +102,14 @@ function CancelDeletionContent() {
   // no-token
   return (
     <AuthPageWrapper>
-      <div className="w-full max-w-[384px]">
-        <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+      <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
+        <div data-testid="auth-cancel-deletion-no-token" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
           <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
           <h1 className="text-xl font-bold text-foreground">Link inválido</h1>
           <p className="text-sm text-muted-foreground">
             Este link não contém um token válido. Verifique o link recebido por email.
           </p>
-          <Link href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
+          <Link data-testid="auth-cancel-deletion-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
             Ir para o login
           </Link>
         </div>

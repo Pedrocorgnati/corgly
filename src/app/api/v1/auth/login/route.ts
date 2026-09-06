@@ -8,7 +8,7 @@ import { withApiHandler } from '@/lib/api-handler';
 /** POST /api/v1/auth/login */
 export const POST = withApiHandler(async (request: NextRequest) => {
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-  const rl = checkRateLimit(`login:${ip}`, RATE_LIMITS.AUTH_LOGIN);
+  const rl = await checkRateLimit(`login:${ip}`, RATE_LIMITS.AUTH_LOGIN);
   if (!rl.allowed) {
     return NextResponse.json(
       apiResponse(null, 'Muitas tentativas. Aguarde 1 minuto.'),

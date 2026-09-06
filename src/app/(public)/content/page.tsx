@@ -1,6 +1,11 @@
+import type { Metadata } from 'next';
 import { ContentGrid } from '@/components/content/content-grid';
 
 export const revalidate = 300; // ISR — revalidate every 5 minutes
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // Placeholder content data for MVP
 const CONTENT_ITEMS = [
@@ -56,7 +61,7 @@ const CONTENT_ITEMS = [
 
 export default function ContentPage() {
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-content-list" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="max-w-[1200px] mx-auto">
         <ContentGrid items={CONTENT_ITEMS} />
       </div>

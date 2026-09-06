@@ -65,13 +65,14 @@ export function ReportGenerator({ onDownloaded }: { onDownloaded?: () => void })
   }
 
   return (
-    <form onSubmit={handleDownload} className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
-      <h2 className="font-semibold text-foreground">Gerar relatorio</h2>
+    <form data-testid="admin-reports-generator" onSubmit={handleDownload} className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+      <h2 data-testid="admin-reports-generator-header" className="font-semibold text-foreground">Gerar relatorio</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Tipo</span>
           <select
+            data-testid="admin-reports-type-select"
             value={type}
             onChange={(e) => setType(e.target.value as ReportType)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2"
@@ -83,6 +84,7 @@ export function ReportGenerator({ onDownloaded }: { onDownloaded?: () => void })
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Formato</span>
           <select
+            data-testid="admin-reports-format-select"
             value={format}
             onChange={(e) => setFormat(e.target.value as Format)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2"
@@ -94,26 +96,26 @@ export function ReportGenerator({ onDownloaded }: { onDownloaded?: () => void })
 
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">De</span>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+          <input data-testid="admin-reports-from-input" type="date" value={from} onChange={(e) => setFrom(e.target.value)}
                  className="w-full rounded-lg border border-border bg-background px-3 py-2" />
         </label>
 
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Ate</span>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+          <input data-testid="admin-reports-to-input" type="date" value={to} onChange={(e) => setTo(e.target.value)}
                  className="w-full rounded-lg border border-border bg-background px-3 py-2" />
         </label>
 
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Status (opcional)</span>
-          <input type="text" value={status} onChange={(e) => setStatus(e.target.value)}
+          <input data-testid="admin-reports-status-input" type="text" value={status} onChange={(e) => setStatus(e.target.value)}
                  placeholder="Ex.: COMPLETED, SUCCEEDED"
                  className="w-full rounded-lg border border-border bg-background px-3 py-2" />
         </label>
 
         <label className="text-sm">
           <span className="block mb-1 text-muted-foreground">Idioma (users)</span>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)}
+          <select data-testid="admin-reports-language-select" value={language} onChange={(e) => setLanguage(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2">
             <option value="">Todos</option>
             <option value="PT_BR">pt-BR</option>
@@ -124,9 +126,10 @@ export function ReportGenerator({ onDownloaded }: { onDownloaded?: () => void })
         </label>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p data-testid="admin-reports-generator-error" className="text-sm text-destructive">{error}</p>}
 
       <button
+        data-testid="admin-reports-download-button"
         type="submit"
         disabled={loading}
         className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium disabled:opacity-50"

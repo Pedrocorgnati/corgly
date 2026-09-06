@@ -67,6 +67,7 @@ export interface LeadFormProps {
  * Turnstile opcional (renderizado só quando `NEXT_PUBLIC_TURNSTILE_SITE_KEY`).
  */
 export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', className }: LeadFormProps) {
+  const formSlug = origin.toLowerCase().replace(/_/g, '-');
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -159,7 +160,7 @@ export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', c
 
   if (sent) {
     return (
-      <div className={`text-center space-y-3 py-6 ${className ?? ''}`} role="status">
+      <div data-testid={`form-lead-${formSlug}-success`} className={`text-center space-y-3 py-6 ${className ?? ''}`} role="status">
         <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
         <h2 className="text-base font-semibold text-foreground">Mensagem enviada!</h2>
         <p className="text-sm text-muted-foreground">
@@ -170,7 +171,7 @@ export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', c
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className={`space-y-4 ${className ?? ''}`} noValidate>
+    <form data-testid={`form-lead-${formSlug}`} onSubmit={handleSubmit(onSubmit)} className={`space-y-4 ${className ?? ''}`} noValidate>
       {/* Honeypot — escondido de humanos, ignorado por leitores de tela. */}
       <div aria-hidden="true" className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden">
         <label htmlFor={`${origin}-website`}>Não preencha este campo</label>
@@ -188,6 +189,7 @@ export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', c
       <div className="space-y-1.5">
         <Label htmlFor={`${origin}-name`} className="text-sm font-medium">Nome</Label>
         <Input
+          data-testid={`form-lead-${formSlug}-name-input`}
           id={`${origin}-name`}
           type="text"
           placeholder="Seu nome"
@@ -205,6 +207,7 @@ export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', c
       <div className="space-y-1.5">
         <Label htmlFor={`${origin}-email`} className="text-sm font-medium">Email</Label>
         <Input
+          data-testid={`form-lead-${formSlug}-email-input`}
           id={`${origin}-email`}
           type="email"
           placeholder="seu@email.com"
@@ -223,6 +226,7 @@ export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', c
         <div className="space-y-1.5">
           <Label htmlFor={`${origin}-message`} className="text-sm font-medium">Mensagem</Label>
           <Textarea
+            data-testid={`form-lead-${formSlug}-message-input`}
             id={`${origin}-message`}
             placeholder="Como podemos ajudar?"
             rows={4}
@@ -241,6 +245,7 @@ export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', c
       <div className="space-y-1.5 pt-1">
         <div className="flex items-start gap-3">
           <Checkbox
+            data-testid={`form-lead-${formSlug}-consent-checkbox`}
             id={`${origin}-consent`}
             disabled={isLoading}
             onCheckedChange={(v) => setValue('consentGiven', v === true, { shouldValidate: true })}
@@ -262,10 +267,10 @@ export function LeadForm({ origin, showMessage = true, submitLabel = 'Enviar', c
       {TURNSTILE_SITE_KEY && <div ref={captchaRef} className="min-h-[65px]" />}
 
       {formError && (
-        <p className="text-sm text-destructive" role="alert">{formError}</p>
+        <p data-testid={`form-lead-${formSlug}-error`} className="text-sm text-destructive" role="alert">{formError}</p>
       )}
 
-      <Button type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
+      <Button data-testid={`form-lead-${formSlug}-submit-button`} type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
         {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Enviando...</> : submitLabel}
       </Button>
     </form>

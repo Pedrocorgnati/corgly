@@ -35,9 +35,10 @@ export function ContentGrid({ items }: ContentGridProps) {
   return (
     <div>
       {/* Category filter chips */}
-      <div className="flex flex-wrap gap-2 mb-8" role="group" aria-label={t('filterLabel')}>
+      <div data-testid="content-filter" className="flex flex-wrap gap-2 mb-8" role="group" aria-label={t('filterLabel')}>
         <button
           type="button"
+          data-testid="content-filter-all"
           onClick={() => setActiveCategory(null)}
           className={cn(
             'px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
@@ -52,6 +53,7 @@ export function ContentGrid({ items }: ContentGridProps) {
           <button
             key={category}
             type="button"
+            data-testid={`content-filter-${category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
             onClick={() => setActiveCategory(category)}
             className={cn(
               'px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
@@ -67,7 +69,7 @@ export function ContentGrid({ items }: ContentGridProps) {
 
       {/* Grid */}
       {filteredItems.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div data-testid="content-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => (
             <ContentCard
               key={item.id}
@@ -80,7 +82,7 @@ export function ContentGrid({ items }: ContentGridProps) {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
+        <div data-testid="content-list-empty" className="text-center py-16">
           <p className="text-muted-foreground text-lg">{t('emptyFilter')}</p>
         </div>
       )}

@@ -89,10 +89,11 @@ export function DocumentSearch({
     buildHref ? buildHref(hit) : `/sessions/${hit.sessionId}`;
 
   return (
-    <div className={cn('relative w-full', className)}>
+    <div data-testid="document-search" className={cn('relative w-full', className)}>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
+          data-testid="document-search-input"
           type="search"
           value={q}
           onChange={(e) => {
@@ -104,28 +105,29 @@ export function DocumentSearch({
           className="h-10 w-full rounded-md border bg-background pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
         {state === 'loading' && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          <Loader2 data-testid="document-search-input-loading" className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}
       </div>
 
       {q.trim().length >= 2 && (
-        <div className="absolute z-20 mt-1 max-h-[60vh] w-full overflow-auto rounded-md border bg-popover shadow-md">
+        <div data-testid="document-search-results" className="absolute z-20 mt-1 max-h-[60vh] w-full overflow-auto rounded-md border bg-popover shadow-md">
           {state === 'loading' && (
-            <div className="p-3 text-sm text-muted-foreground">Buscando…</div>
+            <div data-testid="document-search-loading" className="p-3 text-sm text-muted-foreground">Buscando…</div>
           )}
           {state === 'error' && (
-            <div className="p-3 text-sm text-destructive">Erro: {err}</div>
+            <div data-testid="document-search-error" className="p-3 text-sm text-destructive">Erro: {err}</div>
           )}
           {state === 'ready' && resp && resp.data.length === 0 && (
-            <div className="p-3 text-sm text-muted-foreground">
+            <div data-testid="document-search-empty" className="p-3 text-sm text-muted-foreground">
               Nenhum resultado para “{q}”.
             </div>
           )}
           {state === 'ready' && resp && resp.data.length > 0 && (
-            <ul className="divide-y">
+            <ul data-testid="document-search-list" className="divide-y">
               {resp.data.map((hit) => (
-                <li key={hit.id}>
+                <li key={hit.id} data-testid={`document-search-item-${hit.id}`}>
                   <Link
+                    data-testid={`document-search-item-${hit.id}-link`}
                     href={hrefOf(hit)}
                     className="block px-3 py-2 hover:bg-accent focus:bg-accent focus:outline-none"
                   >
@@ -149,8 +151,9 @@ export function DocumentSearch({
             </ul>
           )}
           {state === 'ready' && resp && resp.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t px-3 py-2 text-xs">
+            <div data-testid="document-search-pagination" className="flex items-center justify-between border-t px-3 py-2 text-xs">
               <button
+                data-testid="document-search-pagination-prev-button"
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
@@ -162,6 +165,7 @@ export function DocumentSearch({
                 Pagina {resp.page} de {resp.totalPages} ({resp.total} resultados)
               </span>
               <button
+                data-testid="document-search-pagination-next-button"
                 type="button"
                 onClick={() => setPage((p) => Math.min(resp.totalPages, p + 1))}
                 disabled={page >= resp.totalPages}

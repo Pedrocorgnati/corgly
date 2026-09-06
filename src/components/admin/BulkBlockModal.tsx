@@ -84,22 +84,24 @@ export function BulkBlockModal({
 
   return (
     <div
+      data-testid="modal-bulk-block"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
       aria-label="Bloqueio e cancelamento em massa"
     >
       <div className="bg-card border border-border rounded-2xl shadow-lg w-full max-w-md mx-4 p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
+        <h3 data-testid="modal-bulk-block-header" className="text-lg font-semibold text-foreground mb-4">
           Bloqueio em massa
         </h3>
 
-        <div className="space-y-4 mb-6">
+        <div data-testid="modal-bulk-block-form" className="space-y-4 mb-6">
           <div>
             <label htmlFor="bulk-start" className="text-sm font-medium text-foreground block mb-1">
               Data início
             </label>
             <input
+              data-testid="modal-bulk-block-start-input"
               id="bulk-start"
               type="date"
               value={startDate}
@@ -113,6 +115,7 @@ export function BulkBlockModal({
               Data fim
             </label>
             <input
+              data-testid="modal-bulk-block-end-input"
               id="bulk-end"
               type="date"
               value={endDate}
@@ -127,6 +130,7 @@ export function BulkBlockModal({
               Motivo <span className="text-destructive">*</span>
             </label>
             <Textarea
+              data-testid="modal-bulk-block-reason-input"
               id="bulk-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -136,7 +140,7 @@ export function BulkBlockModal({
           </div>
 
           {preview && (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+            <div data-testid="modal-bulk-block-preview" className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
               <p className="text-sm font-medium text-amber-700">Preview da operação:</p>
               <ul className="text-sm text-muted-foreground mt-1 list-disc list-inside">
                 <li>{preview.sessionsToCancel} sessões serão canceladas</li>
@@ -146,16 +150,17 @@ export function BulkBlockModal({
           )}
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting} className="flex-1">
+        <div data-testid="modal-bulk-block-actions" className="flex gap-3">
+          <Button data-testid="modal-bulk-block-cancel-button" variant="outline" onClick={handleClose} disabled={isSubmitting} className="flex-1">
             Cancelar
           </Button>
           {!preview ? (
-            <Button onClick={handlePreview} disabled={!canSubmit} className="flex-1">
+            <Button data-testid="modal-bulk-block-preview-button" onClick={handlePreview} disabled={!canSubmit} className="flex-1">
               Visualizar impacto
             </Button>
           ) : (
             <Button
+              data-testid="modal-bulk-block-confirm-button"
               variant="destructive"
               onClick={handleSubmit}
               disabled={isSubmitting}

@@ -162,11 +162,12 @@ export default function BillingPaymentDetailPage() {
   }
 
   return (
-    <PageWrapper className="max-w-3xl">
-      <div className="mb-6 flex items-center gap-3">
+    <PageWrapper data-testid="page-billing-payment-detail" className="max-w-3xl">
+      <div data-testid="billing-payment-detail-header" className="mb-6 flex items-center gap-3">
         <Link
           href="/billing/history"
           aria-label="Voltar para extrato"
+          data-testid="billing-payment-detail-back-link"
           className={cn(buttonVariants({ variant: 'outline', size: 'icon' }))}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -180,19 +181,19 @@ export default function BillingPaymentDetailPage() {
       </div>
 
       {loadState === 'loading' && (
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+        <div data-testid="billing-payment-detail-loading" className="flex items-center gap-2 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Carregando pagamento...
         </div>
       )}
 
       {loadState === 'error' && (
-        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div data-testid="billing-payment-detail-error" role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <div className="mb-3 flex items-center gap-2 font-medium">
             <AlertCircle className="h-4 w-4" />
             {loadError}
           </div>
-          <Button type="button" variant="outline" onClick={loadPayment}>
+          <Button data-testid="billing-payment-detail-retry-button" type="button" variant="outline" onClick={loadPayment}>
             Tentar novamente
           </Button>
         </div>
@@ -200,6 +201,7 @@ export default function BillingPaymentDetailPage() {
 
       {loadState === 'not-found' && (
         <EmptyState
+          data-testid="billing-payment-detail-empty"
           title="Pagamento não encontrado"
           description="Não encontramos esse pagamento no seu extrato."
         />
@@ -207,7 +209,7 @@ export default function BillingPaymentDetailPage() {
 
       {loadState === 'ready' && payment && (
         <div className="flex flex-col gap-4">
-          <section className="rounded-lg border border-border bg-card p-5">
+          <section data-testid="billing-payment-detail-summary" className="rounded-lg border border-border bg-card p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">{payment.description}</h2>

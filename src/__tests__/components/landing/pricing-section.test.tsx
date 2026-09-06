@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { NextIntlClientProvider } from 'next-intl';
 import { PricingSection } from '@/components/landing/pricing-section';
+import en from '../../../../i18n/messages/en-US.json';
 
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: React.PropsWithChildren<{ href: string }>) => (
@@ -9,123 +10,49 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-const messages = {
-  landing: {
-    pricing: {
-      badge: 'Planos',
-      title: 'Escolha seu plano',
-      subtitle: 'Pacotes para todos os niveis',
-      discount_banner: 'Primeira aula 50% OFF!',
-      most_popular: 'Mais Popular',
-      lessons_suffix: 'aulas',
-      lesson_suffix: 'aula',
-      per_lesson_suffix: '/aula',
-      packages: {
-        single: {
-          name: 'Aula Avulsa',
-          features: ['1 aula ao vivo', 'Feedback personalizado'],
-          cta: 'Comprar',
-        },
-        pack5: {
-          name: 'Pacote 5',
-          features: ['5 aulas ao vivo', 'Materiais inclusos'],
-          cta: 'Comprar',
-        },
-        pack10: {
-          name: 'Pacote 10',
-          features: ['10 aulas ao vivo', 'Melhor custo-beneficio'],
-          cta: 'Comprar',
-        },
-        monthly: {
-          name: 'Mensal',
-          features: ['8 aulas/mes', 'Assinatura recorrente'],
-          cta: 'Assinar',
-        },
-      },
-    },
-  },
-};
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({
+    isAuthenticated: false,
+    user: null,
+    isLoading: false,
+    role: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refetch: vi.fn(),
+  }),
+}));
 
-function renderWithI18n(props: Parameters<typeof PricingSection>[0] = {}) {
+function renderPricing() {
   return render(
-    <NextIntlClientProvider locale="pt-BR" messages={messages}>
-      <PricingSection {...props} />
-    </NextIntlClientProvider>
+    <NextIntlClientProvider locale="en-US" messages={en}>
+      <PricingSection />
+    </NextIntlClientProvider>,
   );
 }
 
 describe('PricingSection', () => {
-  it('renderiza titulo e subtitulo i18n', () => {
-    renderWithI18n();
-
-    expect(screen.getByText('Escolha seu plano')).toBeInTheDocument();
-    expect(screen.getByText('Pacotes para todos os niveis')).toBeInTheDocument();
+  it('renders three plans and not pack 5', () => {
+    renderPricing();
+    expect(screen.getByTestId('landing-pricing-plan-single')).toBeInTheDocument();
+    expect(screen.getByTestId('landing-pricing-plan-pack-10')).toBeInTheDocument();
+    expect(screen.getByTestId('landing-pricing-plan-monthly')).toBeInTheDocument();
+    expect(screen.queryByTestId('landing-pricing-plan-pack-5')).not.toBeInTheDocument();
+    expect(screen.queryByText(/pack 5/i)).not.toBeInTheDocument();
   });
 
-  it('renderiza badge de planos', () => {
-    renderWithI18n();
-
-    expect(screen.getByText('Planos')).toBeInTheDocument();
+  it('shows first-lesson price and most chosen vs best cost', () => {
+    renderPricing();
+    expect(screen.getAllByText(/US\$ 12\.5/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Most chosen/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/best cost per lesson/i).length).toBeGreaterThan(0);
   });
 
-  it('renderiza os 4 planos', () => {
-    renderWithI18n();
-
-    expect(screen.getByText('Aula Avulsa')).toBeInTheDocument();
-    expect(screen.getByText('Pacote 5')).toBeInTheDocument();
-    expect(screen.getByText('Pacote 10')).toBeInTheDocument();
-    expect(screen.getByText('Mensal')).toBeInTheDocument();
-  });
-
-  it('exibe badge "Mais Popular" no plano pack10', () => {
-    renderWithI18n();
-
-    expect(screen.getByText('Mais Popular')).toBeInTheDocument();
-  });
-
-  it('mostra banner de desconto por padrao (isFirstPurchase undefined)', () => {
-    renderWithI18n();
-
-    expect(screen.getByText('Primeira aula 50% OFF!')).toBeInTheDocument();
-  });
-
-  it('oculta banner de desconto quando isFirstPurchase=false', () => {
-    renderWithI18n({ isFirstPurchase: false });
-
-    expect(screen.queryByText('Primeira aula 50% OFF!')).not.toBeInTheDocument();
-  });
-
-  it('CTAs apontam para /auth/register quando nao autenticado', () => {
-    renderWithI18n({ isAuthenticated: false });
-
-    const links = screen.getAllByRole('link');
-    links.forEach((link) => {
-      expect(link).toHaveAttribute('href', '/auth/register');
-    });
-  });
-
-  it('CTAs apontam para /buy quando autenticado', () => {
-    renderWithI18n({ isAuthenticated: true });
-
-    const links = screen.getAllByRole('link');
-    links.forEach((link) => {
-      expect(link).toHaveAttribute('href', '/credits');
-    });
-  });
-
-  it('exibe precos corretos', () => {
-    renderWithI18n();
-
-    expect(screen.getByText('$25')).toBeInTheDocument();
-    expect(screen.getByText('$110')).toBeInTheDocument();
-    expect(screen.getByText('$190')).toBeInTheDocument();
-    expect(screen.getByText('$139')).toBeInTheDocument();
-  });
-
-  it('secao tem id "precos" para navegacao por ancora', () => {
-    renderWithI18n();
-
-    const section = document.getElementById('precos');
-    expect(section).toBeInTheDocument();
+  it('offers monthly 10 at US$ 17 and 20 at US$ 15', () => {
+    renderPricing();
+    expect(screen.getByTestId('landing-pricing-monthly-option-10')).toBeInTheDocument();
+    expect(screen.getByTestId('landing-pricing-monthly-option-20')).toBeInTheDocument();
+    expect(screen.getAllByText(/US\$ 17/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/US\$ 15/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/US\$ 170/).length).toBeGreaterThan(0);
   });
 });

@@ -113,18 +113,19 @@ export default function AdminStripeWebhooksPage() {
   };
 
   return (
-    <PageWrapper>
-      <div className="mb-6">
+    <PageWrapper data-testid="page-admin-webhooks">
+      <div data-testid="admin-webhooks-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Webhooks Stripe</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Eventos recebidos, falhas de processamento e replay administrativo seguro.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div data-testid="admin-webhooks-filters" className="flex flex-wrap gap-2 mb-6">
         {FILTERS.map((option) => (
           <Button
             key={option.value}
+            data-testid={`admin-webhooks-filter-${option.value.toLowerCase()}-button`}
             size="sm"
             variant={filter === option.value ? 'default' : 'outline'}
             onClick={() => setFilter(option.value)}
@@ -134,21 +135,21 @@ export default function AdminStripeWebhooksPage() {
         ))}
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground">Carregando webhooks...</p>}
+      {loading && <p data-testid="admin-webhooks-loading" className="text-sm text-muted-foreground">Carregando webhooks...</p>}
 
       {!loading && filteredItems.length === 0 && (
-        <div className="border border-dashed border-border rounded-xl p-8 text-sm text-muted-foreground text-center bg-card">
+        <div data-testid="admin-webhooks-empty" className="border border-dashed border-border rounded-xl p-8 text-sm text-muted-foreground text-center bg-card">
           Nenhum evento encontrado para o filtro atual.
         </div>
       )}
 
-      <div className="space-y-4">
+      <div data-testid="admin-webhooks-list" className="space-y-4">
         {filteredItems.map((item) => {
           const busy = busyByEventId[item.eventId] === true;
           const canReplay = item.status === 'FAILED' || item.status === 'RECEIVED';
 
           return (
-            <div key={item.eventId} className="bg-card border border-border rounded-xl p-4 sm:p-5">
+            <div key={item.eventId} data-testid={`admin-webhooks-card-${item.eventId}`} className="bg-card border border-border rounded-xl p-4 sm:p-5">
               <div className="flex flex-wrap justify-between items-start gap-3 mb-3">
                 <div>
                   <p className="font-semibold text-sm text-foreground">{item.type}</p>
@@ -174,6 +175,7 @@ export default function AdminStripeWebhooksPage() {
 
               <div className="flex justify-end">
                 <Button
+                  data-testid={`admin-webhooks-replay-button-${item.eventId}`}
                   disabled={!canReplay || busy || isPending}
                   onClick={() => replay(item)}
                   size="sm"

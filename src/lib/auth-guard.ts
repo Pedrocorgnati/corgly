@@ -10,7 +10,7 @@ export interface AuthUser {
 }
 
 /**
- * Validates the authenticated user from middleware-injected headers.
+ * Validates the authenticated user from proxy-injected headers (src/proxy.ts).
  * Checks tokenVersion against DB to detect invalidated sessions (e.g., password reset).
  *
  * Returns AuthUser on success, or a 401 NextResponse on failure.

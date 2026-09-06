@@ -20,8 +20,9 @@ export const metadata: Metadata = {
  */
 export default function NewSupportTicketPage() {
   return (
-    <PageWrapper className="max-w-2xl">
+    <PageWrapper data-testid="page-support-new" className="max-w-2xl">
       <Link
+        data-testid="support-new-back-link"
         href={ROUTES.SUPPORT}
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
@@ -29,7 +30,7 @@ export default function NewSupportTicketPage() {
         Voltar para suporte
       </Link>
 
-      <div className="mb-6 flex items-center gap-3">
+      <div data-testid="support-new-header" className="mb-6 flex items-center gap-3">
         <LifeBuoy className="h-6 w-6 text-primary" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">Abrir chamado</h1>

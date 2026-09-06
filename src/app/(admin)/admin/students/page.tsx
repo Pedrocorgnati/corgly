@@ -32,7 +32,7 @@ async function StudentsTable({ searchParams }: Props) {
 
   if (error) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center">
+      <div data-testid="admin-students-error" className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center">
         <p className="text-sm text-destructive">Erro ao carregar alunos: {error}</p>
       </div>
     );
@@ -41,6 +41,7 @@ async function StudentsTable({ searchParams }: Props) {
   if (!data || data.items.length === 0) {
     return (
       <EmptyState
+        data-testid="admin-students-empty"
         icon={Users}
         title={search ? 'Nenhum aluno encontrado' : 'Nenhum aluno ainda'}
         description={
@@ -60,7 +61,7 @@ async function StudentsTable({ searchParams }: Props) {
         {data.total} aluno(s) cadastrado(s)
       </p>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+      <div data-testid="admin-students-table" className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -83,6 +84,7 @@ async function StudentsTable({ searchParams }: Props) {
               {data.items.map((student) => (
                 <tr
                   key={student.id}
+                  data-testid={`admin-students-row-${student.id}`}
                   className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors"
                 >
                   <td className="px-4 py-3">
@@ -123,7 +125,7 @@ async function StudentsTable({ searchParams }: Props) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
+        <div data-testid="admin-students-pagination" className="flex items-center justify-between mt-4">
           <p className="text-xs text-muted-foreground">
             Página {page} de {totalPages}
           </p>
@@ -134,6 +136,7 @@ async function StudentsTable({ searchParams }: Props) {
                   ...(search ? { search } : {}),
                   page: String(page - 1),
                 }).toString()}`}
+                data-testid="admin-students-pagination-prev-button"
                 className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors"
               >
                 Anterior
@@ -145,6 +148,7 @@ async function StudentsTable({ searchParams }: Props) {
                   ...(search ? { search } : {}),
                   page: String(page + 1),
                 }).toString()}`}
+                data-testid="admin-students-pagination-next-button"
                 className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors"
               >
                 Próxima
@@ -159,8 +163,8 @@ async function StudentsTable({ searchParams }: Props) {
 
 export default async function AdminStudentsPage(props: Props) {
   return (
-    <PageWrapper>
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <PageWrapper data-testid="page-admin-students">
+      <div data-testid="admin-students-header" className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-foreground">Alunos</h1>
         <Suspense fallback={<div className="h-10 w-64 bg-muted rounded-lg animate-pulse" />}>
           <StudentSearchInput />
@@ -169,7 +173,7 @@ export default async function AdminStudentsPage(props: Props) {
 
       <Suspense
         fallback={
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm animate-pulse">
+          <div data-testid="admin-students-loading" className="bg-card border border-border rounded-2xl p-6 shadow-sm animate-pulse">
             <div className="h-4 bg-muted rounded w-1/4 mb-4" />
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (

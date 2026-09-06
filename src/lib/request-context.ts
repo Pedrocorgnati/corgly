@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { setRequestContextResolver } from '@/lib/logger';
 
 /**
  * Contexto por request — usado para propagar metadados como correlationId
@@ -22,3 +23,8 @@ export function runWithContext<T>(ctx: RequestContext, fn: () => T): T {
 export function getRequestContext(): RequestContext {
   return storage.getStore() ?? {};
 }
+
+// Liga o contexto por request ao logger sem que o logger precise importar este
+// modulo — o import inverso arrastaria node:async_hooks para o bundle do
+// browser (os error boundaries sao client components e usam o logger).
+setRequestContextResolver(getRequestContext);

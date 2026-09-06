@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { PAGINATION } from '@/lib/constants';
-import { env } from '@/lib/env';
+import { internalApiOrigin } from '@/lib/internal-api';
 import type { PaginatedTickets } from '@/lib/support/ticket.types';
 
 /**
@@ -17,7 +17,6 @@ import type { PaginatedTickets } from '@/lib/support/ticket.types';
  * em `@/lib/support/ticket.types` (módulo `'use server'` só exporta funções).
  */
 
-const API_BASE = env.NEXT_PUBLIC_APP_URL;
 
 const EMPTY_PAGE: PaginatedTickets = {
   data: [],
@@ -32,7 +31,7 @@ async function apiFetch<T>(
   init?: RequestInit,
 ): Promise<{ data: T | null; error: string | null }> {
   const cookieStore = await cookies();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${await internalApiOrigin()}${path}`, {
     ...init,
     cache: 'no-store',
     headers: {

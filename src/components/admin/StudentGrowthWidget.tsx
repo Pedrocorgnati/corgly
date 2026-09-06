@@ -1,5 +1,5 @@
 import { Users, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { WidgetCard } from '@/components/shared/widget-card';
 
 interface StudentGrowthWidgetProps {
   totalStudents: number;
@@ -7,23 +7,21 @@ interface StudentGrowthWidgetProps {
 
 export function StudentGrowthWidget({ totalStudents }: StudentGrowthWidgetProps) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-      <div className="flex items-center gap-2 mb-4">
-        <Users className="h-4 w-4 text-primary" />
-        <h2 className="font-semibold text-foreground">Alunos</h2>
+    <WidgetCard title="Alunos" icon={Users}>
+      {/* Numero grande em tinta navy, como o preco dos planos da landing. */}
+      <div className="flex items-baseline gap-2 mb-5">
+        <span className="text-[2.75rem] font-bold tracking-tight text-ink leading-none">
+          {totalStudents}
+        </span>
+        <span className="text-[13px] text-muted-foreground">cadastrados</span>
       </div>
 
-      <div className="flex items-baseline gap-2 mb-4">
-        <span className="text-4xl font-bold text-foreground">{totalStudents}</span>
-        <span className="text-sm text-muted-foreground">cadastrados</span>
-      </div>
-
-      <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 flex flex-col items-center justify-center text-center">
-        <TrendingUp className="h-6 w-6 text-muted-foreground/40 mb-2" />
-        <p className="text-xs text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-brand-200 bg-brand-50 p-5 flex flex-col items-center justify-center text-center">
+        <TrendingUp className="h-6 w-6 text-brand-400 mb-2" />
+        <p className="text-[12.5px] text-muted-foreground">
           Gráfico de crescimento disponível em breve
         </p>
       </div>
-    </div>
+    </WidgetCard>
   );
 }

@@ -7,7 +7,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 /** POST /api/v1/auth — alias for register */
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-  const rl = checkRateLimit(`register:${ip}`, RATE_LIMITS.AUTH_REGISTER);
+  const rl = await checkRateLimit(`register:${ip}`, RATE_LIMITS.AUTH_REGISTER);
   if (!rl.allowed) {
     return NextResponse.json(
       apiResponse(null, 'Muitas tentativas. Aguarde e tente novamente.'),

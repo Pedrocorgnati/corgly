@@ -18,7 +18,7 @@ export function AdminScheduleClient() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
+      <div data-testid="admin-schedule-header" className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -26,18 +26,18 @@ export function AdminScheduleClient() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setShowBulkBlock(true)} className="gap-2">
+          <Button data-testid="admin-schedule-bulk-block-button" variant="outline" onClick={() => setShowBulkBlock(true)} className="gap-2">
             <ShieldBan className="h-4 w-4" />
             Bloquear período
           </Button>
-          <Button onClick={() => setShowEditor(!showEditor)} className="gap-2">
+          <Button data-testid="admin-schedule-create-button" onClick={() => setShowEditor(!showEditor)} className="gap-2">
             <Plus className="h-4 w-4" />
             Novo horário
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div data-testid="admin-schedule-content" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <AdminCalendar key={refreshKey} />
         </div>

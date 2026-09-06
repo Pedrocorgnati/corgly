@@ -37,9 +37,9 @@ export default async function PrivacyPage() {
   const t = await getTranslations('privacy');
 
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-privacy" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
+        <div data-testid="privacy-header" className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">{cmsPost?.title ?? t('title')}</h1>
           {cmsPost?.publishedAt ? (
             <p className="text-sm text-muted-foreground mt-2">
@@ -67,10 +67,10 @@ export default async function PrivacyPage() {
         )}
 
         <div className="mt-8 pt-6 border-t border-border">
-          <Link href={ROUTES.TERMS} className="text-primary text-sm font-medium hover:underline mr-4">
+          <Link href={ROUTES.TERMS} data-testid="privacy-terms-link" className="text-primary text-sm font-medium hover:underline mr-4">
             {t('linkTerms')}
           </Link>
-          <Link href={ROUTES.HOME} className="text-muted-foreground text-sm hover:underline">
+          <Link href={ROUTES.HOME} data-testid="privacy-back-link" className="text-muted-foreground text-sm hover:underline">
             &larr; {t('linkBack')}
           </Link>
         </div>

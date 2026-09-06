@@ -96,7 +96,7 @@ export function ProfileForm() {
 
   if (isAuthLoading) {
     return (
-      <div className="space-y-6">
+      <div data-testid="profile-loading" className="space-y-6">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -110,10 +110,10 @@ export function ProfileForm() {
   const displayEmail = user?.email ?? '';
 
   return (
-    <div className="space-y-6">
+    <div data-testid="profile-sections" className="space-y-6">
       {/* Profile section */}
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center gap-4 mb-6">
+      <div data-testid="profile-personal-section" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <div data-testid="profile-identity" className="flex items-center gap-4 mb-6">
           <AvatarInitials name={displayName} size="lg" />
           <div>
             <p className="font-semibold text-foreground">{displayName}</p>
@@ -121,22 +121,23 @@ export function ProfileForm() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form data-testid="form-profile" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="name">Nome completo</Label>
             <Input
+              data-testid="form-profile-name-input"
               id="name"
               disabled={isLoading}
               aria-invalid={!!errors.name}
               aria-describedby={errors.name ? 'profile-name-error' : undefined}
               {...register('name')}
             />
-            {errors.name && <p id="profile-name-error" className="text-xs text-destructive" role="alert">{errors.name.message}</p>}
+            {errors.name && <p data-testid="form-profile-name-error" id="profile-name-error" className="text-xs text-destructive" role="alert">{errors.name.message}</p>}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" value={displayEmail} disabled readOnly className="opacity-60" />
+            <Input data-testid="form-profile-email-input" id="email" value={displayEmail} disabled readOnly className="opacity-60" />
             <p className="text-xs text-muted-foreground">O email não pode ser alterado.</p>
           </div>
 
@@ -147,7 +148,7 @@ export function ProfileForm() {
               onValueChange={(v) => setValue('timezone', v ?? '')}
               disabled={isLoading}
             >
-              <SelectTrigger id="profile-timezone">
+              <SelectTrigger data-testid="form-profile-timezone-select" id="profile-timezone">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -165,7 +166,7 @@ export function ProfileForm() {
               onValueChange={(v) => setValue('preferredLanguage', v ?? '')}
               disabled={isLoading}
             >
-              <SelectTrigger id="profile-language">
+              <SelectTrigger data-testid="form-profile-language-select" id="profile-language">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -176,12 +177,12 @@ export function ProfileForm() {
             </Select>
           </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full">
+          <Button data-testid="form-profile-submit-button" type="submit" disabled={isLoading} className="w-full">
             {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</> : 'Salvar alterações'}
           </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-border">
+        <div data-testid="profile-marketing-opt-in" className="mt-6 pt-6 border-t border-border">
           <div className="flex items-start justify-between gap-4">
             <div>
               <Label htmlFor="marketing-opt-in" className="text-sm font-medium">
@@ -192,6 +193,7 @@ export function ProfileForm() {
               </p>
             </div>
             <Switch
+              data-testid="profile-marketing-opt-in-switch"
               id="marketing-opt-in"
               checked={marketingOptIn}
               onCheckedChange={(value) => handleMarketingToggle(Boolean(value))}
@@ -203,13 +205,14 @@ export function ProfileForm() {
       </div>
 
       {/* Danger zone */}
-      <div className="bg-card border border-destructive/30 rounded-2xl p-6 shadow-sm">
+      <div data-testid="profile-danger-zone" className="bg-card border border-destructive/30 rounded-2xl p-6 shadow-sm">
         <h3 className="font-semibold text-destructive mb-2">Zona de perigo</h3>
         <p className="text-sm text-muted-foreground mb-4">
           A exclusão da conta é permanente e não pode ser desfeita.
           Todos os seus dados e créditos restantes serão removidos.
         </p>
         <Button
+          data-testid="profile-delete-account-button"
           variant="destructive"
           size="sm"
           className="gap-2"

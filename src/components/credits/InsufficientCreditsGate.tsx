@@ -16,6 +16,7 @@ export function InsufficientCreditsGate({ balance, children }: InsufficientCredi
 
   return (
     <section
+      data-testid="insufficient-credits-gate"
       className="rounded-lg border border-destructive/30 bg-destructive/10 p-4"
       role="status"
       aria-labelledby="insufficient-credits-title"
@@ -34,6 +35,7 @@ export function InsufficientCreditsGate({ balance, children }: InsufficientCredi
         </div>
 
         <Link
+          data-testid="insufficient-credits-buy-link"
           href={ROUTES.CREDITS}
           className={cn(buttonVariants(), 'min-h-[44px] shrink-0')}
         >

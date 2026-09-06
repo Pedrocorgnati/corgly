@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40">
+  <!-- Red base -->
+  <rect width="60" height="40" fill="#B22234"/>
+  <!-- White stripes -->
+  <rect y="3.077" width="60" height="3.077" fill="#fff"/>
+  <rect y="9.231" width="60" height="3.077" fill="#fff"/>
+  <rect y="15.385" width="60" height="3.077" fill="#fff"/>
+  <rect y="21.538" width="60" height="3.077" fill="#fff"/>
+  <rect y="27.692" width="60" height="3.077" fill="#fff"/>
+  <rect y="33.846" width="60" height="3.077" fill="#fff"/>
+  <!-- Blue canton -->
+  <rect width="24" height="21.538" fill="#3C3B6E"/>
+  <!-- Stars (simplified as small circles) -->
+  <circle cx="3" cy="3" r="1.2" fill="#fff"/>
+  <circle cx="7.8" cy="3" r="1.2" fill="#fff"/>
+  <circle cx="12.6" cy="3" r="1.2" fill="#fff"/>
+  <circle cx="17.4" cy="3" r="1.2" fill="#fff"/>
+  <circle cx="22.2" cy="3" r="1.2" fill="#fff"/>
+  <circle cx="5.4" cy="6" r="1.2" fill="#fff"/>
+  <circle cx="10.2" cy="6" r="1.2" fill="#fff"/>
+  <circle cx="15" cy="6" r="1.2" fill="#fff"/>
+  <circle cx="19.8" cy="6" r="1.2" fill="#fff"/>
+  <circle cx="3" cy="9" r="1.2" fill="#fff"/>
+  <circle cx="7.8" cy="9" r="1.2" fill="#fff"/>
+  <circle cx="12.6" cy="9" r="1.2" fill="#fff"/>
+  <circle cx="17.4" cy="9" r="1.2" fill="#fff"/>
+  <circle cx="22.2" cy="9" r="1.2" fill="#fff"/>
+  <circle cx="5.4" cy="12" r="1.2" fill="#fff"/>
+  <circle cx="10.2" cy="12" r="1.2" fill="#fff"/>
+  <circle cx="15" cy="12" r="1.2" fill="#fff"/>
+  <circle cx="19.8" cy="12" r="1.2" fill="#fff"/>
+  <circle cx="3" cy="15" r="1.2" fill="#fff"/>
+  <circle cx="7.8" cy="15" r="1.2" fill="#fff"/>
+  <circle cx="12.6" cy="15" r="1.2" fill="#fff"/>
+  <circle cx="17.4" cy="15" r="1.2" fill="#fff"/>
+  <circle cx="22.2" cy="15" r="1.2" fill="#fff"/>
+  <circle cx="5.4" cy="18" r="1.2" fill="#fff"/>
+  <circle cx="10.2" cy="18" r="1.2" fill="#fff"/>
+  <circle cx="15" cy="18" r="1.2" fill="#fff"/>
+  <circle cx="19.8" cy="18" r="1.2" fill="#fff"/>
+</svg>

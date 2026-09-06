@@ -87,16 +87,16 @@ export function ContentResourcePanel({ resources }: ContentResourcePanelProps) {
 
   if (resources.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center">
+      <div data-testid="content-resources-empty" className="rounded-2xl border border-dashed border-border bg-card p-6 text-center">
         <p className="text-sm text-muted-foreground">{t('resourcesEmpty')}</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div data-testid="content-resources" className="rounded-2xl border border-border bg-card p-4">
       <p className="mb-3 text-xs text-muted-foreground">{t('resourcesExpiringHint')}</p>
-      <ul className="space-y-2">
+      <ul data-testid="content-resources-list" className="space-y-2">
         {resources.map((resource) => {
           const Icon = iconFor(resource.type);
           const busy = busyId === resource.id;
@@ -104,6 +104,7 @@ export function ContentResourcePanel({ resources }: ContentResourcePanelProps) {
           return (
             <li
               key={resource.id}
+              data-testid={`content-resources-item-${resource.id}`}
               className="flex items-center gap-3 rounded-lg border border-border/60 p-3"
             >
               <Icon className="h-5 w-5 flex-shrink-0 text-primary" aria-hidden />
@@ -116,13 +117,14 @@ export function ContentResourcePanel({ resources }: ContentResourcePanelProps) {
                   {resource.mimeType}
                 </p>
                 {failed && (
-                  <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                  <p data-testid={`content-resources-item-${resource.id}-error`} className="mt-1 flex items-center gap-1 text-xs text-destructive">
                     <AlertCircle className="h-3.5 w-3.5" aria-hidden />
                     {t('resourcesError')}
                   </p>
                 )}
               </div>
               <Button
+                data-testid={`content-resources-download-${resource.id}-button`}
                 type="button"
                 size="sm"
                 variant="outline"

@@ -2,7 +2,7 @@
  * Janela canonica de "MFA recente" para rotas admin sensiveis.
  *
  * 15 minutos (NIST SP 800-63B §4.1.2 — re-autenticacao de sessao privilegiada).
- * Consumido por T-045: admin-mfa.guard.ts e middleware de admin UI.
+ * Consumido por T-045: admin-mfa.guard.ts e proxy (src/proxy.ts) de admin UI.
  *
  * Janela RATIFICADA pelo operador em 2026-06-22 como politica canonica de
  * re-autenticacao admin (listener-recovery, canal interactive/RESSALVAS).

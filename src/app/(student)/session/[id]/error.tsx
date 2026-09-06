@@ -22,7 +22,7 @@ export default function SessionError({
   }, [error, pathname]);
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4">
+    <div data-testid="session-error" className="min-h-dvh flex flex-col items-center justify-center px-4">
       <div className="text-center max-w-sm">
         <AlertTriangle className="h-10 w-10 text-destructive mx-auto mb-4" />
         <h2 className="text-lg font-semibold text-foreground mb-2">Erro na sessão</h2>
@@ -30,9 +30,9 @@ export default function SessionError({
           Ocorreu um erro inesperado durante a sessão. Tente reconectar ou volte ao dashboard.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button onClick={reset}>Tentar reconectar</Button>
+          <Button data-testid="session-error-retry-button" onClick={reset}>Tentar reconectar</Button>
           <Button variant="outline" asChild>
-            <Link href={ROUTES.DASHBOARD}>Voltar ao dashboard</Link>
+            <Link data-testid="session-error-dashboard-link" href={ROUTES.DASHBOARD}>Voltar ao dashboard</Link>
           </Button>
         </div>
       </div>

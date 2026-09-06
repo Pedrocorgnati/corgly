@@ -40,23 +40,40 @@ describe('createUser', () => {
 });
 
 describe('createSession', () => {
-  it('cria sessão com valores padrão', () => {
+  it('cria sessão com valores padrão no shape canônico SessionWithMeta', () => {
     const session = createSession();
 
     expect(session.id).toBeDefined();
     expect(session.studentId).toBeDefined();
+    expect(session.availabilitySlotId).toBeDefined();
     expect(session.status).toBe(SessionStatus.SCHEDULED);
-    expect(session.durationMinutes).toBe(60);
-    expect(session.scheduledAt).toBeDefined();
-    expect(session.endAt).toBeInstanceOf(Date);
+    // startAt/endAt são ISO string (não Date): é o que a API emite.
+    expect(typeof session.startAt).toBe('string');
+    expect(typeof session.endAt).toBe('string');
+    expect(session.startAt).toBe(new Date(session.startAt).toISOString());
+    expect(session.endAt).toBe(new Date(session.endAt).toISOString());
+    // Duração padrão de 60 min — não existe mais campo `durationMinutes`.
+    expect(
+      new Date(session.endAt).getTime() - new Date(session.startAt).getTime(),
+    ).toBe(60 * 60 * 1000);
+    expect(session.creditBatchId).toBeNull();
+    expect(session.isRecurring).toBe(false);
+    expect(session.recurringPatternId).toBeNull();
+    expect(session.cancelledAt).toBeNull();
+    expect(session.cancelledBy).toBeNull();
+    expect(session.completedAt).toBeNull();
+    expect(session.extendedBy).toBeNull();
+    expect(session.reminderSentAt).toBeNull();
+    expect(session.rescheduleRequestSlotId).toBeNull();
     expect(session.createdAt).toBeDefined();
     expect(session.updatedAt).toBeDefined();
   });
 
-  it('endAt é posterior a scheduledAt', () => {
+  it('endAt é posterior a startAt', () => {
     const session = createSession();
-    const start = new Date(session.scheduledAt);
-    expect(session.endAt.getTime()).toBeGreaterThan(start.getTime());
+    expect(new Date(session.endAt).getTime()).toBeGreaterThan(
+      new Date(session.startAt).getTime(),
+    );
   });
 
   it('aplica overrides de status', () => {
@@ -64,10 +81,20 @@ describe('createSession', () => {
     expect(session.status).toBe(SessionStatus.COMPLETED);
   });
 
-  it('aceita scheduledAt customizado', () => {
+  it('aceita startAt customizado (Date) e normaliza para ISO', () => {
     const customDate = new Date('2025-06-15T14:00:00Z');
-    const session = createSession({ scheduledAt: customDate });
-    expect(session.scheduledAt).toBe(customDate.toISOString());
+    const session = createSession({ startAt: customDate });
+    expect(session.startAt).toBe(customDate.toISOString());
+    expect(session.endAt).toBe(new Date('2025-06-15T15:00:00Z').toISOString());
+  });
+
+  it('rejeita janela invertida', () => {
+    expect(() =>
+      createSession({
+        startAt: '2025-06-15T14:00:00Z',
+        endAt: '2025-06-15T13:00:00Z',
+      }),
+    ).toThrow(/startAt must be before endAt/);
   });
 
   it('gera IDs únicos', () => {

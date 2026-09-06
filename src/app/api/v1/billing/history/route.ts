@@ -75,7 +75,9 @@ export async function GET(request: NextRequest) {
         status: true,
         createdAt: true,
         stripePaymentIntentId: true,
-        creditBatch: { select: { id: true, credits: true } },
+        // Relacao Payment -> CreditBatch carregada de verdade; o model nao tem
+        // coluna `credits`, a quantidade comprada vive em totalCredits.
+        creditBatch: { select: { id: true, totalCredits: true } },
       },
     });
 
@@ -87,8 +89,8 @@ export async function GET(request: NextRequest) {
       id: p.id,
       createdAt: p.createdAt.toISOString(),
       description:
-        p.creditBatch && p.creditBatch.credits
-          ? `Compra de ${p.creditBatch.credits} crédito(s)`
+        p.creditBatch && p.creditBatch.totalCredits > 0
+          ? `Compra de ${p.creditBatch.totalCredits} crédito(s)`
           : 'Pagamento',
       amount: p.amount,
       currency: p.currency,

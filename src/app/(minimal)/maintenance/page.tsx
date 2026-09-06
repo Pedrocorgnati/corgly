@@ -8,16 +8,16 @@ export const metadata: Metadata = {
 
 export default function MaintenancePage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-background">
-      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-6">
+    <div data-testid="page-maintenance" className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-background">
+      <div data-testid="maintenance-icon" className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-6">
         <Wrench className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
       </div>
 
-      <h1 className="text-2xl font-bold text-foreground mb-3">
+      <h1 data-testid="maintenance-title" className="text-2xl font-bold text-foreground mb-3">
         Sistema em manutenção
       </h1>
 
-      <p className="text-muted-foreground max-w-sm">
+      <p data-testid="maintenance-description" className="text-muted-foreground max-w-sm">
         Voltamos em breve. Obrigado pela paciência!
       </p>
     </div>

@@ -28,6 +28,7 @@ export const ROUTES = {
   SCHEDULE: '/schedule',
   CREDITS: '/credits',
   PROGRESS: '/progress',
+  EXERCISES: '/exercises',
   ONBOARDING_EQUIPMENT: '/onboarding/equipment-check',
   SESSION: (id: string) => `/session/${id}`,
   SESSION_LOBBY: (id: string) => `/session/${id}/lobby`,
@@ -58,6 +59,7 @@ export const ROUTES = {
   ADMIN_FEEDBACK: (sessionId: string) => `/admin/feedback/${sessionId}`,
   ADMIN_STUDENT_NOTES: (id: string) => `/admin/students/${id}/notes`,
   MFA_CHALLENGE: '/auth/mfa/challenge',
+  MFA_SETUP: '/auth/mfa/setup',
 } as const;
 
 export const API = {

@@ -19,6 +19,7 @@ export interface StarRatingProps {
   disabled?: boolean;
   /** Validation error message */
   error?: string;
+  'data-testid'?: string;
 }
 
 export function StarRating({
@@ -28,6 +29,7 @@ export function StarRating({
   onChange,
   disabled = false,
   error,
+  'data-testid': testId,
 }: StarRatingProps) {
   const [hovered, setHovered] = useState(0);
   const groupRef = useRef<HTMLDivElement>(null);
@@ -72,7 +74,7 @@ export function StarRating({
   const groupId = `star-rating-${dimension}`;
 
   return (
-    <div>
+    <div data-testid={testId}>
       <p className="text-sm font-medium text-foreground mb-1" id={`${groupId}-label`}>
         {label}
       </p>

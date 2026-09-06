@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 export default function ForgotPasswordPage() {
   return (
     <AuthPageWrapper>
-      <div className="w-full max-w-[384px]">
+      <div data-testid="page-auth-forgot-password" className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
-          <div className="mb-6">
+          <div data-testid="auth-forgot-password-header" className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">Recuperar senha</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Informe seu email e enviaremos um link de recuperação.

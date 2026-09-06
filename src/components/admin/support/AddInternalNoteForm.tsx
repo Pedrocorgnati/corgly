@@ -80,19 +80,20 @@ export function AddInternalNoteForm({ studentId, openTickets }: AddInternalNoteF
 
   return (
     <form
+      data-testid="form-internal-note"
       className="rounded-2xl border border-border bg-card p-4"
       onSubmit={(e) => {
         e.preventDefault();
         submit();
       }}
     >
-      <div className="mb-3 flex items-center gap-2">
+      <div data-testid="form-internal-note-header" className="mb-3 flex items-center gap-2">
         <StickyNote className="h-4 w-4 text-amber-600 dark:text-amber-400" />
         <h2 className="text-sm font-semibold text-foreground">Nova nota interna</h2>
       </div>
 
       {noTickets ? (
-        <p className="text-sm text-muted-foreground">
+        <p data-testid="form-internal-note-empty" className="text-sm text-muted-foreground">
           O aluno não possui tickets abertos. Notas internas são anexadas a um
           ticket; abra ou reabra um chamado na caixa de suporte para registrar uma
           nota.
@@ -104,6 +105,7 @@ export function AddInternalNoteForm({ studentId, openTickets }: AddInternalNoteF
               Ticket
             </Label>
             <select
+              data-testid="form-internal-note-ticket-select"
               id="note-ticket"
               value={ticketId}
               onChange={(e) => setTicketId(e.target.value)}
@@ -123,6 +125,7 @@ export function AddInternalNoteForm({ studentId, openTickets }: AddInternalNoteF
               Nota (visível só para a equipe)
             </Label>
             <Textarea
+              data-testid="form-internal-note-body-input"
               id="note-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -134,9 +137,9 @@ export function AddInternalNoteForm({ studentId, openTickets }: AddInternalNoteF
             />
           </div>
 
-          <div className="flex justify-end">
-            <Button type="submit" className="gap-1.5" disabled={pending}>
-              {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+          <div data-testid="form-internal-note-actions" className="flex justify-end">
+            <Button data-testid="form-internal-note-submit-button" type="submit" className="gap-1.5" disabled={pending}>
+              {pending && <Loader2 data-testid="form-internal-note-loading" className="h-4 w-4 animate-spin" />}
               Salvar nota
             </Button>
           </div>

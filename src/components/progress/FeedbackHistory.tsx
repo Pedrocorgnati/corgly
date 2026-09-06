@@ -3,11 +3,16 @@ import { PAGINATION } from '@/lib/constants';
 import { API } from '@/lib/constants/routes';
 
 import { useState, useCallback } from 'react';
-import { Download, ChevronLeft, ChevronRight, Loader2, ClipboardList } from 'lucide-react';
+import { AlertCircle, Download, ChevronLeft, ChevronRight, Loader2, ClipboardList } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { apiClient } from '@/lib/api-client';
 
+/**
+ * Vocabulario canonico das notas por dimensao. Fonte da verdade:
+ * prisma/schema.prisma (listeningScore/speakingScore/writingScore/vocabularyScore),
+ * src/schemas/feedback.schema.ts e src/services/feedback.service.ts (mapFeedback).
+ */
 interface FeedbackScores {
   listening: number;
   speaking: number;
@@ -50,14 +55,26 @@ const DIMENSION_LABELS: Record<keyof FeedbackScores, string> = {
   vocabulary: 'Vocabulário',
 };
 
-function scoreBadgeClass(score: number): string {
+function isScore(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/** Nota ausente ou nao-finita vira travessao — nunca `NaN` nem TypeError. */
+function formatScore(value: unknown): string {
+  return isScore(value) ? value.toFixed(1) : '—';
+}
+
+function scoreBadgeClass(score: unknown): string {
+  if (!isScore(score)) return 'bg-muted text-muted-foreground';
   if (score <= 2) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
   if (score <= 3.4) return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
   return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('pt-BR', {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -69,19 +86,31 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
   const [period, setPeriod] = useState<Period>('all');
   const [currentPage, setCurrentPage] = useState(initialData.page);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const totalPages = Math.max(1, Math.ceil(data.total / data.limit));
+  const limit = data.limit > 0 ? data.limit : PAGINATION.FEEDBACK_HISTORY;
+  const totalPages = Math.max(1, Math.ceil(data.total / limit));
 
   const fetchData = useCallback(async (page: number, p: Period) => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const json = await apiClient.get<{ data: HistoryData }>(API.FEEDBACK_HISTORY, { params: { page, limit: PAGINATION.FEEDBACK_HISTORY, period: p } });
       if (json.data) {
         setData(json.data);
         setCurrentPage(page);
+      } else {
+        // Zero Silencio: resposta sem `data` nao pode passar como sucesso.
+        setLoadError('Resposta do servidor fora do formato esperado.');
       }
-    } catch {
-      // Keep old data visible on error
+    } catch (error) {
+      // Zero Silencio: os dados antigos continuam na tela, mas o usuario ve
+      // que o filtro/pagina que ele pediu nao foi aplicado.
+      setLoadError(
+        error instanceof Error
+          ? `Nao foi possivel atualizar o historico: ${error.message}`
+          : 'Nao foi possivel atualizar o historico.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +129,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
   const isEmpty = data.items.length === 0 && !isLoading;
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+    <div data-testid="progress-feedback-history" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h2 className="font-semibold text-foreground">Historico de Avaliacoes</h2>
 
@@ -110,6 +139,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
             {PERIOD_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
+                data-testid={`progress-feedback-history-period-${opt.value}-button`}
                 onClick={() => handlePeriodChange(opt.value)}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                   period === opt.value
@@ -124,6 +154,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
 
           {/* CSV export */}
           <a
+            data-testid="progress-feedback-history-export-button"
             href={`/api/v1/feedback/history?format=csv&period=${period}`}
             download
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
@@ -134,8 +165,20 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
         </div>
       </div>
 
+      {loadError && (
+        <div
+          data-testid="progress-feedback-history-error"
+          role="alert"
+          className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3"
+        >
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" aria-hidden="true" />
+          <p className="text-xs text-foreground">{loadError}</p>
+        </div>
+      )}
+
       {isEmpty ? (
         <EmptyState
+          data-testid="progress-feedback-history-empty"
           icon={ClipboardList}
           title="Sem avaliacoes"
           description="Voce ainda nao tem avaliacoes registradas"
@@ -152,7 +195,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
 
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
+              <table data-testid="progress-feedback-history-table" className="w-full text-sm">
                 <caption className="sr-only">Historico de avaliacoes</caption>
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
@@ -168,18 +211,18 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
                 </thead>
                 <tbody>
                   {data.items.map((item) => (
-                    <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                    <tr key={item.id} data-testid={`progress-feedback-history-row-${item.id}`} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                       <td className="py-3 text-foreground">{formatDate(item.sessionDate)}</td>
                       {(Object.keys(DIMENSION_LABELS) as (keyof FeedbackScores)[]).map((key) => (
                         <td key={key} className="py-3 text-center">
                           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${scoreBadgeClass(item.scores[key])}`}>
-                            {item.scores[key].toFixed(1)}
+                            {formatScore(item.scores[key])}
                           </span>
                         </td>
                       ))}
                       <td className="py-3 text-center">
                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${scoreBadgeClass(item.averageScore)}`}>
-                          {item.averageScore.toFixed(1)}
+                          {formatScore(item.averageScore)}
                         </span>
                       </td>
                       <td className="py-3 text-muted-foreground max-w-[200px] truncate">
@@ -194,13 +237,13 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
             {/* Mobile cards */}
             <div className="md:hidden space-y-3">
               {data.items.map((item) => (
-                <div key={item.id} className="border border-border rounded-xl p-4 space-y-2">
+                <div key={item.id} data-testid={`progress-feedback-history-row-${item.id}-mobile`} className="border border-border rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">
                       {formatDate(item.sessionDate)}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${scoreBadgeClass(item.averageScore)}`}>
-                      Media: {item.averageScore.toFixed(1)}
+                      Media: {formatScore(item.averageScore)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -208,7 +251,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
                       <div key={key} className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">{DIMENSION_LABELS[key]}</span>
                         <span className={`px-1.5 py-0.5 rounded-full font-medium ${scoreBadgeClass(item.scores[key])}`}>
-                          {item.scores[key].toFixed(1)}
+                          {formatScore(item.scores[key])}
                         </span>
                       </div>
                     ))}
@@ -225,12 +268,13 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+            <div data-testid="progress-feedback-history-pagination" className="flex items-center justify-between mt-4 pt-4 border-t border-border">
               <p className="text-xs text-muted-foreground">
                 Pagina {currentPage} de {totalPages} ({data.total} avaliacoes)
               </p>
               <div className="flex gap-2">
                 <Button
+                  data-testid="progress-feedback-history-prev-button"
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(currentPage - 1)}
@@ -241,6 +285,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
                   Anterior
                 </Button>
                 <Button
+                  data-testid="progress-feedback-history-next-button"
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(currentPage + 1)}

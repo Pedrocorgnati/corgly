@@ -103,7 +103,7 @@ export function CreditLog() {
 
   if (isLoading) {
     return (
-      <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
+      <div data-testid="admin-credit-log-loading" className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-3">
         <h2 className="text-base font-semibold text-foreground mb-4">{t('title')}</h2>
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-12 w-full rounded-lg" />
@@ -116,6 +116,7 @@ export function CreditLog() {
     return (
       <div className="bg-card border border-border rounded-xl shadow-sm">
         <ErrorState
+          data-testid="admin-credit-log-error"
           message={error}
           onRetry={() => fetchPayments(page)}
         />
@@ -124,14 +125,15 @@ export function CreditLog() {
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-foreground mb-4">{t('title')}</h2>
+    <div data-testid="admin-credit-log" className="bg-card border border-border rounded-xl p-5 shadow-sm">
+      <h2 data-testid="admin-credit-log-header" className="text-base font-semibold text-foreground mb-4">{t('title')}</h2>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div data-testid="admin-credit-log-filter-bar" className="flex flex-wrap gap-2 mb-4">
         {FILTER_KEYS.map((key) => (
           <Button
             key={key}
+            data-testid={`admin-credit-log-filter-${key.toLowerCase()}-button`}
             variant={activeFilters.has(key) ? 'default' : 'outline'}
             size="sm"
             onClick={() => toggleFilter(key)}
@@ -145,6 +147,7 @@ export function CreditLog() {
 
       {filteredPayments.length === 0 ? (
         <EmptyState
+          data-testid="admin-credit-log-empty"
           icon={ClipboardList}
           title={t('empty')}
           description={activeFilters.size > 0 ? t('emptyFiltered') : undefined}
@@ -152,9 +155,9 @@ export function CreditLog() {
       ) : (
         <>
           {/* Mobile: Cards */}
-          <div className="space-y-3 md:hidden">
+          <div data-testid="admin-credit-log-list" className="space-y-3 md:hidden">
             {filteredPayments.map((payment) => (
-              <div key={payment.id} className="border border-border rounded-lg p-3 space-y-2">
+              <div key={payment.id} data-testid={`admin-credit-log-card-${payment.id}`} className="border border-border rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">{formatDatePtBR(payment.createdAt)}</span>
                   <Badge variant="outline">{payment.status}</Badge>
@@ -174,7 +177,7 @@ export function CreditLog() {
           </div>
 
           {/* Desktop: Table */}
-          <div className="hidden md:block overflow-x-auto">
+          <div data-testid="admin-credit-log-table" className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -186,7 +189,7 @@ export function CreditLog() {
               </thead>
               <tbody>
                 {filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
+                  <tr key={payment.id} data-testid={`admin-credit-log-row-${payment.id}`} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-3">
                       <Badge variant="outline">{CREDIT_TYPE_MAP[payment.status as CreditType]?.label ?? payment.status}</Badge>
                     </td>
@@ -204,15 +207,17 @@ export function CreditLog() {
           </div>
 
           {pagination && pagination.pages > 1 && (
-            <Pagination
-              page={page}
-              totalPages={pagination.pages}
-              onPageChange={handlePageChange}
-              total={pagination.total}
-              limit={pagination.limit}
-              showInfo
-              className="mt-4"
-            />
+            <div data-testid="admin-credit-log-pagination">
+              <Pagination
+                page={page}
+                totalPages={pagination.pages}
+                onPageChange={handlePageChange}
+                total={pagination.total}
+                limit={pagination.limit}
+                showInfo
+                className="mt-4"
+              />
+            </div>
           )}
         </>
       )}

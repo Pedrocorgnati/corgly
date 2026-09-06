@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES, API } from '@/lib/constants/routes';
+import { UserRole } from '@/lib/constants/enums';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { LoginSchema } from '@/schemas/auth.schema';
 
@@ -46,7 +47,13 @@ export function LoginForm() {
 
       toast.success('Login realizado com sucesso!');
 
-      if (!result.data.user.onboardingCompletedAt) {
+      // Destino pos-login ramifica por papel ANTES de olhar o onboarding:
+      // o onboarding e um fluxo de aluno, admin nunca passa por ele.
+      const { role, onboardingCompletedAt } = result.data.user;
+
+      if (role === UserRole.ADMIN) {
+        router.push(ROUTES.ADMIN_DASHBOARD);
+      } else if (!onboardingCompletedAt) {
         router.push(ROUTES.ONBOARDING);
       } else {
         router.push(ROUTES.DASHBOARD);
@@ -69,11 +76,12 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form data-testid="form-login" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {/* Email */}
       <div className="space-y-1.5">
         <Label htmlFor="email" className="text-sm font-medium">Email</Label>
         <Input
+          data-testid="form-login-email-input"
           id="email"
           type="email"
           placeholder="email@exemplo.com"
@@ -94,6 +102,7 @@ export function LoginForm() {
           <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
           <Link
             href={ROUTES.FORGOT_PASSWORD}
+            data-testid="form-login-forgot-password-link"
             className="text-xs text-primary hover:underline"
           >
             Esqueci minha senha
@@ -101,6 +110,7 @@ export function LoginForm() {
         </div>
         <div className="relative">
           <Input
+            data-testid="form-login-password-input"
             id="password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
@@ -112,6 +122,7 @@ export function LoginForm() {
           />
           <button
             type="button"
+            data-testid="form-login-toggle-password-button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
@@ -127,6 +138,7 @@ export function LoginForm() {
       {/* Auth error */}
       {authError && (
         <div
+          data-testid="form-login-error"
           role="alert"
           className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
         >
@@ -136,6 +148,7 @@ export function LoginForm() {
 
       {/* Submit */}
       <Button
+        data-testid="form-login-submit-button"
         type="submit"
         className="w-full min-h-[52px] bg-primary text-primary-foreground hover:bg-primary/90 font-semibold sticky bottom-4 md:static"
         disabled={isLoading}

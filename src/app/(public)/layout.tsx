@@ -4,8 +4,8 @@ import { PublicHeader } from '@/components/shared/public-header';
 import { PublicFooter } from '@/components/shared/public-footer';
 import { detectLocale } from '@/lib/detect-locale';
 import { generateLandingMetadata } from '@/lib/seo/metadata';
+import { ThemeProvider } from '@/components/shared/theme-provider';
 
-// Next.js injects <link rel="alternate" hreflang> tags from metadata.alternates.languages
 export async function generateMetadata(): Promise<Metadata> {
   const cookieStore = await cookies();
   const locale = detectLocale(cookieStore);
@@ -14,12 +14,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh flex flex-col">
-      <PublicHeader />
-      <main id="main-content" className="flex-1 pt-16">
-        {children}
-      </main>
-      <PublicFooter />
-    </div>
+    <ThemeProvider attribute="class" forcedTheme="light" enableSystem={false}>
+      <div className="min-h-dvh flex flex-col bg-background text-foreground">
+        <PublicHeader />
+        <main id="main-content" data-testid="main-content" className="flex-1 pt-[52px]">
+          {children}
+        </main>
+        <PublicFooter />
+      </div>
+    </ThemeProvider>
   );
 }

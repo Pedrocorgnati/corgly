@@ -38,14 +38,14 @@ export function ContentList() {
   }, [status, q]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div data-testid="admin-content-list" className="space-y-4">
+      <div data-testid="admin-content-filter-bar" className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar..."
+          <input data-testid="admin-content-search-input" type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar..."
                  className="rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm" />
         </div>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}
+        <select data-testid="admin-content-filter-status-select" value={status} onChange={(e) => setStatus(e.target.value)}
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
           <option value="">Todos status</option>
           <option value="DRAFT">Rascunho</option>
@@ -53,13 +53,13 @@ export function ContentList() {
           <option value="PUBLISHED">Publicado</option>
           <option value="ARCHIVED">Arquivado</option>
         </select>
-        <Link href="/admin/content/new"
+        <Link data-testid="admin-content-create-link" href="/admin/content/new"
               className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium">
           <Plus className="h-4 w-4" /> Novo conteudo
         </Link>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-x-auto">
+      <div data-testid="admin-content-table" className="bg-card border border-border rounded-2xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-muted-foreground">
@@ -72,13 +72,13 @@ export function ContentList() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">Carregando...</td></tr>
+              <tr><td data-testid="admin-content-loading" colSpan={5} className="py-6 text-center text-muted-foreground">Carregando...</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">Nenhum conteudo encontrado.</td></tr>
+              <tr><td data-testid="admin-content-empty" colSpan={5} className="py-6 text-center text-muted-foreground">Nenhum conteudo encontrado.</td></tr>
             ) : items.map((it) => (
-              <tr key={it.id} className="border-b border-border/50 hover:bg-muted/30">
+              <tr key={it.id} data-testid={`admin-content-row-${it.id}`} className="border-b border-border/50 hover:bg-muted/30">
                 <td className="py-2 px-4">
-                  <Link href={`/admin/content/${it.id}`} className="font-medium text-foreground hover:text-primary">
+                  <Link data-testid={`admin-content-row-${it.id}-link`} href={`/admin/content/${it.id}`} className="font-medium text-foreground hover:text-primary">
                     {it.title}
                   </Link>
                   {it.category && <span className="ml-2 text-xs text-muted-foreground">· {it.category}</span>}

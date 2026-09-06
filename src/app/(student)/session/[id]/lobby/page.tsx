@@ -66,8 +66,8 @@ export default function SessionLobbyPage() {
   }, [router, sessionId])
 
   return (
-    <main className="mx-auto w-full max-w-3xl p-4 md:p-8">
-      <header className="mb-6">
+    <main data-testid="page-session-lobby" className="mx-auto w-full max-w-3xl p-4 md:p-8">
+      <header data-testid="session-lobby-header" className="mb-6">
         <h1 className="text-2xl font-bold">Lobby da aula</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Confirme que seu equipamento está pronto antes de entrar na sala.
@@ -75,7 +75,7 @@ export default function SessionLobbyPage() {
       </header>
 
       {!showTest && (
-        <section className="rounded-lg border bg-card p-4">
+        <section data-testid="session-lobby-last-check" className="rounded-lg border bg-card p-4">
           {lastCheck ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -98,7 +98,7 @@ export default function SessionLobbyPage() {
               )}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div data-testid="session-lobby-empty" className="space-y-2">
               <h2 className="font-semibold">Nenhum teste recente</h2>
               <p className="text-sm text-muted-foreground">
                 Você ainda não testou seu equipamento. Rode o teste antes de entrar.
@@ -107,6 +107,7 @@ export default function SessionLobbyPage() {
           )}
           <button
             type="button"
+            data-testid="session-lobby-retest-button"
             onClick={() => {
               setConfirmedWarning(false)
               setShowTest(true)
@@ -119,13 +120,13 @@ export default function SessionLobbyPage() {
       )}
 
       {showTest && (
-        <section className="space-y-6">
+        <section data-testid="session-lobby-device-test" className="space-y-6">
           <DeviceTest
             onReady={setLiveStatus}
             onResult={handleResult}
           />
           {liveStatus === 'warning' && (
-            <label className="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+            <label data-testid="session-lobby-warning-confirm" className="flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
               <input
                 type="checkbox"
                 checked={confirmedWarning}
@@ -139,6 +140,7 @@ export default function SessionLobbyPage() {
           )}
           <button
             type="button"
+            data-testid="session-lobby-finish-test-button"
             onClick={() => setShowTest(false)}
             className="rounded border px-4 py-2 text-sm"
           >
@@ -150,6 +152,7 @@ export default function SessionLobbyPage() {
       <div className="mt-8 flex items-center justify-between">
         <button
           type="button"
+          data-testid="session-lobby-back-button"
           onClick={() => router.back()}
           className="rounded border px-4 py-2 text-sm"
         >
@@ -157,6 +160,7 @@ export default function SessionLobbyPage() {
         </button>
         <button
           type="button"
+          data-testid="session-lobby-enter-button"
           onClick={handleEnter}
           disabled={!canEnter}
           className="rounded bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"

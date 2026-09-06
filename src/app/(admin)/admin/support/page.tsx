@@ -59,7 +59,7 @@ async function TicketsTable({ searchParams }: PageProps) {
 
   if (error) {
     return (
-      <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+      <div data-testid="admin-support-error" className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
         <div>
           <p className="font-medium">Não foi possível carregar os tickets.</p>
@@ -72,6 +72,7 @@ async function TicketsTable({ searchParams }: PageProps) {
   if (tickets.data.length === 0) {
     return (
       <EmptyState
+        data-testid="admin-support-empty"
         icon={LifeBuoy}
         title="Nenhum ticket encontrado"
         description="Nenhum chamado corresponde aos filtros aplicados."
@@ -92,7 +93,7 @@ async function TicketsTable({ searchParams }: PageProps) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div data-testid="admin-support-table" className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -115,7 +116,7 @@ async function TicketsTable({ searchParams }: PageProps) {
                 className: 'text-muted-foreground',
               };
               return (
-                <tr key={ticket.id} className="border-b border-border last:border-0 align-top">
+                <tr key={ticket.id} data-testid={`admin-support-row-${ticket.id}`} className="border-b border-border last:border-0 align-top">
                   <td className="px-4 py-3">
                     <p className="font-medium text-foreground">{ticket.subject}</p>
                     {ticket.lastMessage && (
@@ -165,7 +166,7 @@ async function TicketsTable({ searchParams }: PageProps) {
         </table>
       </div>
 
-      <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Paginação">
+      <nav data-testid="admin-support-pagination" className="mt-4 flex items-center justify-between text-sm" aria-label="Paginação">
         <span className="text-muted-foreground">
           Página {tickets.page} de {Math.max(1, tickets.totalPages)} · {tickets.total} ticket(s)
         </span>
@@ -173,6 +174,7 @@ async function TicketsTable({ searchParams }: PageProps) {
           {tickets.page > 1 && (
             <Link
               href={buildPageHref(tickets.page - 1)}
+              data-testid="admin-support-pagination-prev-button"
               className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
             >
               Anterior
@@ -181,6 +183,7 @@ async function TicketsTable({ searchParams }: PageProps) {
           {tickets.page < tickets.totalPages && (
             <Link
               href={buildPageHref(tickets.page + 1)}
+              data-testid="admin-support-pagination-next-button"
               className="rounded-lg border border-border px-3 py-1.5 hover:bg-muted"
             >
               Próxima
@@ -196,15 +199,15 @@ export default async function AdminSupportPage(props: PageProps) {
   const params = await props.searchParams;
 
   return (
-    <PageWrapper>
-      <div className="mb-6">
+    <PageWrapper data-testid="page-admin-support">
+      <div data-testid="admin-support-header" className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">Suporte</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Caixa de entrada de chamados. Filtre, responda, feche e registre notas internas.
         </p>
       </div>
 
-      <div className="mb-6">
+      <div data-testid="admin-support-filters" className="mb-6">
         <AdminSupportFilters
           initial={{
             status: params.status ?? '',
@@ -218,7 +221,7 @@ export default async function AdminSupportPage(props: PageProps) {
 
       <Suspense
         fallback={
-          <div className="h-40 animate-pulse rounded-2xl border border-border bg-muted/30" />
+          <div data-testid="admin-support-loading" className="h-40 animate-pulse rounded-2xl border border-border bg-muted/30" />
         }
       >
         <TicketsTable searchParams={props.searchParams} />

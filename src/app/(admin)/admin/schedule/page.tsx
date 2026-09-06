@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function AdminSchedulePage() {
   return (
-    <PageWrapper>
+    <PageWrapper data-testid="page-admin-schedule">
       <AdminScheduleClient />
     </PageWrapper>
   );

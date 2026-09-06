@@ -25,7 +25,8 @@
       "buy": "Comprar créditos",
       "settings": "Configurações",
       "creditsBalance": "Saldo: {count} créditos",
-      "library": "Biblioteca"
+      "library": "Biblioteca",
+      "exercises": "Exercícios"
     },
     "admin": {
       "dashboard": "Painel",
@@ -50,15 +51,23 @@
     "home": "Início",
     "schedule": "Agendar",
     "progress": "Progresso",
-    "account": "Conta"
+    "account": "Conta",
+    "buy": "Comprar",
+    "exercises": "Exercícios"
   },
   "footer": {
     "copyright": "© {year} Corgly. Todos os direitos reservados.",
     "privacy": "Política de Privacidade",
+    "privacy_short": "Privacidade",
     "terms": "Termos de Uso",
+    "terms_short": "Termos",
     "cookies": "Cookies",
     "languageLabel": "Idioma",
-    "preferences": "Preferências de cookies"
+    "preferences": "Preferências de cookies",
+    "tagline": "Conversas reais. Aprendizado que conecta.",
+    "method": "Método",
+    "pricing": "Preços",
+    "faq": "FAQ"
   },
   "creditBadge": {
     "credits": "{count} créditos",
@@ -198,194 +207,234 @@
   "landing": {
     "header": {
       "login": "Entrar",
-      "register": "Criar Conta",
+      "cta": "Primeira aula — US$ 12,50",
       "nav": {
+        "how_it_works": "Como funciona",
         "method": "Método",
         "pricing": "Preços",
-        "content": "Conteúdo",
-        "contact": "Contato"
+        "faq": "FAQ"
       },
       "nav_aria": "Navegação principal",
       "menuOpen": "Abrir menu"
     },
     "hero": {
-      "title": "Aprenda português brasileiro com professor nativo",
-      "subtitle": "Aulas 1:1 ao vivo com o Corgly Method. Evolução mensurável, acompanhamento real.",
-      "cta_primary": "Criar Conta Grátis",
-      "cta_secondary": "Ver Preços",
-      "cta_primary_aria": "Criar conta gratuita no Corgly",
-      "cta_secondary_aria": "Ver planos e preços do Corgly",
-      "first_lesson_badge": "Primeira aula 50% OFF — apenas $12.50",
-      "professor_alt": "Pedro Corgnati, professor de português brasileiro, sorrindo em ambiente de home office",
-      "professor_name": "Pedro Corgnati"
+      "eyebrow": "1:1 ao vivo · professor nativo",
+      "title": "Fale português brasileiro com naturalidade",
+      "subtitle": "Aulas particulares com Pedro. Progresso visível a cada ciclo.",
+      "proof_countries": "20+ países",
+      "proof_duration": "aula de 50 min",
+      "proof_feedback": "feedback após cada aula",
+      "cta_primary": "Agendar primeira aula",
+      "cta_secondary": "Ver planos",
+      "microcopy": "{price} a primeira aula · sem mensalidade obrigatória",
+      "overlay_name": "Pedro · Professor nativo · PT-BR",
+      "overlay_chip": "Próxima aula · {minutes} min",
+      "languages": "Aulas em inglês, espanhol e italiano",
+      "brazil_vs_pt": "Português do Brasil, não o de Portugal",
+      "professor_alt": "Pedro, professor nativo de português brasileiro, em aula ao vivo",
+      "from": "de"
+    },
+    "goals": {
+      "eyebrow": "O seu objetivo",
+      "title": "Traga o motivo pelo qual você precisa de português. Eu monto o caminho.",
+      "chips": {
+        "zero": "começar do zero",
+        "travel": "viajar",
+        "move": "morar no Brasil",
+        "work": "trabalho e reuniões",
+        "family": "família e dia a dia",
+        "confidence": "falar com confiança"
+      },
+      "authority": {
+        "rating": "4.8 / 15 avaliações",
+        "countries": "Alunos de 20+ países",
+        "postgrad": "Professor de português, pós-graduado em metodologia de ensino",
+        "background": "Administração e engenharia de software"
+      }
+    },
+    "how_it_works": {
+      "eyebrow": "Como funciona",
+      "title": "Da primeira aula ao progresso visível",
+      "steps": {
+        "01": {
+          "title": "Agende",
+          "body": "Você agenda a aula no horário que funciona para você."
+        },
+        "02": {
+          "title": "Aula ao vivo 1:1",
+          "body": "Aula particular ao vivo com um professor especializado, no Zoom."
+        },
+        "03": {
+          "title": "Feedback estruturado",
+          "body": "Receba feedback claro, personalizado e acionável."
+        },
+        "04": {
+          "title": "Próximo ciclo",
+          "body": "Aplique, evolua e avance para o próximo nível."
+        }
+      }
     },
     "professor": {
-      "badge": "Professor Nativo",
+      "badge": "Professor nativo",
       "title": "Conheça o Pedro",
-      "subtitle": "Professor nativo de português brasileiro com metodologia própria",
-      "bio": "Sou Pedro Corgnati, professor nativo de português brasileiro com anos de experiência ensinando alunos internacionais de todos os níveis. Desenvolvi o Corgly Method para garantir evolução mensurável em cada ciclo de aulas.",
-      "image_alt": "Pedro Corgnati, professor de português brasileiro, sorrindo em ambiente de home office",
-      "credentials": {
-        "international": "Experiência com alunos de 20+ países",
-        "method": "Criador do Corgly Method",
-        "live": "Disponível para aulas 1:1 ao vivo",
-        "feedback": "Feedback estruturado após cada aula"
+      "bio": "Professor nativo de português brasileiro com paixão por ajudar estudantes internacionais a falarem com confiança e naturalidade. Minhas aulas são personalizadas, práticas e focadas na comunicação real do dia a dia.",
+      "positioning": "Você estuda comigo.",
+      "image_alt": "Pedro, professor nativo de português brasileiro",
+      "credentials_aria": "Credenciais do professor",
+      "metrics": {
+        "years": {
+          "value": "8 anos",
+          "label": "de experiência ensinando PB"
+        },
+        "countries": {
+          "value": "20+ países",
+          "label": "de alunos de todo o mundo que já aprenderam comigo."
+        },
+        "one_to_one": {
+          "value": "1:1 sempre",
+          "label": "aulas individuais 100% personalizadas"
+        }
+      },
+      "checks": {
+        "adults": "Experiência sólida no ensino de adultos e profissionais internacionais",
+        "fluency": "Especializado em conversação, pronúncia e fluência natural",
+        "certified": "Professor de português, pós-graduado em metodologia de ensino"
       }
     },
     "method": {
-      "badge": "Metodologia",
-      "title": "O Corgly Method",
-      "subtitle": "Uma metodologia desenvolvida para garantir evolução real e mensurável no português brasileiro.",
+      "title": "O método Corgly, sem jargão",
+      "subtitle": "Quatro combinados simples para cada aula particular ao vivo avançar de verdade.",
       "pillars": {
         "commitment": {
-          "title": "Commitment",
-          "description": "Compromisso com metas claras e responsabilidade mútua entre aluno e professor."
+          "title": "Compromisso",
+          "description": "Assumimos o compromisso e entregamos."
         },
-        "time_boxed": {
-          "title": "Time-Boxed",
-          "description": "Ciclos de aprendizado com tempo definido para foco e progresso consistente."
+        "closed_cycle": {
+          "title": "Ciclo fechado",
+          "description": "Começamos juntos, entregamos juntos."
         },
-        "cycle_based": {
-          "title": "Cycle-Based",
-          "description": "Estrutura de ciclos que integra prática, feedback e consolidação do aprendizado."
+        "continuous_context": {
+          "title": "Contexto contínuo",
+          "description": "Entendemos o todo para acertar no que importa."
         },
-        "shared_context": {
-          "title": "Shared Context",
-          "description": "Contexto compartilhado entre aulas para continuidade e evolução real."
-        },
-        "feedback_loop": {
-          "title": "Feedback Loop",
-          "description": "Feedback constante e estruturado para correção e melhoria contínua."
+        "real_feedback": {
+          "title": "Feedback de verdade",
+          "description": "Falamos com clareza e ajudamos de verdade."
         }
       }
     },
     "pricing": {
-      "badge": "Planos",
-      "title": "Invista no seu português",
-      "subtitle": "Escolha o plano que melhor se adapta à sua rotina",
-      "discount_banner": "★ Sua primeira aula tem 50% de desconto — apenas $12.50!",
-      "most_popular": "MAIS POPULAR",
+      "title": "Escolha o ritmo",
+      "subtitle": "Três formas de estudar. Preços públicos em dólar.",
+      "discount_banner": "Primeira aula com 50% OFF — US$ 12,50 (de US$ 25)",
+      "most_chosen": "Mais escolhido",
+      "best_cost": "melhor custo por aula",
       "per_lesson_suffix": "/aula",
+      "per_lesson": "por aula",
+      "per_month": "por mês · {count} aulas inclusas",
+      "monthly_options_aria": "Opções do plano mensal",
+      "monthly_option": "{count} aulas",
+      "first_lesson_label": "Primeira aula",
+      "following_lessons_label": "Aulas seguintes",
+      "equivalent_to": "equivalente a",
       "lesson_suffix": "aula",
       "lessons_suffix": "aulas",
+      "footnote": "Créditos valem 6 meses · cancele a mensal no fim do ciclo",
+      "footnote_credits": "Créditos valem 6 meses",
+      "footnote_cancel": "cancele a mensal no fim do ciclo",
       "packages": {
         "single": {
           "name": "Avulsa",
-          "cta": "Começar agora",
+          "cta": "Começar pela primeira aula",
           "features": [
-            "1 aula de 55 min",
-            "Feedback estruturado",
-            "Sala virtual com doc colaborativo",
-            "Suporte por email"
-          ]
-        },
-        "pack5": {
-          "name": "Pack 5",
-          "cta": "Comprar Pack 5",
-          "features": [
-            "5 aulas de 55 min",
-            "Feedback estruturado",
-            "Sala virtual com doc colaborativo",
-            "Progresso e gráficos",
-            "Suporte prioritário"
+            "Sem compromisso",
+            "Créditos valem 6 meses"
           ]
         },
         "pack10": {
           "name": "Pack 10",
-          "cta": "Comprar Pack 10",
+          "cta": "Escolher Pack 10",
           "features": [
-            "10 aulas de 55 min",
-            "Feedback estruturado",
-            "Sala virtual com doc colaborativo",
-            "Progresso e gráficos",
-            "Histórico completo",
-            "Suporte prioritário",
-            "Acesso ao conteúdo P1"
+            "10 aulas inclusas",
+            "Créditos valem 6 meses"
           ]
         },
         "monthly": {
           "name": "Mensal",
-          "cta": "Assinar Mensal",
+          "cta": "Escolher Mensal",
           "features": [
-            "8 aulas por mês",
-            "Feedback estruturado",
-            "Sala virtual com doc colaborativo",
-            "Progresso e gráficos",
-            "Renovação automática",
-            "Suporte prioritário"
+            "Melhor custo por aula",
+            "Cancele a mensal no fim do ciclo"
           ]
         }
       }
     },
-    "content_preview": {
-      "badge": "Conteúdo Gratuito",
-      "title": "Em breve: aulas gratuitas",
-      "subtitle": "Estamos preparando conteúdo gratuito de gramática, vocabulário e pronúncia. Cadastre-se para ser notificado quando lançar.",
-      "cta": "Ver todo o conteúdo"
-    },
     "testimonials": {
       "title": "O que dizem os alunos",
-      "subtitle": "Resultados reais de alunos de todo o mundo",
-      "items": {
-        "maria": {
-          "name": "Maria Chen",
-          "country": "Estados Unidos",
-          "text": "Em 3 meses com o Pedro, consegui me comunicar com a família do meu marido brasileiro pela primeira vez. O Corgly Method é incrível!"
-        },
-        "giulia": {
-          "name": "Giulia Rossi",
-          "country": "Itália",
-          "text": "As aulas 1:1 fizeram toda a diferença. O feedback estruturado após cada sessão me ajuda a focar no que realmente precisa melhorar."
-        },
-        "james": {
-          "name": "James O'Brien",
-          "country": "Irlanda",
-          "text": "Tentei vários apps de idiomas antes e nenhum funcionou como as aulas ao vivo com Pedro. Recomendo sem hesitar."
-        }
-      }
+      "subtitle": "Resultados reais, sem carrossel",
+      "band": "4.8 / 5 · 15 avaliações · Clareza 5.0 · Confiabilidade 4.8 · Progresso 4.7",
+      "show_translation": "Mostrar tradução",
+      "show_original": "Mostrar original",
+      "all_15": "Ver as 15 avaliações"
     },
     "faq": {
-      "title": "Perguntas Frequentes",
+      "title": "FAQ",
       "items": {
-        "how_it_works": {
-          "q": "Como funcionam as aulas?",
-          "a": "As aulas são 1:1 ao vivo por videoconferência, com duração de 50 minutos. Você agenda no horário que preferir e recebe o link de acesso por email."
-        },
         "duration": {
-          "q": "Qual a duração da aula?",
-          "a": "50 minutos em hora cheia."
+          "q": "Quanto tempo dura cada aula ao vivo?",
+          "a": "Cada aula ao vivo tem duração consistente de 50 minutos, para manter o foco, o ritmo e o aprendizado fluindo de forma produtiva."
         },
         "cancel": {
-          "q": "Posso cancelar?",
-          "a": "Sim, com até 24 horas de antecedência sem perder o crédito. Cancelamentos com menos de 24h resultam na dedução do crédito."
+          "q": "Posso cancelar ou remarcar?",
+          "a": "Sim, até 24h antes. Depois disso o crédito é usado."
+        },
+        "credits": {
+          "q": "Os créditos do pack expiram?",
+          "a": "Sim, 6 meses após a compra. Os da mensal seguem o ciclo de cobrança."
+        },
+        "pack_vs_monthly": {
+          "q": "Qual a diferença entre Pack 10 e Mensal?",
+          "a": "Pack 10 são 10 créditos para usar quando quiser (valem 6 meses). Mensal: 10 aulas a US$ 17 ou 20 aulas a US$ 15 por aula, cobrado a cada ciclo. Cancele no fim do ciclo."
+        },
+        "beginner": {
+          "q": "Preciso já saber português?",
+          "a": "Não. Começamos do zero. As aulas podem ser em inglês, espanhol ou italiano até o português assumir."
+        },
+        "intensive": {
+          "q": "Tenho viagem, mudança ou entrevista logo. Dá para ir mais rápido?",
+          "a": "Sim. Plano intensivo: conversação, vocabulário prioritário, erros frequentes, metas semanais."
+        },
+        "business": {
+          "q": "Você ensina português para trabalho?",
+          "a": "Sim. Reuniões, e-mails, apresentações, entrevistas, negociação e vocabulário da área. Formação em administração e software."
+        },
+        "brazil_vs_pt": {
+          "q": "Português do Brasil ou de Portugal?",
+          "a": "Só o do Brasil. O português que os brasileiros falam de verdade."
+        },
+        "first_lesson": {
+          "q": "Como funciona o preço da primeira aula?",
+          "a": "US$ 12,50 uma vez por aluno novo (50% de US$ 25). Nessa aula mapeamos nível, objetivos e travas e montamos um plano simples."
         },
         "timezone": {
           "q": "Como funciona o fuso horário?",
-          "a": "Você pode agendar em qualquer fuso horário. O sistema converte automaticamente para o seu horário local."
+          "a": "Você agenda no seu horário local. O calendário converte."
         },
-        "credits_expire": {
-          "q": "Os créditos expiram?",
-          "a": "Sim, créditos expiram 6 meses após a data de compra."
+        "platform": {
+          "q": "Onde a aula acontece?",
+          "a": "Ao vivo no Zoom. O link chega por e-mail."
         },
-        "first_lesson": {
-          "q": "Como funciona o desconto da primeira aula?",
-          "a": "$12.50 (50% OFF) — válido uma vez por conta para novos alunos."
+        "payment": {
+          "q": "Como eu pago?",
+          "a": "Em dólar, cartão via Stripe."
         }
       }
     },
     "cta": {
-      "title": "Pronto para aprender português de verdade?",
-      "subtitle": "Primeira aula com 50% de desconto. Sem compromisso de longo prazo.",
-      "button": "Criar Conta Agora",
-      "button_secondary": "Ver Planos"
-    },
-    "footer": {
-      "copyright": "© 2026 Corgly. Todos os direitos reservados.",
-      "links": {
-        "terms": "Termos de Uso",
-        "privacy": "Privacidade",
-        "contact": "Contato"
-      }
+      "title": "Pronto para a primeira conversa de verdade?",
+      "subtitle": "Aula particular ao vivo no Zoom. Primeira aula US$ 12,50.",
+      "button": "Quero minha aula por {price}",
+      "button_secondary": "Ver planos"
     }
   },
   "content": {
@@ -467,12 +516,17 @@
       "pack10Desc": "10 créditos",
       "pack10Badge": "Melhor custo-benefício",
       "monthlyTitle": "Mensal",
-      "monthlyDesc": "8 créditos/mês",
+      "monthlyDesc": "10 ou 20 créditos/mês",
       "buyBtn": "Comprar",
       "subscribing": "Assinando...",
       "buying": "Comprando...",
       "perLesson": "/aula",
-      "perMonth": "/mês"
+      "perMonth": "/mês",
+      "subscribeBtn": "Assinar mensal",
+      "checkoutError": "Não foi possível iniciar o pagamento. Tente novamente.",
+      "redirecting": "Redirecionando para o pagamento seguro...",
+      "firstPurchaseNote": "Desconto de primeira aula aplicado automaticamente no pagamento.",
+      "selectedPlan": "Plano escolhido na página inicial"
     },
     "discount": {
       "title": "Primeira compra",
@@ -510,7 +564,67 @@
       "updateMsg": "Alterar frequência para {count}x por semana?",
       "updateConfirm": "Confirmar",
       "empty": "Sem assinatura ativa",
-      "emptyDesc": "Assine para ter créditos renovados automaticamente todo mês."
+      "emptyDesc": "Assine para ter créditos renovados automaticamente todo mês.",
+      "lessonsPerMonth": "{count} aulas por mês",
+      "perWeek": "{count}x por semana",
+      "perMonth": "/mês",
+      "planLabel": "Plano",
+      "periodLabel": "Período atual",
+      "creditsLabel": "Créditos mensais",
+      "creditsPerMonth": "{count} créditos por mês",
+      "priceNote": "Valor de referência em dólar. A cobrança segue a moeda registrada na assinatura.",
+      "trial": "Período de teste",
+      "pastDue": "Pagamento pendente",
+      "paused": "Pausada",
+      "changePlan": "Alterar plano",
+      "emptyAction": "Ver planos",
+      "cancelKeep": "Manter assinatura",
+      "cancelMsgDated": "Sua assinatura será cancelada ao final do período atual ({date}). Os créditos já liberados continuam válidos até a data de expiração.",
+      "cancelNotice": "Sua assinatura será encerrada em {date}.",
+      "loadError": "Não foi possível carregar sua assinatura. Tente novamente.",
+      "cancelSuccess": "Assinatura cancelada. Ela permanece ativa até o fim do período atual.",
+      "cancelError": "Não foi possível cancelar a assinatura. Tente novamente.",
+      "updateSuccess": "Plano alterado com sucesso.",
+      "updateError": "Não foi possível alterar o plano. Tente novamente.",
+      "axisError": "Escolha um plano mensal OU uma frequência semanal, nunca os dois.",
+      "pageTitle": "Assinatura",
+      "pageSubtitle": "Veja seu plano atual e gerencie pagamento e dados de cobrança no portal seguro da Stripe.",
+      "planSectionTitle": "Seu plano",
+      "portalTitle": "Portal seguro da Stripe",
+      "portalDesc": "Abra uma sessão autenticada para atualizar o método de pagamento, ver os dados da assinatura ou resolver cobranças pendentes. Ao finalizar, você volta para esta página.",
+      "portalCta": "Abrir portal",
+      "portalOpening": "Abrindo portal...",
+      "portalRedirecting": "Redirecionando para o portal da Stripe.",
+      "portalError": "Não foi possível abrir o portal de cobrança. Tente novamente.",
+      "portalConnectionError": "Erro de conexão ao abrir o portal de cobrança. Tente novamente.",
+      "pastDueNotice": "Se sua assinatura estiver com pagamento pendente, use o portal para atualizar o método de pagamento. O retorno para o aplicativo é restrito ao domínio configurado da Corgly.",
+      "supportTitle": "Suporte financeiro",
+      "supportCta": "Falar com suporte",
+      "changeBack": "Voltar para a assinatura",
+      "changeSubtitle": "Simule a cobrança proporcional, os impostos estimados e a data efetiva antes de confirmar.",
+      "changeChooseTitle": "Escolha o novo plano",
+      "changeCurrentPlan": "Plano atual: {plan}.",
+      "changeMonthlyGroup": "Planos mensais",
+      "changeLegacyGroup": "Frequência semanal",
+      "changeLegacyHint": "Disponível apenas para assinaturas contratadas por frequência semanal.",
+      "changeCurrentBadge": "Atual",
+      "changeEstimated": "por mês (estimado)",
+      "changePreviewCta": "Simular mudança",
+      "changePreviewLoading": "Simulando...",
+      "changeConfirmCta": "Confirmar mudança",
+      "changeConfirmLoading": "Confirmando...",
+      "changeSelectedIsCurrent": "Este já é o seu plano atual. Escolha outro para simular a mudança.",
+      "changePreviewTitle": "Resumo da simulação",
+      "changePreviewHint": "Escolha um plano e clique em Simular mudança para ver os valores antes de confirmar.",
+      "changeSummaryLabel": "Mudança",
+      "changeSummaryValue": "{from} para {to}",
+      "changeNextMonthly": "Novo valor mensal",
+      "changeProration": "Ajuste proporcional",
+      "changeTax": "Impostos estimados",
+      "changeDueNow": "Total a pagar agora",
+      "changeEffective": "Efetiva em {effectiveAt}. O período atual termina em {periodEnd}.",
+      "changeCurrentPlanNotice": "A simulação aponta o mesmo plano que você já tem: nada será cobrado.",
+      "changePreviewError": "Não foi possível simular a mudança de plano. Tente novamente."
     },
     "breakdown": {
       "title": "Detalhamento de Créditos",
@@ -561,7 +675,19 @@
         "emptyFiltered": "Nenhum registro para os filtros selecionados."
       }
     },
-    "checkoutSuccess": "Compra realizada com sucesso! Seus créditos foram adicionados."
+    "checkoutSuccess": "Compra realizada com sucesso! Seus créditos foram adicionados.",
+    "currency": {
+      "label": "Moeda",
+      "groupAria": "Escolher a moeda de exibição dos preços",
+      "optionAria": "Exibir preços em {currency}",
+      "loading": "Carregando sua preferência de moeda...",
+      "saving": "Salvando sua preferência de moeda...",
+      "loadError": "Não foi possível carregar sua preferência de moeda salva. Exibindo em {currency}.",
+      "saveError": "Não foi possível salvar sua preferência de moeda. A escolha vale apenas neste navegador.",
+      "retry": "Tentar novamente",
+      "note": "A moeda cobrada é confirmada no pagamento.",
+      "usdcNote": "USDC disponível conforme suporte do gateway."
+    }
   },
   "errors": {
     "notFound": {
@@ -613,5 +739,41 @@
     "resourcesDownload": "Baixar",
     "resourcesDownloadAria": "Baixar recurso {name}",
     "resourcesError": "Nao foi possivel gerar o link de download. Tente novamente."
+  },
+  "skipNav": {
+    "label": "Pular para o conteúdo principal"
+  },
+  "exercises": {
+    "pageTitle": "Exercícios",
+    "pageDescription": "Pratique o conteúdo das aulas no seu ritmo.",
+    "breadcrumbDashboard": "Painel",
+    "emptyTitle": "Nenhum exercício disponível ainda",
+    "emptyDescription": "Assim que uma aula com exercícios for publicada, ela aparece aqui.",
+    "emptyExercise": "Esta aula ainda não tem questões de múltipla escolha.",
+    "lessonBadge": "Aula {number}",
+    "levelBadge": "Nível {level}",
+    "kindMultipleChoice": "Múltipla escolha",
+    "questionCount": "{count, plural, one {# questão} other {# questões}}",
+    "instructions": "Escolha uma alternativa e confira a resposta.",
+    "grammarToggle": "Ponto gramatical da aula",
+    "progress": "Questão {current} de {total}",
+    "progressDone": "{total, plural, one {# questão respondida} other {# questões respondidas}}",
+    "optionLabel": "Alternativa {letter}",
+    "checkButton": "Conferir resposta",
+    "nextButton": "Próxima questão",
+    "finishButton": "Ver resultado",
+    "retryButton": "Refazer o exercício",
+    "noSelectionWarning": "Escolha uma alternativa antes de conferir.",
+    "correctTitle": "Você acertou",
+    "incorrectTitle": "Você errou",
+    "yourAnswer": "Sua resposta: {letter}) {text}",
+    "correctAnswer": "Resposta certa: {letter}) {text}",
+    "summaryTitle": "Exercício concluído",
+    "summaryScore": "Você acertou {correct} de {total}.",
+    "summaryHint": "Refaça quantas vezes quiser: as questões e a ordem das alternativas são sempre as mesmas.",
+    "restarted": "Exercício reiniciado. Você voltou para a primeira questão.",
+    "errorTitle": "Erro ao carregar os exercícios",
+    "errorDescription": "Não foi possível montar o exercício desta aula. Tente novamente.",
+    "errorRetry": "Tentar novamente"
   }
 }

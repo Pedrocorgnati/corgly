@@ -124,7 +124,7 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
 
   if (loadState === 'loading') {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label="Carregando snapshots">
+      <div data-testid="session-notes-recovery-loading" className="space-y-3" aria-busy="true" aria-label="Carregando snapshots">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
@@ -135,6 +135,7 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
   if (loadState === 'error') {
     return (
       <ErrorState
+        data-testid="session-notes-recovery-error"
         title="Erro ao carregar snapshots"
         message={errorMessage ?? 'Ocorreu um erro. Tente novamente.'}
         onRetry={loadSnapshots}
@@ -143,7 +144,7 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div data-testid="session-notes-recovery-panel" className="space-y-6">
       <section aria-labelledby="export-heading">
         <h2 id="export-heading" className="text-sm font-semibold text-foreground mb-2">
           Exportar caderno
@@ -155,6 +156,7 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
           <a
             href={exportHref('markdown')}
             download
+            data-testid="session-notes-recovery-export-markdown-button"
             className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
           >
             <Download className="size-4" />
@@ -163,6 +165,7 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
           <a
             href={exportHref('html')}
             download
+            data-testid="session-notes-recovery-export-html-button"
             className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
           >
             <Download className="size-4" />
@@ -178,15 +181,16 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
 
         {snapshots.length === 0 ? (
           <EmptyState
+            data-testid="session-notes-recovery-empty"
             icon={History}
             title="Nenhum snapshot disponível"
             description="Ainda não há versões salvas deste caderno para restaurar."
           />
         ) : (
-          <ul role="list" className="space-y-3">
+          <ul role="list" data-testid="session-notes-recovery-list" className="space-y-3">
             {snapshots.map((snapshot) => (
               <li key={snapshot.id}>
-                <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <Card data-testid={`session-notes-recovery-snapshot-${snapshot.id}`} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">Versão {snapshot.version}</Badge>
@@ -205,6 +209,7 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
                     size="sm"
                     onClick={() => setSelected(snapshot)}
                     aria-label={`Restaurar versão ${snapshot.version}`}
+                    data-testid={`session-notes-recovery-restore-${snapshot.id}`}
                     className="shrink-0"
                   >
                     <RotateCcw className="size-4" />
@@ -233,6 +238,8 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
         cancelText="Cancelar"
         dangerLevel="high"
         isLoading={isRecovering}
+        confirmTestId="session-notes-recovery-confirm-button"
+        cancelTestId="session-notes-recovery-cancel-button"
       />
     </div>
   );

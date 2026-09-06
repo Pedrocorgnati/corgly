@@ -3,12 +3,11 @@
 import { cookies } from 'next/headers';
 import { getSession } from '@/lib/auth/session';
 
-import { env } from '@/lib/env';
-const API_BASE = env.NEXT_PUBLIC_APP_URL;
+import { internalApiOrigin } from '@/lib/internal-api';
 
 async function apiFetch<T>(path: string): Promise<{ data: T | null; error: string | null }> {
   const cookieStore = await cookies();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${await internalApiOrigin()}${path}`, {
     cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',

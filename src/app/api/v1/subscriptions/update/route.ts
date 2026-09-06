@@ -10,15 +10,37 @@ import {
   financialIdempotencyService,
   resolveRequestIdempotencyKey,
 } from '@/lib/billing/idempotency.service';
+import { MonthlyLessonsEnum } from '@/schemas/checkout.schema';
+import type { SubscriptionPlanUpdate } from '@/services/stripe.service';
 
-const UpdateSubscriptionSchema = z.object({
-  weeklyFrequency: z.number().int().min(1).max(5, {
-    message: 'Frequência deve estar entre 1 e 5 aulas por semana.',
-  }),
-  prorationDate: z.number().int().positive().optional(),
-});
+/**
+ * Dois eixos mutuamente exclusivos, exatamente como no checkout:
+ *  - `monthlyLessons` (canonico): 10 ou 20 aulas por mes;
+ *  - `weeklyFrequency` (legado): 1 a 5 aulas por semana.
+ *
+ * Enviar os dois deixaria o preco ambiguo; nao enviar nenhum nao precifica nada.
+ */
+const UpdateSubscriptionSchema = z
+  .object({
+    monthlyLessons: MonthlyLessonsEnum.optional(),
+    weeklyFrequency: z
+      .number()
+      .int()
+      .min(1)
+      .max(5, { message: 'Frequência deve estar entre 1 e 5 aulas por semana.' })
+      .optional(),
+    prorationDate: z.number().int().positive().optional(),
+  })
+  .refine(
+    (data) => (data.monthlyLessons !== undefined) !== (data.weeklyFrequency !== undefined),
+    {
+      message:
+        'Informe exatamente um eixo: monthlyLessons (10 ou 20 aulas por mes) ou weeklyFrequency (1 a 5 aulas por semana).',
+      path: ['monthlyLessons'],
+    },
+  );
 
-/** POST /api/v1/subscriptions/update — atualizar frequência semanal da assinatura */
+/** POST /api/v1/subscriptions/update — trocar o plano da assinatura ativa */
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
   if (authResult instanceof NextResponse) return authResult;
@@ -52,6 +74,13 @@ export async function POST(request: NextRequest) {
 
     const clientKey = resolveRequestIdempotencyKey(request.headers);
 
+    // `plan` no formato aceito por stripeService.updateSubscription: numero cru
+    // no eixo legado (assinatura de contrato antigo), objeto no eixo canonico.
+    const plan: number | SubscriptionPlanUpdate =
+      parsed.data.monthlyLessons !== undefined
+        ? { monthlyLessons: parsed.data.monthlyLessons }
+        : (parsed.data.weeklyFrequency as number);
+
     const { result: updated, idempotentReplay } = await financialIdempotencyService.run(
       'subscription_update',
       userId,
@@ -61,6 +90,7 @@ export async function POST(request: NextRequest) {
         subscriptionId: subscription.id,
         stripeSubscriptionId: subscription.stripeSubscriptionId,
         weeklyFrequency: parsed.data.weeklyFrequency,
+        monthlyLessons: parsed.data.monthlyLessons,
         prorationDate: parsed.data.prorationDate,
       },
       async (idempotencyKey) => {
@@ -71,14 +101,14 @@ export async function POST(request: NextRequest) {
         if (updateOptions) {
           await stripeService.updateSubscription(
             subscription.stripeSubscriptionId,
-            parsed.data.weeklyFrequency,
+            plan,
             idempotencyKey,
             updateOptions,
           );
         } else {
           await stripeService.updateSubscription(
             subscription.stripeSubscriptionId,
-            parsed.data.weeklyFrequency,
+            plan,
             idempotencyKey,
           );
         }
@@ -92,8 +122,8 @@ export async function POST(request: NextRequest) {
         { subscription: updated, idempotentReplay },
         null,
         idempotentReplay
-          ? 'Frequência atualizada anteriormente para esta Idempotency-Key.'
-          : 'Frequência atualizada com sucesso.',
+          ? 'Plano atualizado anteriormente para esta Idempotency-Key.'
+          : 'Plano atualizado com sucesso.',
       ),
     );
   } catch (err) {

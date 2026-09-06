@@ -105,8 +105,8 @@ export default function OnboardingEquipmentCheckPage() {
   }, [router])
 
   return (
-    <main className="mx-auto w-full max-w-3xl p-4 md:p-8">
-      <header className="mb-6">
+    <main data-testid="page-onboarding-equipment-check" className="mx-auto w-full max-w-3xl p-4 md:p-8">
+      <header data-testid="onboarding-equipment-check-header" className="mb-6">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Onboarding
         </p>
@@ -120,7 +120,7 @@ export default function OnboardingEquipmentCheckPage() {
       <DeviceTest onReady={setStatus} onResult={handleResult} />
 
       {failedChecks.length > 0 && (
-        <section className="mt-6 space-y-4">
+        <section data-testid="onboarding-equipment-check-guides" className="mt-6 space-y-4">
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
             <p className="font-medium">Encontramos pontos a ajustar antes de seguir:</p>
             <ul className="mt-1 list-disc pl-5">
@@ -130,17 +130,17 @@ export default function OnboardingEquipmentCheckPage() {
             </ul>
           </div>
           {guidesLoading && (
-            <p className="text-sm text-muted-foreground" aria-live="polite">
+            <p data-testid="onboarding-equipment-check-loading" className="text-sm text-muted-foreground" aria-live="polite">
               Carregando guias de correção...
             </p>
           )}
           {guidesError && (
-            <div className="rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            <div data-testid="onboarding-equipment-check-error" className="rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               {guidesError}
             </div>
           )}
           {guides.map((g) => (
-            <article key={g.errorType} className="rounded-lg border bg-card p-4">
+            <article key={g.errorType} data-testid={`onboarding-equipment-check-guide-${g.errorType}`} className="rounded-lg border bg-card p-4">
               <h3 className="font-semibold">{g.title}</h3>
               <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
                 {g.steps.map((step, i) => (
@@ -153,7 +153,7 @@ export default function OnboardingEquipmentCheckPage() {
       )}
 
       {status === 'warning' && (
-        <label className="mt-6 flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+        <label data-testid="onboarding-equipment-check-warning-confirm" className="mt-6 flex items-start gap-2 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
           <input
             type="checkbox"
             checked={confirmedWarning}
@@ -179,6 +179,7 @@ export default function OnboardingEquipmentCheckPage() {
         </p>
         <button
           type="button"
+          data-testid="onboarding-equipment-check-continue-button"
           onClick={handleContinue}
           disabled={!canContinue}
           className="rounded bg-primary px-5 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"

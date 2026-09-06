@@ -12,7 +12,7 @@ export type RouteHandler<Ctx = unknown> = (
 /**
  * Higher-order wrapper para route handlers do App Router.
  *
- * - Extrai correlationId do header `x-request-id` (setado pelo middleware).
+ * - Extrai correlationId do header `x-request-id` (setado pelo proxy, src/proxy.ts).
  * - Executa o handler dentro de `runWithContext({correlationId, route})` para
  *   que `logger` resolva o contexto via AsyncLocalStorage sem prop drilling.
  * - Loga inicio, sucesso (com latencia e status) e erros com stack.

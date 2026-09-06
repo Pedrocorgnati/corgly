@@ -65,10 +65,10 @@ export function CalendarSchedule({ creditBalance }: CalendarScheduleProps) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center" role="alert">
+      <div data-testid="schedule-error" className="flex flex-col items-center justify-center py-12 text-center" role="alert">
         <p className="text-destructive font-medium mb-2">Erro ao carregar horários</p>
         <p className="text-sm text-muted-foreground mb-4">{error}</p>
-        <Button onClick={refresh} variant="outline">
+        <Button data-testid="schedule-retry-button" onClick={refresh} variant="outline">
           Tentar novamente
         </Button>
       </div>
@@ -79,7 +79,7 @@ export function CalendarSchedule({ creditBalance }: CalendarScheduleProps) {
     <>
       {!hasCredits && <InsufficientCreditsGate balance={creditBalance} />}
 
-      <div className="flex flex-col gap-6 lg:flex-row">
+      <div data-testid="schedule-calendar-section" className="flex flex-col gap-6 lg:flex-row">
         <CalendarView
           currentMonth={currentMonth}
           currentYear={currentYear}
@@ -102,7 +102,7 @@ export function CalendarSchedule({ creditBalance }: CalendarScheduleProps) {
           />
 
           {selectedSlot && hasCredits && (
-            <Button onClick={handleOpenModal} className="w-full h-11">
+            <Button data-testid="schedule-confirm-slot-button" onClick={handleOpenModal} className="w-full h-11">
               Confirmar horário
             </Button>
           )}

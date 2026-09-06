@@ -60,41 +60,54 @@ export function createUser(overrides?: Partial<User>): User {
 }
 
 // ── createSession ────────────────────────────────────────────────────────────
+//
+// Espelha `SessionWithMeta` (src/types/session.types.ts), o unico shape que a
+// API emite via `sessionToMeta`. Datas sao ISO string, nao Date: o shape legado
+// (`scheduledAt`, `durationMinutes`, `student`, `documentId`, `feedbackId`,
+// `rtcState`) nao existe mais.
 
-interface CreateSessionOptions extends Partial<Omit<Session, 'scheduledAt'>> {
-  scheduledAt?: Date | string;
-  status?: Session['status'];
+/** Overrides aceitam Date por conveniencia de teste; a factory normaliza para ISO. */
+export interface CreateSessionOptions
+  extends Partial<Omit<Session, 'startAt' | 'endAt'>> {
+  startAt?: Date | string;
+  endAt?: Date | string;
 }
 
-export function createSession(overrides?: CreateSessionOptions): Session & { endAt: Date } {
-  const now = new Date();
-  const startAt = overrides?.scheduledAt
-    ? new Date(overrides.scheduledAt as string)
-    : addHours(now, 24);
-  const endAt = addMinutes(startAt, 60);
+export function createSession(overrides?: CreateSessionOptions): Session {
+  const { startAt: startOverride, endAt: endOverride, ...rest } = overrides ?? {};
 
+  const now = new Date();
+  const startAt = startOverride ? new Date(startOverride) : addHours(now, 24);
+  const endAt = endOverride ? new Date(endOverride) : addMinutes(startAt, 60);
+
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+    throw new Error('startAt/endAt precisam ser datas validas');
+  }
   if (endAt <= startAt) {
     throw new Error('startAt must be before endAt');
   }
 
   const sessionNow = now.toISOString();
-  const defaults: Session & { endAt: Date } = {
+  const defaults: Session = {
     id: genId(),
     studentId: genId(),
-    student: undefined,
-    scheduledAt: startAt.toISOString(),
-    endAt,
-    durationMinutes: 60,
+    availabilitySlotId: genId(),
+    startAt: startAt.toISOString(),
+    endAt: endAt.toISOString(),
     status: SessionStatus.SCHEDULED,
-    creditBatchId: undefined,
-    documentId: undefined,
-    feedbackId: undefined,
-    rtcState: undefined,
+    creditBatchId: null,
+    isRecurring: false,
+    recurringPatternId: null,
+    cancelledAt: null,
+    cancelledBy: null,
+    completedAt: null,
+    extendedBy: null,
+    reminderSentAt: null,
+    rescheduleRequestSlotId: null,
     createdAt: sessionNow,
     updatedAt: sessionNow,
   };
 
-  const { scheduledAt: _, ...rest } = overrides ?? {};
   return { ...defaults, ...rest };
 }
 

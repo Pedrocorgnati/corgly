@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40">
+  <!-- Green background -->
+  <rect width="60" height="40" fill="#009C3B"/>
+  <!-- Yellow diamond -->
+  <polygon points="30,3 57,20 30,37 3,20" fill="#FFDF00"/>
+  <!-- Blue circle -->
+  <circle cx="30" cy="20" r="10" fill="#002776"/>
+  <!-- White band (simplified arc) -->
+  <path d="M21,17 Q30,23 39,17" stroke="#fff" stroke-width="2" fill="none"/>
+</svg>

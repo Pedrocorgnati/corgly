@@ -9,94 +9,131 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import Link from 'next/link';
+import { Target } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WidgetCard } from '@/components/shared/widget-card';
 import { ROUTES } from '@/lib/constants/routes';
+import type { FeedbackScores } from '@/actions/dashboard';
 
-interface CorglyCircleScores {
-  clarity: number;
-  didactics: number;
-  punctuality: number;
-  engagement: number;
-}
+/**
+ * Dimensoes do Corgly Circle.
+ *
+ * Vocabulario canonico do backend — listening/speaking/writing/vocabulary
+ * (prisma/schema.prisma, src/schemas/feedback.schema.ts,
+ * src/services/feedback.service.ts). As dimensoes antigas
+ * (clarity/didactics/punctuality/engagement) NAO existem em lugar nenhum da
+ * API: o grafico recebia `undefined` em todo raio, colapsava no centro e
+ * sobrava so o rotulo. Rotulos iguais aos de src/components/progress/*.
+ */
+const DIMENSIONS: Array<{ key: keyof FeedbackScores; label: string }> = [
+  { key: 'listening', label: 'Escuta' },
+  { key: 'speaking', label: 'Fala' },
+  { key: 'writing', label: 'Escrita' },
+  { key: 'vocabulary', label: 'Vocabulário' },
+];
 
 interface CorglyCircleProps {
-  scores: CorglyCircleScores | null;
+  scores: FeedbackScores | null;
   isLoading: boolean;
+  /** Span na grade do dashboard. A GRADE manda no span; o card nao decide. */
+  className?: string;
 }
 
-const DIMENSION_LABELS: Record<keyof CorglyCircleScores, string> = {
-  clarity: 'Claridade',
-  didactics: 'Didatica',
-  punctuality: 'Pontualidade',
-  engagement: 'Engajamento',
-};
-
-function mapScoresToData(scores: CorglyCircleScores) {
-  return (Object.keys(DIMENSION_LABELS) as (keyof CorglyCircleScores)[]).map((key) => ({
-    dimension: DIMENSION_LABELS[key],
-    value: scores[key],
-  }));
+function ProgressLink() {
+  return (
+    <Link
+      href={ROUTES.PROGRESS}
+      className="text-brand-500 text-[13.5px] font-semibold hover:underline"
+    >
+      Ver progresso completo &rarr;
+    </Link>
+  );
 }
 
-export function CorglyCircle({ scores, isLoading }: CorglyCircleProps) {
+export function CorglyCircle({ scores, isLoading, className }: CorglyCircleProps) {
   if (isLoading) {
     return (
-      <div className="md:col-span-2 lg:col-span-2 bg-card border border-border rounded-xl p-5 shadow-sm">
-        <p className="text-sm font-medium text-muted-foreground mb-4">Corgly Circle</p>
+      <WidgetCard
+        data-testid="dashboard-corgly-circle"
+        title="Corgly Circle"
+        icon={Target}
+        className={className}
+      >
         <Skeleton className="rounded-full h-[220px] w-full" />
-      </div>
+      </WidgetCard>
     );
   }
 
   if (!scores) {
     return (
-      <div className="md:col-span-2 lg:col-span-2 bg-card border border-border rounded-xl p-5 shadow-sm">
-        <p className="text-sm font-medium text-muted-foreground mb-4">Corgly Circle</p>
-        <div className="flex items-center justify-center h-[220px] border-2 border-dashed border-border rounded-xl">
-          <div className="text-center text-muted-foreground">
-            <p className="text-sm">Complete suas primeiras sessoes para ver seu Corgly Circle</p>
-          </div>
+      <WidgetCard
+        data-testid="dashboard-corgly-circle"
+        title="Corgly Circle"
+        icon={Target}
+        className={className}
+        footer={<ProgressLink />}
+      >
+        <div className="flex items-center justify-center h-[220px] border-2 border-dashed border-brand-200 rounded-lg">
+          <p className="text-[13.5px] text-muted-foreground text-center px-6">
+            Complete suas primeiras sessoes para ver seu Corgly Circle
+          </p>
         </div>
-        <Link href={ROUTES.PROGRESS} className="text-primary text-sm font-medium hover:underline mt-3 block">
-          Ver progresso completo &rarr;
-        </Link>
-      </div>
+      </WidgetCard>
     );
   }
 
-  const data = mapScoresToData(scores);
+  const data = DIMENSIONS.map((dimension) => ({
+    dimension: dimension.label,
+    value: scores[dimension.key],
+  }));
 
   return (
-    <div
-      className="md:col-span-2 lg:col-span-2 bg-card border border-border rounded-xl p-5 shadow-sm"
+    <WidgetCard
+      data-testid="dashboard-corgly-circle"
       aria-label="Grafico de progresso por dimensao"
+      title="Corgly Circle"
+      icon={Target}
+      className={className}
+      footer={<ProgressLink />}
     >
-      <p className="text-sm font-medium text-muted-foreground mb-4">Corgly Circle</p>
       <ResponsiveContainer width="100%" height={220}>
         <RadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
-          <PolarGrid stroke="hsl(var(--border))" />
+          {/* Os tokens de cor sao HEX (src/app/globals.css), nao triplas HSL:
+              `hsl(var(--border))` gera CSS invalido e apaga o traco do eixo.
+              Consumir a variavel direta. */}
+          <PolarGrid stroke="var(--border)" />
           <PolarAngleAxis
             dataKey="dimension"
-            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+            tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 5]}
             tickCount={6}
-            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+            tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
           />
           <Radar
             name="Score"
             dataKey="value"
-            stroke="#4F46E5"
-            fill="#4F46E5"
+            stroke="var(--brand-500)"
+            fill="var(--brand-500)"
             fillOpacity={0.3}
           />
         </RadarChart>
       </ResponsiveContainer>
-      <Link href={ROUTES.PROGRESS} className="text-primary text-sm font-medium hover:underline mt-3 block">
-        Ver progresso completo &rarr;
-      </Link>
-    </div>
+
+      {/* Leitura numerica: o SVG do recharts nao e legivel por leitor de tela e
+          o poligono sozinho nao diz o valor de cada dimensao. */}
+      <ul className="mt-4 grid grid-cols-2 gap-2">
+        {DIMENSIONS.map((dimension) => (
+          <li key={dimension.key} className="text-[12.5px] text-muted-foreground">
+            {dimension.label}:{' '}
+            <span className="font-semibold text-ink">
+              {scores[dimension.key].toFixed(1)}/5
+            </span>
+          </li>
+        ))}
+      </ul>
+    </WidgetCard>
   );
 }

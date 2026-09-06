@@ -45,7 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const user = await apiClient.get<User>(API.AUTH.ME);
+      // Sondagem de sessao: 401 aqui e resposta valida ("ninguem logado"),
+      // nao expiracao. Sem skipAuthRedirect, o AuthProvider (montado no root
+      // layout) jogava todo visitante anonimo de qualquer pagina publica em
+      // /auth/login, e la o proprio login entrava em loop de redirect.
+      const user = await apiClient.get<User>(API.AUTH.ME, { skipAuthRedirect: true });
       setState({ user, isLoading: false });
     } catch {
       setState({ user: null, isLoading: false });

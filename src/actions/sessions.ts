@@ -4,12 +4,11 @@ import { PAGINATION } from '@/lib/constants';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
-import { env } from '@/lib/env';
-const API_BASE = env.NEXT_PUBLIC_APP_URL;
+import { internalApiOrigin } from '@/lib/internal-api';
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<{ data: T | null; error: string | null }> {
   const cookieStore = await cookies();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${await internalApiOrigin()}${path}`, {
     ...init,
     cache: init?.method && init.method !== 'GET' ? undefined : 'no-store',
     headers: {

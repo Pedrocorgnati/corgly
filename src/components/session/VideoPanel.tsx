@@ -27,7 +27,7 @@ export interface VideoPanelProps {
 
 function AudioOnlyOverlay({ name }: { name?: string }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">
+    <div data-testid="session-video-audio-only" className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-700">
         <Volume2 className="h-8 w-8 text-gray-400" aria-hidden="true" />
       </div>
@@ -97,6 +97,7 @@ export function VideoPanel({
           'relative flex aspect-video w-full items-center justify-center rounded-xl bg-gray-900',
           className,
         )}
+        data-testid="session-video-connecting"
         aria-label="Painel de vídeo: conectando"
       >
         <div className="flex flex-col items-center gap-3 text-gray-400">
@@ -117,6 +118,7 @@ export function VideoPanel({
           'relative flex aspect-video w-full items-center justify-center rounded-xl bg-gray-900',
           className,
         )}
+        data-testid="session-video-failed"
         aria-label="Painel de vídeo: falha na conexão"
       >
         <div className="flex flex-col items-center gap-4 text-center">
@@ -129,6 +131,7 @@ export function VideoPanel({
           </div>
           {onRetry && (
             <button
+              data-testid="session-video-retry-button"
               onClick={onRetry}
               className={cn(
                 'flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground',
@@ -154,6 +157,7 @@ export function VideoPanel({
           'relative flex aspect-video w-full items-center justify-center rounded-xl bg-gray-900',
           className,
         )}
+        data-testid="session-video-disconnected"
         aria-label="Painel de vídeo: desconectado"
       >
         <div className="flex flex-col items-center gap-4 text-center">
@@ -164,6 +168,7 @@ export function VideoPanel({
           </div>
           {onRetry && (
             <button
+              data-testid="session-video-reconnect-button"
               onClick={onRetry}
               className={cn(
                 'flex items-center gap-2 rounded-lg bg-muted px-4 py-2 text-sm font-medium text-foreground',
@@ -190,6 +195,7 @@ export function VideoPanel({
         'h-[40vh] md:aspect-video md:h-auto',
         className,
       )}
+      data-testid="session-video-panel"
       aria-label="Painel de vídeo da sessão"
     >
       {/* ── Tile principal: vídeo remoto (80% da área) ────────────────────────── */}
@@ -203,6 +209,7 @@ export function VideoPanel({
               <VideoPlaceholder label="Aguardando vídeo do professor..." />
             )}
             <video
+              data-testid="session-video-remote"
               ref={remoteVideoRef}
               autoPlay
               playsInline
@@ -218,7 +225,7 @@ export function VideoPanel({
       </div>
 
       {/* ── ConnectionIndicator (canto superior direito) ─────────────────────── */}
-      <div className="absolute right-3 top-3 z-10">
+      <div data-testid="session-video-connection-indicator" className="absolute right-3 top-3 z-10">
         <ConnectionIndicator
           connectionState={connectionState}
           rtt={rtt}
@@ -227,7 +234,7 @@ export function VideoPanel({
       </div>
 
       {/* ── Nome do peer remoto (canto inferior esquerdo do tile principal) ────── */}
-      <div className="absolute bottom-3 left-3 z-10">
+      <div data-testid="session-video-remote-name" className="absolute bottom-3 left-3 z-10">
         <div className="flex items-center gap-1.5 rounded-lg bg-black/50 px-2 py-1 backdrop-blur-sm">
           <span className="text-xs font-medium text-white">{remoteName}</span>
         </div>
@@ -244,12 +251,14 @@ export function VideoPanel({
           // Aspect-ratio para self-view
           'aspect-video',
         )}
+        data-testid="session-video-self-view"
         aria-label="Seu vídeo (self-view)"
       >
         {isVideoOff || !localStream ? (
           <VideoPlaceholder label="" />
         ) : (
           <video
+            data-testid="session-video-local"
             ref={localVideoRef}
             autoPlay
             muted // OBRIGATÓRIO: evitar eco

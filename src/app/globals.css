@@ -45,6 +45,19 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  /* Corgly lilac brand scale — mesma paleta da landing */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-amber-accent: var(--amber-accent);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -55,29 +68,53 @@
 }
 
 /* ────────────────────────────────────────────────────────────
-   CORGLY — Indigo Stripe (light) + Slate Indigo (dark)
+   CORGLY — Lilac (light) + Deep Lilac (dark)
+
+   Fonte da verdade da identidade: a landing page (hero/method/
+   pricing/professor). Os hexes abaixo sao exatamente os da
+   landing, promovidos a token para que o app inteiro (dashboard
+   do aluno e do professor) herde a mesma aparencia.
 ──────────────────────────────────────────────────────────── */
 :root {
-  /* Primary — Indigo */
-  --background: #FFFFFF;
-  --foreground: #111827;
-  --card: #F9FAFB;
-  --card-foreground: #111827;
+  /* Escala lilas da marca (landing) */
+  --brand-50: #f4eefb;   /* fundo de secao (method) */
+  --brand-100: #efe7fb;  /* superficie de badge */
+  --brand-200: #d9c8f3;  /* borda suave */
+  --brand-300: #c4b0e8;  /* borda de card / hover */
+  --brand-400: #9b7ed4;  /* lilas claro (topo do hero) */
+  --brand-500: #7c5cbf;  /* lilas principal */
+  --brand-600: #6d4fb0;  /* hover do principal */
+  --brand-700: #5b4a9a;  /* texto sobre branco */
+  /* Tinta (headings da landing) */
+  --ink: #1B2140;
+  --ink-soft: #3b2b63;
+  --ink-muted: #64748B;  /* slate-500 — corpo de texto da landing */
+  --amber-accent: #d97706;
+  /* Sombras da landing */
+  --shadow-brand-sm: 0 8px 24px rgba(90, 50, 140, 0.06);
+  --shadow-brand-md: 0 12px 32px rgba(124, 92, 191, 0.12);
+  --shadow-brand-lg: 0 18px 50px rgba(90, 50, 140, 0.18);
+
+  /* Semantic */
+  --background: #faf7fd;  /* mesmo chao lilas claro das secoes da landing */
+  --foreground: #1B2140;
+  --card: #FFFFFF;        /* cards da landing sao brancos sobre o chao lilas */
+  --card-foreground: #1B2140;
   --popover: #FFFFFF;
-  --popover-foreground: #111827;
-  --primary: #4F46E5;
+  --popover-foreground: #1B2140;
+  --primary: #7c5cbf;
   --primary-foreground: #FFFFFF;
-  --secondary: #6366F1;
+  --secondary: #9b7ed4;
   --secondary-foreground: #FFFFFF;
-  --muted: #F3F4F6;
-  --muted-foreground: #5B6370; /* era #9CA3AF (2.37:1) → agora 5.36:1 ✅ WCAG 1.4.3 */
-  --accent: #C7D2FE;
-  --accent-foreground: #312E81;
+  --muted: #f4eefb;
+  --muted-foreground: #5B6370; /* 5.36:1 sobre branco ✅ WCAG 1.4.3 */
+  --accent: #efe7fb;
+  --accent-foreground: #5b4a9a;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
-  --border: #E5E7EB;
-  --input: #EDEEEE;
-  --ring: #4F46E5;
+  --border: #e7ddf5;
+  --input: #EDEAF3;
+  --ring: #7c5cbf;
   /* Semantic */
   --success: #059669;
   --success-foreground: #FFFFFF;
@@ -85,44 +122,61 @@
   --warning-foreground: #FFFFFF;
   --info: #0284C7;
   --info-foreground: #FFFFFF;
-  /* Charts (indigo scale) */
-  --chart-1: #4F46E5;
-  --chart-2: #6366F1;
-  --chart-3: #818CF8;
-  --chart-4: #A5B4FC;
-  --chart-5: #C7D2FE;
-  --radius: 0.5rem;
+  /* Charts (lilas + ambar, como a landing) */
+  --chart-1: #7c5cbf;
+  --chart-2: #9b7ed4;
+  --chart-3: #c4b0e8;
+  --chart-4: #d97706;
+  --chart-5: #e8a247;
+  --radius: 0.625rem;
   /* Sidebar */
-  --sidebar: #F9FAFB;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #4F46E5;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1B2140;
+  --sidebar-primary: #7c5cbf;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #C7D2FE;
-  --sidebar-accent-foreground: #312E81;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #4F46E5;
+  --sidebar-accent: #efe7fb;
+  --sidebar-accent-foreground: #5b4a9a;
+  --sidebar-border: #e7ddf5;
+  --sidebar-ring: #7c5cbf;
 }
 
 .dark {
-  --background: #0F0F1E;
-  --foreground: #E0E7FF;
-  --card: #1A1A2E;
-  --card-foreground: #E0E7FF;
-  --popover: #1A1A2E;
-  --popover-foreground: #E0E7FF;
-  --primary: #818CF8;
-  --primary-foreground: #0F0F1E;
-  --secondary: #6366F1;
-  --secondary-foreground: #FFFFFF;
-  --muted: #1A1A2E;
-  --muted-foreground: #94A3B8; /* #64748B (3.5:1) → #94A3B8 (~5.1:1) ✅ WCAG AA */
-  --accent: #312E81;
-  --accent-foreground: #C7D2FE;
+  /* Escala lilas invertida: no escuro os tons claros viram a tinta */
+  --brand-50: #241f36;
+  --brand-100: #2c2545;
+  --brand-200: #3a3159;
+  --brand-300: #4b3f73;
+  --brand-400: #9b7ed4;
+  --brand-500: #b79ae8;
+  --brand-600: #c9b2f0;
+  --brand-700: #ded0f7;
+  --ink: #EDE9F8;
+  --ink-soft: #cbbdec;
+  --ink-muted: #A0A0BE;
+  --amber-accent: #FBBF24;
+  --shadow-brand-sm: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-brand-md: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-brand-lg: 0 18px 50px rgba(0, 0, 0, 0.55);
+
+  --background: #14121F;
+  --foreground: #EDE9F8;
+  --card: #1D1930;
+  --card-foreground: #EDE9F8;
+  --popover: #1D1930;
+  --popover-foreground: #EDE9F8;
+  --primary: #b79ae8;
+  --primary-foreground: #14121F;
+  --secondary: #9b7ed4;
+  --secondary-foreground: #14121F;
+  --muted: #241F36;
+  --muted-foreground: #A0A0BE; /* ~5.3:1 sobre #14121F ✅ WCAG AA */
+  --accent: #3A3159;
+  --accent-foreground: #DED0F7;
   --destructive: #FB7185;
   --destructive-foreground: #4C0519;
-  --border: #2D2D5E;
-  --input: #2C2C3F;
-  --ring: #818CF8;
+  --border: #322B4D;
+  --input: #2C2740;
+  --ring: #b79ae8;
   /* Semantic dark */
   --success: #34D399;
   --success-foreground: #064E3B;
@@ -131,19 +185,19 @@
   --info: #38BDF8;
   --info-foreground: #0C4A6E;
   /* Charts */
-  --chart-1: #818CF8;
-  --chart-2: #6366F1;
-  --chart-3: #4F46E5;
-  --chart-4: #A5B4FC;
-  --chart-5: #C7D2FE;
-  --sidebar: #1A1A2E;
-  --sidebar-foreground: #E0E7FF;
-  --sidebar-primary: #818CF8;
-  --sidebar-primary-foreground: #0F0F1E;
-  --sidebar-accent: #312E81;
-  --sidebar-accent-foreground: #C7D2FE;
-  --sidebar-border: #2D2D5E;
-  --sidebar-ring: #818CF8;
+  --chart-1: #b79ae8;
+  --chart-2: #9b7ed4;
+  --chart-3: #7c5cbf;
+  --chart-4: #FBBF24;
+  --chart-5: #e8a247;
+  --sidebar: #1D1930;
+  --sidebar-foreground: #EDE9F8;
+  --sidebar-primary: #b79ae8;
+  --sidebar-primary-foreground: #14121F;
+  --sidebar-accent: #3A3159;
+  --sidebar-accent-foreground: #DED0F7;
+  --sidebar-border: #322B4D;
+  --sidebar-ring: #b79ae8;
 }
 
 @layer base {
@@ -171,6 +225,52 @@
 @layer utilities {
   .bg-brand-gradient {
     background-image: linear-gradient(to bottom right, var(--accent-foreground), var(--primary), var(--secondary));
+  }
+  .bg-hero-lilac {
+    background-image: linear-gradient(180deg, #9b7ed4 0%, #ae90e0 42%, #c2a8ea 100%);
+  }
+  .bg-method-lilac {
+    background-color: #f4eefb;
+  }
+  .bg-cta-lilac {
+    background-image: linear-gradient(90deg, #8b6bd4 0%, #c4a8ee 100%);
+  }
+  .bg-pricing-banner {
+    background-image: linear-gradient(90deg, #e8a247 0%, #d07ad0 48%, #8b5cf6 100%);
+  }
+
+  /* ── Vocabulario visual da landing reaproveitado no app ──
+     Usado pelos dashboards (aluno e professor) para que card,
+     titulo e regua tenham exatamente o mesmo desenho da landing. */
+
+  /* Card branco com sombra lilas suave (method/pricing/professor) */
+  .card-corgly {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-brand-sm);
+  }
+  /* Card em destaque (plano "mais escolhido" da pricing) */
+  .card-corgly-featured {
+    background-color: var(--card);
+    border: 2px solid var(--brand-500);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-brand-md);
+  }
+  /* Regua fina sob o titulo de secao (method/professor) */
+  .rule-corgly {
+    display: block;
+    height: 3px;
+    width: 2.25rem;
+    border-radius: 9999px;
+    background-color: var(--brand-500);
+  }
+  .rule-corgly-amber {
+    background-color: var(--amber-accent);
+  }
+  /* Faixa lilas de cabecalho de pagina — eco do hero da landing */
+  .bg-panel-lilac {
+    background-image: linear-gradient(105deg, #8b6bd4 0%, #a385e0 55%, #c2a8ea 100%);
   }
 }
 

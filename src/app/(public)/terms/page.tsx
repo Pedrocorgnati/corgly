@@ -32,9 +32,9 @@ export default async function TermsPage() {
   const t = await getTranslations('terms');
 
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-terms" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
+        <div data-testid="terms-header" className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">{cmsPost?.title ?? t('title')}</h1>
           {cmsPost?.publishedAt ? (
             <p className="text-sm text-muted-foreground mt-2">
@@ -59,10 +59,10 @@ export default async function TermsPage() {
         )}
 
         <div className="mt-8 pt-6 border-t border-border">
-          <Link href={ROUTES.PRIVACY} className="text-primary text-sm font-medium hover:underline mr-4">
+          <Link href={ROUTES.PRIVACY} data-testid="terms-privacy-link" className="text-primary text-sm font-medium hover:underline mr-4">
             {t('linkPrivacy')}
           </Link>
-          <Link href={ROUTES.HOME} className="text-muted-foreground text-sm hover:underline">
+          <Link href={ROUTES.HOME} data-testid="terms-back-link" className="text-muted-foreground text-sm hover:underline">
             &larr; {t('linkBack')}
           </Link>
         </div>

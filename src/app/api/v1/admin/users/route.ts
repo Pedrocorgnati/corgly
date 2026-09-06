@@ -36,6 +36,12 @@ export async function GET(request: NextRequest) {
     ...(status === 'inactive' ? { deletionRequestedAt: { not: null } } : {}),
   };
 
+  // Espelha o predicado de saldo de CreditService.getBalance (credit.service.ts):
+  // lote vale enquanto nao expirou (expiresAt no futuro OU sem validade) e ainda
+  // tem credito sobrando. `gt` no Prisma NUNCA casa NULL, entao o OR e obrigatorio:
+  // sem ele os lotes sem validade (MONTHLY/REFUND) sumiriam do total do admin.
+  const now = new Date();
+
   try {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -52,10 +58,15 @@ export async function GET(request: NextRequest) {
           deletionRequestedAt: true,
           creditBatches: {
             select: { totalCredits: true, usedCredits: true, expiresAt: true },
-            where:  { expiresAt: { gt: new Date() } },
+            where:  {
+              OR: [
+                { expiresAt: null },
+                { expiresAt: { gt: now } },
+              ],
+            },
           },
           sessions: {
-            select: { status: true },
+            select: { completedAt: true },
             where:  { status: SessionStatus.COMPLETED },
             take:   1,
             orderBy: { completedAt: 'desc' },
@@ -78,10 +89,13 @@ export async function GET(request: NextRequest) {
       createdAt:      u.createdAt,
       lastLoginAt:    u.lastLoginAt,
       isActive:       !u.deletionRequestedAt,
+      // Lote exaurido (usedCredits >= totalCredits) e descartado igual ao servico,
+      // para o saldo do admin nunca divergir do saldo que o aluno ve no dashboard.
       creditBalance:  u.creditBatches.reduce(
-        (s, b) => s + (b.totalCredits - b.usedCredits),
+        (s, b) => (b.usedCredits < b.totalCredits ? s + (b.totalCredits - b.usedCredits) : s),
         0,
       ),
+      lastCompletedSessionAt: u.sessions[0]?.completedAt ?? null,
     }));
 
     return NextResponse.json(apiResponse({ items: mapped, total, page, limit }));

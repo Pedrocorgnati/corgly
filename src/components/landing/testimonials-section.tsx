@@ -1,116 +1,111 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { Card, CardContent } from '@/components/ui/card';
-import { AvatarInitials } from '@/components/ui/avatar-initials';
-import { Button } from '@/components/ui/button';
+import { useMemo, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import { FEATURED_IDS, ROW2_IDS, TESTIMONIALS, type Testimonial } from '@/lib/landing/testimonials';
 
-const TESTIMONIAL_KEYS = ['maria', 'giulia', 'james'] as const;
-const RATINGS: Record<string, number> = { maria: 5, giulia: 5, james: 5 };
+function byId(id: string): Testimonial {
+  const found = TESTIMONIALS.find((item) => item.id === id);
+  if (!found) throw new Error(`Missing testimonial ${id}`);
+  return found;
+}
 
-export function TestimonialsSection() {
-  const t = useTranslations('landing');
-  const [activeIndex, setActiveIndex] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
+function uiLang(locale: string): 'en' | 'pt' | 'es' | 'it' {
+  if (locale.startsWith('pt')) return 'pt';
+  if (locale.startsWith('es')) return 'es';
+  if (locale.startsWith('it')) return 'it';
+  return 'en';
+}
 
-  const scrollToIndex = (index: number) => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const child = container.children[index] as HTMLElement;
-    if (child) {
-      container.scrollTo({ left: child.offsetLeft - container.offsetLeft, behavior: 'smooth' });
-    }
-    setActiveIndex(index);
-  };
-
-  const goPrev = () => scrollToIndex(Math.max(activeIndex - 1, 0));
-  const goNext = () => scrollToIndex(Math.min(activeIndex + 1, TESTIMONIAL_KEYS.length - 1));
+function TestimonialCard({ item, showTranslation }: { item: Testimonial; showTranslation: boolean }) {
+  const locale = useLocale();
+  const lang = uiLang(locale);
+  const text = showTranslation ? item.translations[lang] : item.original;
+  const initial = item.name.trim().charAt(0).toUpperCase();
 
   return (
-    <section className="py-20 bg-background" aria-labelledby="testimonials-heading">
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6">
-        <div className="text-center mb-12">
-          <h2 id="testimonials-heading" className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            {t('testimonials.title')}
+    <article
+      data-testid={`landing-testimonials-card-${item.id}`}
+      className="h-full rounded-[10px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(90,50,140,0.06)]"
+    >
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#efe7fb] text-[#7c5cbf] text-[14px] font-semibold">
+          {initial}
+        </span>
+        <div>
+          <p className="text-[14px] font-semibold text-[#1B2140]">{item.name}</p>
+          <p className="text-[12px] text-slate-500 uppercase tracking-[0.06em]">{item.lang}</p>
+        </div>
+      </div>
+      <p className="mt-4 text-[14.5px] text-slate-700 leading-[1.7]">&ldquo;{text}&rdquo;</p>
+    </article>
+  );
+}
+
+export function TestimonialsSection() {
+  const t = useTranslations('landing.testimonials');
+  const locale = useLocale();
+  const [showTranslation, setShowTranslation] = useState(false);
+  const featured = useMemo(() => FEATURED_IDS.map(byId), []);
+  const row2 = useMemo(() => ROW2_IDS.map(byId), []);
+
+  return (
+    <section
+      data-testid="landing-testimonials"
+      className="py-[4.5rem] md:py-20 bg-white"
+      aria-labelledby="testimonials-heading"
+    >
+      <div className="max-w-[1120px] mx-auto px-5 md:px-6">
+        <div className="text-center mb-10">
+          <h2
+            id="testimonials-heading"
+            className="text-[2rem] md:text-[2.6rem] font-bold tracking-tight text-[#1B2140] leading-[1.14]"
+          >
+            {t('title')}
           </h2>
-          <p className="text-lg text-muted-foreground">
-            {t('testimonials.subtitle')}
-          </p>
+          <span className="mt-3 mx-auto block h-[3px] w-9 rounded-full bg-[#7c5cbf]" />
+          <p className="mt-5 text-[1.02rem] text-slate-600 leading-[1.7]">{t('subtitle')}</p>
+          <p className="mt-2 text-[14px] font-semibold text-[#3b2b63]">{t('band')}</p>
+          <button
+            type="button"
+            data-testid="landing-testimonials-translate-toggle"
+            className="mt-5 text-[13.5px] font-semibold underline underline-offset-4 text-[#7c5cbf] hover:text-[#6d4fb0]"
+            onClick={() => setShowTranslation((v) => !v)}
+          >
+            {showTranslation ? t('show_original') : t('show_translation')}
+          </button>
         </div>
 
-        {/* Empty state */}
-        {TESTIMONIAL_KEYS.length === 0 ? (
-          <p className="text-center text-muted-foreground">Em breve, depoimentos de alunos.</p>
-        ) : (
-          <>
-            {/* Desktop: grid | Mobile: horizontal scroll with snap */}
-            <div
-              ref={scrollRef}
-              className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-x-visible snap-x snap-mandatory scroll-smooth pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0"
-            >
-              {TESTIMONIAL_KEYS.map((key) => {
-                const name = t(`testimonials.items.${key}.name`);
-                const rating = RATINGS[key];
+        <div data-testid="landing-testimonials-featured" className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+          {featured.map((item) => (
+            <TestimonialCard key={item.id} item={item} showTranslation={showTranslation} />
+          ))}
+        </div>
+        <div data-testid="landing-testimonials-row-2" className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {row2.map((item) => (
+            <TestimonialCard key={item.id} item={item} showTranslation={showTranslation} />
+          ))}
+        </div>
 
-                return (
-                  <Card
-                    key={key}
-                    className="border-border min-w-[280px] flex-shrink-0 md:min-w-0 md:flex-shrink snap-center"
-                  >
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: rating }).map((_, i) => (
-                          <Star key={i} className="h-4 w-4 text-warning fill-warning" />
-                        ))}
-                      </div>
-                      <p className="text-sm text-foreground leading-relaxed">
-                        &ldquo;{t(`testimonials.items.${key}.text`)}&rdquo;
-                      </p>
-                      <div className="flex items-center gap-3 pt-2 border-t border-border">
-                        <AvatarInitials name={name} size="sm" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {t(`testimonials.items.${key}.country`)}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {/* Prev/next navigation — visible on all screen sizes */}
-            <div className="flex items-center justify-center gap-4 mt-6">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={goPrev}
-                disabled={activeIndex === 0}
-                aria-label="Depoimento anterior"
-                className="rounded-full"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground" aria-live="polite">
-                {activeIndex + 1} / {TESTIMONIAL_KEYS.length}
-              </span>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                onClick={goNext}
-                disabled={activeIndex === TESTIMONIAL_KEYS.length - 1}
-                aria-label="Próximo depoimento"
-                className="rounded-full"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </>
-        )}
+        <details
+          data-testid="landing-testimonials-details"
+          className="mt-8 rounded-[10px] border border-slate-200 bg-white p-5"
+        >
+          <summary className="cursor-pointer text-[14px] font-semibold text-[#1B2140]">
+            {t('all_15')}
+          </summary>
+          <ul className="mt-5 space-y-4">
+            {TESTIMONIALS.map((item) => (
+              <li key={item.id} className="text-[14px]">
+                <span className="font-semibold text-[#1B2140]">{item.name}</span>
+                <span className="text-slate-500"> · {item.lang.toUpperCase()}</span>
+                <p className="mt-1 text-slate-600 leading-[1.7]">
+                  {showTranslation ? item.translations[uiLang(locale)] : item.original}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
     </section>
   );

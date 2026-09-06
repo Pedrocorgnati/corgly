@@ -15,11 +15,16 @@ import { TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Vocabulario canonico das notas por dimensao. Fonte da verdade:
+ * prisma/schema.prisma (listeningScore/speakingScore/writingScore/vocabularyScore),
+ * src/schemas/feedback.schema.ts e src/services/feedback.service.ts (mapFeedback).
+ */
 interface FeedbackScores {
-  clarity: number;
-  didactics: number;
-  punctuality: number;
-  engagement: number;
+  listening: number;
+  speaking: number;
+  writing: number;
+  vocabulary: number;
 }
 
 interface FeedbackEntry {
@@ -36,11 +41,13 @@ type DimensionKey = keyof FeedbackScores;
 type Period = '5' | '10' | 'all';
 
 const DIMENSIONS: Array<{ key: DimensionKey; label: string; color: string }> = [
-  { key: 'clarity', label: 'Claridade', color: '#4F46E5' },
-  { key: 'didactics', label: 'Didatica', color: '#6366F1' },
-  { key: 'punctuality', label: 'Pontualidade', color: '#059669' },
-  { key: 'engagement', label: 'Engajamento', color: '#D97706' },
+  { key: 'listening',  label: 'Escuta',      color: '#4F46E5' },
+  { key: 'speaking',   label: 'Fala',        color: '#6366F1' },
+  { key: 'writing',    label: 'Escrita',     color: '#059669' },
+  { key: 'vocabulary', label: 'Vocabulário', color: '#D97706' },
 ];
+
+const ALL_DIMENSION_KEYS: DimensionKey[] = DIMENSIONS.map((d) => d.key);
 
 const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
   { value: '5', label: 'Ultimas 5' },
@@ -48,8 +55,17 @@ const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
   { value: 'all', label: 'Todas' },
 ];
 
+/**
+ * Recharts desenha um ponto por valor numerico e abre uma lacuna em `null`.
+ * Nota ausente ou nao-finita vira lacuna — nunca NaN no eixo.
+ */
+function toPoint(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return '—';
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   return `${day}/${month}`;
@@ -57,7 +73,7 @@ function formatDate(dateStr: string): string {
 
 export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
   const [visibleDimensions, setVisibleDimensions] = useState<Set<DimensionKey>>(
-    new Set(['clarity', 'didactics', 'punctuality', 'engagement'])
+    () => new Set(ALL_DIMENSION_KEYS)
   );
   const [period, setPeriod] = useState<Period>('all');
 
@@ -66,10 +82,10 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
     const sliced = feedbacks.slice(-limit);
     return sliced.map((f) => ({
       date: formatDate(f.sessionDate),
-      clarity: f.scores.clarity,
-      didactics: f.scores.didactics,
-      punctuality: f.scores.punctuality,
-      engagement: f.scores.engagement,
+      listening: toPoint(f.scores?.listening),
+      speaking: toPoint(f.scores?.speaking),
+      writing: toPoint(f.scores?.writing),
+      vocabulary: toPoint(f.scores?.vocabulary),
     }));
   }, [feedbacks, period]);
 
@@ -87,7 +103,7 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+      <div data-testid="progress-trend-chart-loading" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <Skeleton className="h-4 w-48 mb-4" />
         <Skeleton className="h-[300px] w-full rounded-xl" />
       </div>
@@ -96,9 +112,10 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
 
   if (!feedbacks.length) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+      <div data-testid="progress-trend-chart-empty-wrapper" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <h2 className="font-semibold text-foreground mb-4">Tendencia por Dimensao</h2>
         <EmptyState
+          data-testid="progress-trend-chart-empty"
           icon={TrendingUp}
           title="Historico insuficiente"
           description="Historico insuficiente para exibir tendencias"
@@ -111,17 +128,19 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
 
   return (
     <div
+      data-testid="progress-trend-chart"
       className="bg-card border border-border rounded-2xl p-6 shadow-sm"
       aria-label="Grafico de tendencia por dimensao"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div data-testid="progress-trend-chart-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h2 className="font-semibold text-foreground">Tendencia por Dimensao</h2>
 
         {/* Period selector */}
-        <div className="flex gap-1 bg-muted rounded-lg p-1">
+        <div data-testid="progress-trend-chart-filter-bar" className="flex gap-1 bg-muted rounded-lg p-1">
           {PERIOD_OPTIONS.map((opt) => (
             <button
               key={opt.value}
+              data-testid={`progress-trend-chart-filter-${opt.value}-button`}
               onClick={() => setPeriod(opt.value)}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
                 period === opt.value
@@ -136,13 +155,15 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
       </div>
 
       {/* Dimension toggles */}
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div data-testid="progress-trend-chart-dimensions" className="flex flex-wrap gap-3 mb-4">
         {DIMENSIONS.map((d) => (
           <label
             key={d.key}
+            data-testid={`progress-trend-chart-dimension-${d.key}`}
             className="flex items-center gap-2 text-sm cursor-pointer select-none"
           >
             <input
+              data-testid={`progress-trend-chart-dimension-${d.key}-checkbox`}
               type="checkbox"
               checked={visibleDimensions.has(d.key)}
               onChange={() => toggleDimension(d.key)}
@@ -174,45 +195,48 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
       </div>
 
       {noneSelected ? (
-        <div className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
+        <div data-testid="progress-trend-chart-none-selected" className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
           Selecione ao menos uma dimensao
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-            />
-            <YAxis
-              domain={[0, 5]}
-              tickCount={6}
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                fontSize: '12px',
-              }}
-            />
-            <Legend />
-            {DIMENSIONS.filter((d) => visibleDimensions.has(d.key)).map((d) => (
-              <Line
-                key={d.key}
-                type="monotone"
-                dataKey={d.key}
-                name={d.label}
-                stroke={d.color}
-                strokeWidth={2}
-                dot={{ fill: d.color, r: 3 }}
-                activeDot={{ r: 5 }}
+        <div data-testid="progress-trend-chart-canvas">
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              <YAxis
+                domain={[0, 5]}
+                tickCount={6}
+                tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              />
+              <Legend />
+              {DIMENSIONS.filter((d) => visibleDimensions.has(d.key)).map((d) => (
+                <Line
+                  key={d.key}
+                  type="monotone"
+                  dataKey={d.key}
+                  name={d.label}
+                  stroke={d.color}
+                  strokeWidth={2}
+                  dot={{ fill: d.color, r: 3 }}
+                  activeDot={{ r: 5 }}
+                  connectNulls={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

@@ -24,6 +24,13 @@ type ApiClientOptions = RequestInit & {
   /** Query string params — serialized as ?key=value&... */
   params?: Record<string, string | number | boolean>;
   signal?: AbortSignal;
+  /**
+   * Suprime o evento global `auth:expired` num 401.
+   * Usar em chamadas de SONDAGEM de sessao (ex.: GET /auth/me no mount do
+   * AuthProvider), onde 401 significa "visitante anonimo" e nao "sessao
+   * expirou". Sem isso, toda pagina publica derruba o visitante no login.
+   */
+  skipAuthRedirect?: boolean;
 };
 
 function buildUrl(url: string, params?: Record<string, string | number | boolean>): string {
@@ -38,7 +45,7 @@ async function request<T>(
   url: string,
   options: ApiClientOptions = {},
 ): Promise<T> {
-  const { params, signal, ...init } = options;
+  const { params, signal, skipAuthRedirect, ...init } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -63,7 +70,7 @@ async function request<T>(
 
     // Emitir evento global para useAuth redirecionar em 401
     if (response.status === 401) {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !skipAuthRedirect) {
         window.dispatchEvent(new CustomEvent('auth:expired'));
       }
       const body = await response.json().catch(() => ({}));

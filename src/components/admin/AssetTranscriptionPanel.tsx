@@ -164,8 +164,8 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
   }
 
   return (
-    <Card className="p-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <Card data-testid="admin-asset-transcription" className="p-4">
+      <div data-testid="admin-asset-transcription-header" className="mb-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-sm font-semibold text-foreground">{assetLabel}</h3>
           {status && (
@@ -183,6 +183,7 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
           )}
         </div>
         <Button
+          data-testid="admin-asset-transcription-refresh-button"
           variant="ghost"
           size="sm"
           onClick={() => void load()}
@@ -194,10 +195,11 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
       </div>
 
       {/* Disparo de transcricao */}
-      <div className="mb-4 flex flex-wrap items-end gap-2">
+      <div data-testid="admin-asset-transcription-dispatch" className="mb-4 flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           Idioma
           <select
+            data-testid="admin-asset-transcription-language-select"
             value={language}
             onChange={(e) => setLanguage(e.target.value as Locale)}
             disabled={isDispatching}
@@ -210,7 +212,7 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
             ))}
           </select>
         </label>
-        <Button onClick={() => void handleDispatch()} disabled={isDispatching} size="sm">
+        <Button data-testid="admin-asset-transcription-dispatch-button" onClick={() => void handleDispatch()} disabled={isDispatching} size="sm">
           {isDispatching ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
@@ -222,32 +224,33 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
 
       {/* Estados: loading / erro / sucesso */}
       {isLoading && !status ? (
-        <div className="space-y-2">
+        <div data-testid="admin-asset-transcription-loading" className="space-y-2">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-2/3" />
         </div>
       ) : error ? (
-        <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center">
+        <div data-testid="admin-asset-transcription-error" role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-center">
           <p className="mb-3 text-sm text-destructive">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
+          <Button data-testid="admin-asset-transcription-error-retry-button" variant="outline" size="sm" onClick={() => void load()}>
             <RefreshCw className="size-4" /> Tentar novamente
           </Button>
         </div>
       ) : status ? (
         <div className="space-y-5">
           {/* Jobs */}
-          <section aria-label="Jobs de transcricao">
+          <section data-testid="admin-asset-transcription-jobs" aria-label="Jobs de transcricao">
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Jobs
             </h4>
             {status.jobs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhum job disparado ainda.</p>
+              <p data-testid="admin-asset-transcription-jobs-empty" className="text-sm text-muted-foreground">Nenhum job disparado ainda.</p>
             ) : (
-              <ul className="space-y-1">
+              <ul data-testid="admin-asset-transcription-jobs-list" className="space-y-1">
                 {status.jobs.map((j) => (
                   <li
                     key={j.id}
+                    data-testid={`admin-asset-transcription-job-${j.id}`}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
                   >
                     <span className="flex items-center gap-2">
@@ -270,17 +273,18 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
           </section>
 
           {/* Transcripts */}
-          <section aria-label="Transcricoes">
+          <section data-testid="admin-asset-transcription-transcripts" aria-label="Transcricoes">
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Transcricoes
             </h4>
             {status.transcripts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma transcricao disponivel.</p>
+              <p data-testid="admin-asset-transcription-transcripts-empty" className="text-sm text-muted-foreground">Nenhuma transcricao disponivel.</p>
             ) : (
-              <ul className="space-y-1">
+              <ul data-testid="admin-asset-transcription-transcripts-list" className="space-y-1">
                 {status.transcripts.map((t) => (
                   <li
                     key={t.id}
+                    data-testid={`admin-asset-transcription-transcript-${t.id}`}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
                   >
                     <span className="flex items-center gap-2">
@@ -304,17 +308,18 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
           </section>
 
           {/* Captions */}
-          <section aria-label="Legendas">
+          <section data-testid="admin-asset-transcription-captions" aria-label="Legendas">
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Legendas
             </h4>
             {status.captions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma legenda gerada ainda.</p>
+              <p data-testid="admin-asset-transcription-captions-empty" className="text-sm text-muted-foreground">Nenhuma legenda gerada ainda.</p>
             ) : (
-              <ul className="space-y-1">
+              <ul data-testid="admin-asset-transcription-captions-list" className="space-y-1">
                 {status.captions.map((c) => (
                   <li
                     key={c.id}
+                    data-testid={`admin-asset-transcription-caption-${c.id}`}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
                   >
                     <span className="flex items-center gap-2">
@@ -327,6 +332,7 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
                     {c.status === 'READY' ? (
                       c.publicUrl ? (
                         <a
+                          data-testid={`admin-asset-transcription-caption-${c.id}-link`}
                           href={c.publicUrl}
                           target="_blank"
                           rel="noreferrer"
@@ -339,6 +345,7 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
                       )
                     ) : (
                       <Button
+                        data-testid={`admin-asset-transcription-caption-${c.id}-publish-button`}
                         variant="outline"
                         size="sm"
                         onClick={() => void handlePublish(c.language)}
@@ -359,7 +366,7 @@ export function AssetTranscriptionPanel({ assetId, assetLabel }: Props) {
           </section>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Sem dados de transcricao para este asset.</p>
+        <p data-testid="admin-asset-transcription-empty" className="text-sm text-muted-foreground">Sem dados de transcricao para este asset.</p>
       )}
     </Card>
   );

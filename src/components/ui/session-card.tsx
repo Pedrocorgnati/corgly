@@ -75,14 +75,14 @@ function SessionCard({
   const showReschedule = onReschedule && session.status === SessionStatus.SCHEDULED
 
   return (
-    <Card className={cn("", className)}>
+    <Card data-testid={`session-card-${session.id}`} className={cn("", className)}>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="size-4 text-muted-foreground" />
             {session.studentName ?? session.adminName ?? "Sessão"}
           </CardTitle>
-          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+          <Badge data-testid={`session-card-${session.id}-status`} variant={statusConfig.variant}>{statusConfig.label}</Badge>
         </div>
       </CardHeader>
 
@@ -110,21 +110,22 @@ function SessionCard({
       </CardContent>
 
       {(showEnter || showCancel || showReschedule) && (
-        <CardFooter className="gap-2">
+        <CardFooter data-testid={`session-card-${session.id}-actions`} className="gap-2">
           {showReschedule && (
-            <Button variant="outline" size="sm" onClick={onReschedule}>
+            <Button data-testid={`session-card-${session.id}-reschedule-button`} variant="outline" size="sm" onClick={onReschedule}>
               <RefreshCwIcon className="size-3.5" />
               Reagendar
             </Button>
           )}
           {showCancel && (
-            <Button variant="destructive" size="sm" onClick={onCancel}>
+            <Button data-testid={`session-card-${session.id}-cancel-button`} variant="destructive" size="sm" onClick={onCancel}>
               <XIcon className="size-3.5" />
               Cancelar
             </Button>
           )}
           {showEnter && (
             <Button
+              data-testid={`session-card-${session.id}-enter-button`}
               size="sm"
               onClick={onEnter}
               disabled={!canEnter}

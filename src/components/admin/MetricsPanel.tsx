@@ -19,21 +19,25 @@ export function MetricsPanel() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <section className="mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-foreground">Metricas do periodo</h2>
+    <section data-testid="admin-metrics-panel" className="mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-[1.15rem] font-bold text-ink tracking-tight">Metricas do periodo</h2>
+          <span className="rule-corgly mt-2" />
+        </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-lg border border-border bg-background p-1">
+          <div data-testid="admin-metrics-period-tabs" className="inline-flex rounded-lg border border-border bg-card p-1">
             {PERIOD_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
+                data-testid={`admin-metrics-period-${opt.value}-button`}
                 type="button"
                 onClick={() => setPeriod(opt.value)}
                 className={cn(
-                  'px-3 py-1 text-xs font-medium rounded-md transition',
+                  'px-3 py-1.5 text-[12.5px] font-semibold rounded-md transition',
                   period === opt.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'bg-brand-500 text-white'
+                    : 'text-muted-foreground hover:text-brand-500',
                 )}
                 aria-pressed={period === opt.value}
               >
@@ -42,10 +46,11 @@ export function MetricsPanel() {
             ))}
           </div>
           <button
+            data-testid="admin-metrics-refresh-button"
             type="button"
             onClick={() => setRefreshKey((k) => k + 1)}
             aria-label="Atualizar todos"
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-[12.5px] font-semibold text-muted-foreground hover:border-brand-300 hover:text-brand-500 transition"
           >
             <RefreshCw className="h-3 w-3" />
             Atualizar
@@ -53,7 +58,7 @@ export function MetricsPanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div data-testid="admin-metrics-cards" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <FinanceiroCard period={period} refreshKey={refreshKey} />
         <EngagementCard period={period} refreshKey={refreshKey} />
         <UserStatsCard period={period} refreshKey={refreshKey} />

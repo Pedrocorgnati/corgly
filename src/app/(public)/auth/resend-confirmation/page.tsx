@@ -46,8 +46,8 @@ export default function ResendConfirmationPage() {
   if (sent) {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-resend-confirmation" className="w-full max-w-[384px]">
+          <div data-testid="auth-resend-confirmation-success" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
             <h2 className="text-base font-semibold text-foreground">Verifique seu email</h2>
             <p className="text-sm text-muted-foreground">
@@ -55,6 +55,7 @@ export default function ResendConfirmationPage() {
               Verifique também sua pasta de spam.
             </p>
             <Link
+              data-testid="auth-resend-confirmation-back-login-link"
               href={ROUTES.LOGIN}
               className="block text-sm text-primary font-medium hover:underline mt-4"
             >
@@ -67,20 +68,21 @@ export default function ResendConfirmationPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
+    <div data-testid="page-auth-resend-confirmation" className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
       <div className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
-          <div className="mb-6">
+          <div data-testid="auth-resend-confirmation-header" className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">Reenviar confirmação</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Informe seu email para receber um novo link de confirmação.
             </p>
           </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <form data-testid="form-resend-confirmation" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <Input
                 id="email"
+                data-testid="form-resend-confirmation-email-input"
                 type="email"
                 placeholder="seu@email.com"
                 autoComplete="email"
@@ -93,12 +95,12 @@ export default function ResendConfirmationPage() {
                 <p id="resend-email-error" className="text-xs text-destructive" role="alert">{errors.email.message}</p>
               )}
             </div>
-            <Button type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
+            <Button type="submit" data-testid="form-resend-confirmation-submit-button" className="w-full min-h-[44px]" disabled={isLoading}>
               {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Enviando...</> : 'Reenviar link de confirmação'}
             </Button>
           </form>
           <p className="text-center text-sm text-muted-foreground mt-4">
-            <Link href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
+            <Link data-testid="auth-resend-confirmation-back-login-link-2" href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
               Voltar para o login
             </Link>
           </p>

@@ -78,9 +78,10 @@ export function NotesEditor({ contentId, isAuthenticated }: NotesEditorProps) {
 
   if (!isAuthenticated) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-center">
+      <div data-testid="content-notes-login-cta" className="rounded-2xl border border-border bg-card p-6 text-center">
         <p className="text-muted-foreground mb-4">{t('notesLoginCta')}</p>
         <Link
+          data-testid="content-notes-register-link"
           href={ROUTES.REGISTER}
           className={buttonVariants({ variant: 'default', size: 'sm' })}
         >
@@ -91,10 +92,10 @@ export function NotesEditor({ contentId, isAuthenticated }: NotesEditorProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div data-testid="content-notes-editor" className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-foreground">{t('notesTitle')}</h3>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div data-testid="content-notes-status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {status === 'saving' && (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -119,6 +120,7 @@ export function NotesEditor({ contentId, isAuthenticated }: NotesEditorProps) {
         </div>
       </div>
       <Textarea
+        data-testid="content-notes-input"
         value={notes}
         onChange={(e) => handleChange(e.target.value)}
         placeholder={t('notesPlaceholder')}

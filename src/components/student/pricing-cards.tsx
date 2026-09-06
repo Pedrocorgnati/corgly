@@ -1,181 +1,437 @@
 'use client';
-import { API } from '@/lib/constants/routes';
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import {
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Layers,
+  Loader2,
+  RefreshCw,
+  Star,
+  TrendingUp,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { API } from '@/lib/constants/routes';
 import { PriceDisplay } from '@/components/billing/PriceDisplay';
+import { CurrencySelector } from '@/components/billing/CurrencySelector';
 import { useUserCurrency } from '@/lib/hooks/use-user-currency';
-import { SUPPORTED_CURRENCIES, type Currency } from '@/lib/currency';
-import { resolvePrice } from '@/lib/pricing/config';
+import type { Currency } from '@/lib/currency';
+import { monthlyPackageType, resolvePrice } from '@/lib/pricing/config';
+import { MONTHLY_OPTIONS, type MonthlyLessons } from '@/lib/constants/landing';
 
-type Pkg = {
-  id: 'SINGLE' | 'PACK_5' | 'PACK_10' | 'MONTHLY';
-  credits: number;
-  nameKey: string;
-  descKey: string;
-  priceLabelKey: 'perLesson' | 'perMonth';
-  featureKeys: readonly string[];
-  popular: boolean;
-  badgeKey: string | null;
-};
+/**
+ * Vitrine do dashboard — espelho da vitrine publica (`landing/pricing-section`).
+ *
+ * TRES planos: SINGLE, PACK_10 e MONTHLY (10 ou 20 aulas/mes). PACK_5 saiu da
+ * vitrine, mas continua suportado no backend (PRICING, creditos e checkout)
+ * para nao quebrar compras antigas.
+ *
+ * CADA preco sai de `resolvePrice` (unica tabela multi-moeda do produto) e e
+ * renderizado por `PriceDisplay`. NAO existe aritmetica de cambio aqui: as
+ * unicas divisoes feitas neste arquivo sao preco-total / numero-de-aulas, que
+ * dividem creditos, nao moeda.
+ */
+export type ShowcasePlanId = 'SINGLE' | 'PACK_10' | 'MONTHLY';
 
-const PACKAGES: readonly Pkg[] = [
-  {
-    id: 'SINGLE',
-    credits: 1,
-    nameKey: 'singleTitle',
-    descKey: 'singleDesc',
-    priceLabelKey: 'perLesson',
-    featureKeys: ['singleFeat1', 'singleFeat2', 'singleFeat3'],
-    popular: false,
-    badgeKey: null,
-  },
-  {
-    id: 'PACK_5',
-    credits: 5,
-    nameKey: 'pack5Title',
-    descKey: 'pack5Desc',
-    priceLabelKey: 'perLesson',
-    featureKeys: ['pack5Feat1', 'pack5Feat2', 'pack5Feat3'],
-    popular: false,
-    badgeKey: 'pack5Badge',
-  },
-  {
-    id: 'PACK_10',
-    credits: 10,
-    nameKey: 'pack10Title',
-    descKey: 'pack10Desc',
-    priceLabelKey: 'perLesson',
-    featureKeys: ['pack10Feat1', 'pack10Feat2', 'pack10Feat3', 'pack10Feat4'],
-    popular: true,
-    badgeKey: 'pack10Badge',
-  },
-  {
-    id: 'MONTHLY',
-    credits: 8,
-    nameKey: 'monthlyTitle',
-    descKey: 'monthlyDesc',
-    priceLabelKey: 'perMonth',
-    featureKeys: ['monthlyFeat1', 'monthlyFeat2', 'monthlyFeat3', 'monthlyFeat4'],
-    popular: false,
-    badgeKey: null,
-  },
-] as const;
+const SHOWCASE_PLAN_IDS: readonly ShowcasePlanId[] = ['SINGLE', 'PACK_10', 'MONTHLY'];
 
-// Assinatura (MONTHLY) e calculada server-side; usar 2x/sem como referencia de display.
-const MONTHLY_REFERENCE_USD_CENTS = Math.ceil(2 * 16 * 4.33 * 100);
-const FX: Record<Currency, number> = { USD: 1, USDC: 1, EUR: 0.92, BRL: 5.0 };
-
-function priceCentsFor(id: Pkg['id'], currency: Currency): number {
-  if (id === 'MONTHLY') return Math.ceil(MONTHLY_REFERENCE_USD_CENTS * FX[currency]);
-  return resolvePrice(id, currency).amountCents;
+/** Type guard usado pela pagina para validar `?plan=` sem inventar plano. */
+export function isShowcasePlanId(value: unknown): value is ShowcasePlanId {
+  return typeof value === 'string' && (SHOWCASE_PLAN_IDS as readonly string[]).includes(value);
 }
 
-export function PricingCards() {
+const FEATURE_ICONS = {
+  SINGLE: [Calendar, Clock],
+  PACK_10: [Layers, Calendar],
+  MONTHLY: [TrendingUp, RefreshCw],
+} as const;
+
+const PACK_10_CREDITS = 10;
+
+/**
+ * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
+ * Em desenvolvimento estoura no primeiro render; em producao devolve string
+ * vazia — a chave crua NUNCA aparece para o usuario final.
+ *
+ * DUPLICADO em `src/components/billing/CurrencySelector.tsx`: extrair para um
+ * modulo compartilhado sairia da lista de arquivos deste work package.
+ */
+function missingMessage(fullKey: string): string {
+  if (process.env.NODE_ENV !== 'production') {
+    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
+  }
+  return '';
+}
+
+/** Preco por aula = total / creditos. Divisao de creditos, nunca de cambio. */
+function perLessonCents(totalCents: number, lessons: number): number {
+  return Math.round(totalCents / lessons);
+}
+
+export interface PricingCardsProps {
+  /** Habilita o preco promocional de primeira aula no plano avulso. */
+  isFirstPurchase?: boolean;
+  /** Plano vindo da landing (`?plan=`). Plano desconhecido chega como null. */
+  initialPlan?: ShowcasePlanId | null;
+  /** Volume mensal vindo da landing (`?lessons=`). Default: 10 aulas. */
+  initialMonthlyLessons?: MonthlyLessons | null;
+}
+
+export function PricingCards({
+  isFirstPurchase = false,
+  initialPlan = null,
+  initialMonthlyLessons = null,
+}: PricingCardsProps) {
   const t = useTranslations('credits.pricing');
+  const tl = useTranslations('landing.pricing');
   const locale = useLocale();
-  const { currency, setCurrency } = useUserCurrency();
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const { currency, isLoading, isSaving, error, setCurrency, reload } = useUserCurrency();
+  const [loadingPlan, setLoadingPlan] = useState<ShowcasePlanId | null>(null);
+  const [monthlyLessons, setMonthlyLessons] = useState<MonthlyLessons>(
+    initialMonthlyLessons ?? MONTHLY_OPTIONS[0].lessons,
+  );
 
-  const handleBuy = async (packageId: string) => {
-    setLoadingId(packageId);
-    try {
-      const isSubscription = packageId === 'MONTHLY';
-      const body = isSubscription
-        ? { isSubscription: true, weeklyFrequency: 2, currency }
-        : { packageType: packageId, isSubscription: false, currency };
+  const text = (key: string, values?: Record<string, string | number>): string =>
+    t.has(key) ? t(key, values) : missingMessage(`credits.pricing.${key}`);
 
-      const json = await apiClient.post<{ data: { url: string } }>(API.CHECKOUT, body);
-      window.location.href = json.data.url;
-    } catch (err) {
-      toast.error(
-        err instanceof ApiError ? err.message : 'Checkout error',
-      );
-      setLoadingId(null);
+  const landing = (key: string, values?: Record<string, string | number>): string =>
+    tl.has(key) ? tl(key, values) : missingMessage(`landing.pricing.${key}`);
+
+  const landingList = (key: string): string[] => {
+    if (!tl.has(key)) {
+      missingMessage(`landing.pricing.${key}`);
+      return [];
     }
+    const raw = tl.raw(key);
+    if (!Array.isArray(raw)) {
+      missingMessage(`landing.pricing.${key}`);
+      return [];
+    }
+    return raw.filter((item): item is string => typeof item === 'string');
   };
+
+  const singleCents = resolvePrice('SINGLE', currency).amountCents;
+  const promoCents = resolvePrice('PROMO', currency).amountCents;
+  const pack10Cents = resolvePrice('PACK_10', currency).amountCents;
+  const monthlyCents = resolvePrice(monthlyPackageType(monthlyLessons), currency).amountCents;
+
+  async function handleBuy(plan: ShowcasePlanId) {
+    setLoadingPlan(plan);
+    try {
+      // MONTHLY usa o eixo canonico `monthlyLessons` (10 ou 20). SINGLE e
+      // PACK_10 seguem no eixo `packageType`. O desconto de primeira aula e
+      // aplicado pelo servidor (PROMO), nao pelo cliente.
+      const body =
+        plan === 'MONTHLY'
+          ? { isSubscription: true, monthlyLessons, currency }
+          : { packageType: plan, isSubscription: false, currency };
+
+      const response = await apiClient.post<{ data: { url?: string } }>(API.CHECKOUT, body);
+      const url = response.data?.url;
+      if (!url) {
+        throw new ApiError('checkout-url-ausente', 502, 'CHECKOUT_URL_MISSING');
+      }
+      toast.loading(text('redirecting'));
+      window.location.href = url;
+    } catch (err) {
+      toast.error(text('checkoutError'), {
+        description: err instanceof ApiError && err.message ? err.message : undefined,
+      });
+      setLoadingPlan(null);
+    }
+  }
+
+  function renderCta(plan: ShowcasePlanId, popular: boolean) {
+    const busy = loadingPlan === plan;
+    return (
+      <Button
+        data-testid={`credits-package-${plan.toLowerCase()}-buy-button`}
+        onClick={() => void handleBuy(plan)}
+        disabled={loadingPlan !== null}
+        variant={popular ? 'default' : 'outline'}
+        className={cn(
+          'mt-6 w-full min-h-[48px]',
+          !popular && 'border-primary text-primary hover:bg-primary/5',
+        )}
+      >
+        {busy ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
+            {plan === 'MONTHLY' ? text('subscribing') : text('buying')}
+          </>
+        ) : plan === 'MONTHLY' ? (
+          text('subscribeBtn')
+        ) : (
+          text('buyBtn')
+        )}
+      </Button>
+    );
+  }
+
+  function renderFeatures(plan: ShowcasePlanId, messageKey: string) {
+    const icons = FEATURE_ICONS[plan];
+    return (
+      <ul className="mt-5 space-y-2.5">
+        {landingList(messageKey).map((feature, index) => {
+          const Icon = icons[index] ?? CheckCircle2;
+          return (
+            <li key={feature} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+              <Icon className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
+              {feature}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  function renderSelectedNote(plan: ShowcasePlanId) {
+    if (initialPlan !== plan) return null;
+    return (
+      <p
+        data-testid={`credits-package-${plan.toLowerCase()}-selected-note`}
+        className="mt-3 text-xs font-medium text-primary"
+      >
+        {text('selectedPlan')}
+      </p>
+    );
+  }
+
+  const cardBase = 'bg-card rounded-2xl px-6 py-7 flex flex-col relative';
 
   return (
     <>
-      <div className="flex justify-end mb-4">
-        <label className="text-sm text-muted-foreground mr-2 self-center" htmlFor="currency-select">
-          {t.has('currencyLabel') ? t('currencyLabel') : 'Currency'}
-        </label>
-        <select
-          id="currency-select"
+      <div className="mb-6 flex justify-end">
+        <CurrencySelector
+          data-testid="credits-currency-select"
           value={currency}
-          onChange={(e) => setCurrency(e.target.value as Currency)}
-          className="bg-card border border-border rounded-md px-3 py-1 text-sm text-foreground"
-        >
-          {SUPPORTED_CURRENCIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+          onChange={(next: Currency) => setCurrency(next)}
+          isLoading={isLoading}
+          isSaving={isSaving}
+          error={error}
+          onRetry={reload}
+          className="items-end text-right"
+        />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {PACKAGES.map((pkg) => (
+
+      <div
+        data-testid="credits-packages"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch"
+      >
+        {/* ---------------------------------------------------------- SINGLE */}
         <div
-          key={pkg.id}
+          data-testid="credits-package-single"
+          data-selected={initialPlan === 'SINGLE' ? 'true' : undefined}
           className={cn(
-            'bg-card border rounded-2xl p-6 flex flex-col relative',
-            pkg.popular
-              ? 'border-2 border-primary shadow-lg shadow-primary/10'
-              : 'border-border shadow-sm',
+            cardBase,
+            'border border-border shadow-sm',
+            initialPlan === 'SINGLE' && 'ring-2 ring-primary/40',
           )}
         >
-          {pkg.popular && (
-            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
-              {t(pkg.badgeKey!)}
-            </Badge>
+          <h3 className="text-lg font-bold text-foreground">{text('singleTitle')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{text('singleDesc')}</p>
+          <span className="mt-3 block h-[3px] w-9 rounded-full bg-primary/60" aria-hidden="true" />
+
+          {isFirstPurchase ? (
+            <>
+              <p className="mt-6 text-xs text-muted-foreground">{landing('first_lesson_label')}</p>
+              <p className="mt-1 flex items-baseline gap-2.5">
+                <PriceDisplay
+                  amountCents={promoCents}
+                  currency={currency}
+                  locale={locale}
+                  className="text-3xl font-bold tracking-tight text-foreground"
+                />
+                <PriceDisplay
+                  amountCents={singleCents}
+                  currency={currency}
+                  locale={locale}
+                  className="text-base text-muted-foreground line-through"
+                />
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{text('firstPurchaseNote')}</p>
+              <p className="mt-4 text-xs text-muted-foreground">
+                {landing('following_lessons_label')}
+              </p>
+            </>
+          ) : (
+            <p className="mt-6 text-xs text-muted-foreground">{landing('per_lesson')}</p>
           )}
 
-          <div className="mb-4">
-            <p className="text-sm text-muted-foreground">{t(pkg.descKey)}</p>
-            <h3 className="text-lg font-bold text-foreground">{t(pkg.nameKey)}</h3>
-          </div>
+          <p className="mt-1 flex items-baseline gap-1">
+            <PriceDisplay
+              amountCents={singleCents}
+              currency={currency}
+              locale={locale}
+              className="text-3xl font-bold tracking-tight text-foreground"
+            />
+            <span className="text-sm font-medium text-muted-foreground">
+              {landing('per_lesson_suffix')}
+            </span>
+          </p>
 
-          <div className="mb-4">
-            <div className="flex items-baseline gap-1">
-              <PriceDisplay
-                amountCents={priceCentsFor(pkg.id, currency)}
-                currency={currency}
-                locale={locale}
-                className="text-3xl font-bold text-foreground"
-              />
-            </div>
-            <p className="text-sm text-muted-foreground">{t(pkg.priceLabelKey)}</p>
-          </div>
-
-          <ul className="space-y-2 mb-6 flex-1">
-            {pkg.featureKeys.map((fKey) => (
-              <li key={fKey} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                {t.has(fKey) ? t(fKey) : fKey}
-              </li>
-            ))}
-          </ul>
-
-          <Button
-            onClick={() => handleBuy(pkg.id)}
-            disabled={loadingId !== null}
-            variant={pkg.popular ? 'default' : 'outline'}
-            className={cn('w-full min-h-[48px]', !pkg.popular && 'border-primary text-primary hover:bg-primary/5')}
-          >
-            {loadingId === pkg.id ? (
-              <><Loader2 className="h-4 w-4 animate-spin mr-2" />{pkg.id === 'MONTHLY' ? t('subscribing') : t('buying')}</>
-            ) : (
-              t('buyBtn')
-            )}
-          </Button>
+          {renderSelectedNote('SINGLE')}
+          {renderCta('SINGLE', false)}
+          {renderFeatures('SINGLE', 'packages.single.features')}
         </div>
-      ))}
+
+        {/* --------------------------------------------------------- PACK_10 */}
+        <div
+          data-testid="credits-package-pack_10"
+          data-selected={initialPlan === 'PACK_10' ? 'true' : undefined}
+          className={cn(
+            cardBase,
+            'border-2 border-primary shadow-lg shadow-primary/10',
+            initialPlan === 'PACK_10' && 'ring-2 ring-primary/40',
+          )}
+        >
+          <Badge
+            data-testid="credits-package-badge"
+            className="absolute -top-3 left-1/2 -translate-x-1/2 h-auto gap-1 px-3 py-1"
+          >
+            <Star className="h-3 w-3 fill-current" aria-hidden="true" />
+            {landing('most_chosen')}
+          </Badge>
+
+          <h3 className="text-lg font-bold text-foreground">{text('pack10Title')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{text('pack10Desc')}</p>
+          <span className="mt-3 block h-[3px] w-9 rounded-full bg-primary" aria-hidden="true" />
+
+          <PriceDisplay
+            amountCents={pack10Cents}
+            currency={currency}
+            locale={locale}
+            className="mt-6 block text-4xl font-bold tracking-tight text-foreground"
+          />
+          <p className="mt-3 text-xs text-muted-foreground">{landing('equivalent_to')}</p>
+          <p className="mt-1 flex items-baseline gap-1">
+            <PriceDisplay
+              amountCents={perLessonCents(pack10Cents, PACK_10_CREDITS)}
+              currency={currency}
+              locale={locale}
+              className="text-3xl font-bold tracking-tight text-primary"
+            />
+            <span className="text-sm font-medium text-primary/80">
+              {landing('per_lesson_suffix')}
+            </span>
+          </p>
+
+          {renderSelectedNote('PACK_10')}
+          {renderCta('PACK_10', true)}
+          {renderFeatures('PACK_10', 'packages.pack10.features')}
+        </div>
+
+        {/* --------------------------------------------------------- MONTHLY */}
+        <div
+          data-testid="credits-package-monthly"
+          data-selected={initialPlan === 'MONTHLY' ? 'true' : undefined}
+          className={cn(
+            cardBase,
+            'border border-border shadow-sm',
+            initialPlan === 'MONTHLY' && 'ring-2 ring-primary/40',
+          )}
+        >
+          <h3 className="text-lg font-bold text-foreground">{text('monthlyTitle')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{text('monthlyDesc')}</p>
+          <span className="mt-3 block h-[3px] w-9 rounded-full bg-primary/60" aria-hidden="true" />
+
+          <div
+            data-testid="credits-monthly-options"
+            role="radiogroup"
+            aria-label={landing('monthly_options_aria')}
+            className="mt-5 grid grid-cols-2 gap-2"
+          >
+            {MONTHLY_OPTIONS.map((option) => {
+              const selected = monthlyLessons === option.lessons;
+              const optionTotalCents = resolvePrice(
+                monthlyPackageType(option.lessons),
+                currency,
+              ).amountCents;
+              return (
+                <button
+                  key={option.lessons}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  data-testid={`credits-monthly-option-${option.lessons}`}
+                  onClick={() => setMonthlyLessons(option.lessons)}
+                  className={cn(
+                    'rounded-xl border px-3 py-2.5 text-left transition-colors',
+                    selected
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-background hover:border-primary/50',
+                  )}
+                >
+                  <span className="block text-xs font-semibold text-foreground">
+                    {landing('monthly_option', { count: option.lessons })}
+                  </span>
+                  <span className="mt-0.5 flex items-baseline gap-0.5">
+                    <PriceDisplay
+                      amountCents={perLessonCents(optionTotalCents, option.lessons)}
+                      currency={currency}
+                      locale={locale}
+                      className="text-xs text-muted-foreground"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {landing('per_lesson_suffix')}
+                    </span>
+                  </span>
+                  {option.lessons === 20 && (
+                    <span className="mt-0.5 block text-[11px] font-medium text-primary">
+                      {landing('best_cost')}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <PriceDisplay
+            amountCents={monthlyCents}
+            currency={currency}
+            locale={locale}
+            className="mt-6 block text-4xl font-bold tracking-tight text-foreground"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            {landing('per_month', { count: monthlyLessons })}
+          </p>
+          <p className="mt-3 flex items-baseline gap-1">
+            <PriceDisplay
+              amountCents={perLessonCents(monthlyCents, monthlyLessons)}
+              currency={currency}
+              locale={locale}
+              className="text-3xl font-bold tracking-tight text-primary"
+            />
+            <span className="text-sm font-medium text-primary/80">
+              {landing('per_lesson_suffix')}
+            </span>
+          </p>
+          {monthlyLessons === 20 && (
+            <p className="mt-1 text-xs font-medium text-primary">{landing('best_cost')}</p>
+          )}
+
+          {renderSelectedNote('MONTHLY')}
+          {renderCta('MONTHLY', false)}
+          {renderFeatures('MONTHLY', 'packages.monthly.features')}
+        </div>
       </div>
+
+      <p
+        data-testid="credits-packages-footnote"
+        className="mt-8 text-center text-xs text-muted-foreground"
+      >
+        {landing('footnote_credits')}
+        <span className="mx-1.5 text-primary" aria-hidden="true">
+          &bull;
+        </span>
+        {landing('footnote_cancel')}
+      </p>
     </>
   );
 }

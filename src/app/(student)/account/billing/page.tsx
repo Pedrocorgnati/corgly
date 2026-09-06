@@ -15,16 +15,17 @@ export default async function BillingPage() {
   const t = await getTranslations('credits.billing');
 
   return (
-    <PageWrapper className="max-w-3xl">
+    <PageWrapper data-testid="page-account-billing" className="max-w-3xl">
       <Link
         href={ROUTES.ACCOUNT}
+        data-testid="account-billing-back-link"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         {t('title')}
       </Link>
 
-      <div className="mb-6">
+      <div data-testid="account-billing-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
         <p className="text-sm text-muted-foreground mt-1">
           {t('subtitle')}

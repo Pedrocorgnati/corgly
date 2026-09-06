@@ -13,8 +13,8 @@ import { z } from 'zod';
 export const MfaVerifySchema = z.object({
   code: z
     .string()
-    .min(6, 'Informe o codigo de 6 digitos ou um codigo de recuperacao')
-    .max(32, 'Codigo invalido')
+    .min(6, 'Informe o código de 6 dígitos ou um código de recuperação')
+    .max(32, 'Código inválido')
     .transform((v) => v.trim()),
 });
 

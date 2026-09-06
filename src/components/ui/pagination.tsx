@@ -14,6 +14,8 @@ interface PaginationProps {
   total?: number
   limit?: number
   className?: string
+  /** Prefixo dos data-testid da paginacao. Default: "pagination". */
+  testId?: string
 }
 
 function getPageNumbers(current: number, total: number): (number | "ellipsis")[] {
@@ -42,6 +44,7 @@ function Pagination({
   total,
   limit,
   className,
+  testId = "pagination",
 }: PaginationProps) {
   if (totalPages <= 1) return null
 
@@ -49,10 +52,12 @@ function Pagination({
 
   return (
     <nav
+      data-testid={testId}
       aria-label="Paginação"
       className={cn("flex items-center justify-center gap-1", className)}
     >
       <Button
+        data-testid={`${testId}-prev-button`}
         variant="outline"
         size="icon-sm"
         onClick={() => onPageChange(page - 1)}
@@ -63,12 +68,12 @@ function Pagination({
       </Button>
 
       {/* Mobile: simplified display */}
-      <span className="text-sm text-muted-foreground sm:hidden px-2">
+      <span data-testid={`${testId}-status`} className="text-sm text-muted-foreground sm:hidden px-2">
         {page} de {totalPages}
       </span>
 
       {/* Desktop: page number buttons */}
-      <div className="hidden sm:flex items-center gap-1">
+      <div data-testid={`${testId}-pages`} className="hidden sm:flex items-center gap-1">
         {pages.map((p, i) =>
           p === "ellipsis" ? (
             <span
@@ -80,6 +85,7 @@ function Pagination({
           ) : (
             <Button
               key={p}
+              data-testid={`${testId}-page-${p}-button`}
               variant={p === page ? "default" : "outline"}
               size="icon-sm"
               onClick={() => onPageChange(p)}
@@ -93,6 +99,7 @@ function Pagination({
       </div>
 
       <Button
+        data-testid={`${testId}-next-button`}
         variant="outline"
         size="icon-sm"
         onClick={() => onPageChange(page + 1)}
@@ -103,7 +110,7 @@ function Pagination({
       </Button>
 
       {showInfo && total != null && limit != null && (
-        <span className="ml-2 text-xs text-muted-foreground hidden sm:inline">
+        <span data-testid={`${testId}-info`} className="ml-2 text-xs text-muted-foreground hidden sm:inline">
           {(page - 1) * limit + 1}–{Math.min(page * limit, total)} de {total}
         </span>
       )}

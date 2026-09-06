@@ -49,14 +49,16 @@ function SubsystemCard({
   name,
   check,
   extra,
+  'data-testid': testId,
 }: {
   icon: typeof Database;
   name: string;
   check: SubsystemCheck;
   extra?: React.ReactNode;
+  'data-testid'?: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+    <div data-testid={testId} className="bg-card border border-border rounded-2xl p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-muted-foreground" />
@@ -80,8 +82,8 @@ export default async function AdminHealthPage() {
   const { subsystems, sessionHealth } = metrics;
 
   return (
-    <PageWrapper>
-      <div className="mb-6 flex items-center gap-3">
+    <PageWrapper data-testid="page-admin-health">
+      <div data-testid="admin-health-header" className="mb-6 flex items-center gap-3">
         <Activity className="h-6 w-6 text-foreground" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">Saúde do sistema</h1>
@@ -92,7 +94,7 @@ export default async function AdminHealthPage() {
       </div>
 
       {/* Banner de status geral */}
-      <div className={`flex items-center gap-3 rounded-2xl border px-5 py-4 mb-6 ${overall.className}`}>
+      <div data-testid="admin-health-overall-status" className={`flex items-center gap-3 rounded-2xl border px-5 py-4 mb-6 ${overall.className}`}>
         {metrics.overall === 'ok' ? (
           <CheckCircle2 className="h-5 w-5" />
         ) : metrics.overall === 'error' ? (
@@ -109,7 +111,7 @@ export default async function AdminHealthPage() {
       </div>
 
       {/* Alertas */}
-      <section className="mb-8">
+      <section data-testid="admin-health-alerts" className="mb-8">
         <h2 className="font-semibold text-foreground mb-3">Alertas críticos</h2>
         {alerts.length === 0 ? (
           <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-3">
@@ -119,7 +121,7 @@ export default async function AdminHealthPage() {
         ) : (
           <ul className="space-y-3">
             {alerts.map((a) => (
-              <li key={a.id} className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${ALERT_STYLE[a.severity]}`}>
+              <li key={a.id} data-testid={`admin-health-alert-${a.id}`} className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${ALERT_STYLE[a.severity]}`}>
                 <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium">
@@ -135,18 +137,19 @@ export default async function AdminHealthPage() {
       </section>
 
       {/* Subsistemas */}
-      <section className="mb-8">
+      <section data-testid="admin-health-subsystems" className="mb-8">
         <h2 className="font-semibold text-foreground mb-3">Subsistemas</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <SubsystemCard icon={Database} name="Banco de dados" check={subsystems.db} />
-          <SubsystemCard icon={CreditCard} name="Pagamentos (Stripe)" check={subsystems.stripe} />
-          <SubsystemCard icon={Mail} name="Email (Resend)" check={subsystems.email} />
-          <SubsystemCard icon={Users2} name="Colaboração (Hocuspocus)" check={subsystems.hocuspocus} />
-          <SubsystemCard icon={Radio} name="WebRTC (TURN)" check={subsystems.turn} />
+          <SubsystemCard icon={Database} name="Banco de dados" check={subsystems.db} data-testid="admin-health-subsystem-db" />
+          <SubsystemCard icon={CreditCard} name="Pagamentos (Stripe)" check={subsystems.stripe} data-testid="admin-health-subsystem-stripe" />
+          <SubsystemCard icon={Mail} name="Email (Resend)" check={subsystems.email} data-testid="admin-health-subsystem-email" />
+          <SubsystemCard icon={Users2} name="Colaboração (Hocuspocus)" check={subsystems.hocuspocus} data-testid="admin-health-subsystem-hocuspocus" />
+          <SubsystemCard icon={Radio} name="WebRTC (TURN)" check={subsystems.turn} data-testid="admin-health-subsystem-turn" />
           <SubsystemCard
             icon={ListChecks}
             name="Fila de jobs"
             check={{ status: subsystems.jobQueue.status, detail: subsystems.jobQueue.detail }}
+            data-testid="admin-health-subsystem-job-queue"
             extra={
               <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
                 <div>
@@ -168,7 +171,7 @@ export default async function AdminHealthPage() {
       </section>
 
       {/* Session health agregado (sem PII) */}
-      <section>
+      <section data-testid="admin-health-session-quality">
         <h2 className="font-semibold text-foreground mb-3">
           Qualidade das sessões (últimas {sessionHealth.windowHours}h)
         </h2>

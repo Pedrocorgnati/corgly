@@ -100,13 +100,13 @@ export function SupportTicketList({
   // explícita + retry, nunca uma tela em branco (Zero Silêncio).
   if (loadError) {
     return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
+      <div data-testid="support-list-error" className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
         <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-destructive" />
         <h3 className="text-base font-semibold text-foreground">
           Não foi possível carregar seus chamados
         </h3>
         <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{loadError}</p>
-        <Button size="sm" variant="outline" className="mt-4" onClick={() => router.refresh()}>
+        <Button data-testid="support-list-retry-button" size="sm" variant="outline" className="mt-4" onClick={() => router.refresh()}>
           Tentar novamente
         </Button>
       </div>
@@ -119,11 +119,12 @@ export function SupportTicketList({
   return (
     <>
       {/* Filtros por status */}
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      <div data-testid="support-status-filters" className="mb-6 flex flex-wrap items-center gap-2">
         <button
           type="button"
           aria-pressed={!currentStatus}
           onClick={() => handleStatusFilter(null)}
+          data-testid="support-status-filter-all"
           className={cn(
             'rounded-full border px-3 py-1.5 text-xs transition-colors',
             !currentStatus
@@ -139,6 +140,7 @@ export function SupportTicketList({
             type="button"
             aria-pressed={currentStatus === filter.value}
             onClick={() => handleStatusFilter(filter.value)}
+            data-testid={`support-status-filter-${filter.value}`}
             className={cn(
               'rounded-full border px-3 py-1.5 text-xs transition-colors',
               currentStatus === filter.value
@@ -154,6 +156,7 @@ export function SupportTicketList({
       {/* Estado vazio */}
       {data.length === 0 ? (
         <EmptyState
+          data-testid="support-list-empty"
           icon={LifeBuoy}
           title={
             currentStatus
@@ -169,7 +172,7 @@ export function SupportTicketList({
           actionHref={currentStatus ? undefined : ROUTES.SUPPORT_NEW}
         />
       ) : (
-        <ul className="space-y-3">
+        <ul data-testid="support-ticket-list" className="space-y-3">
           {data.map((ticket) => {
             const statusCfg = STATUS_CONFIG[ticket.status] ?? {
               label: ticket.status,
@@ -183,6 +186,7 @@ export function SupportTicketList({
             return (
               <li
                 key={ticket.id}
+                data-testid={`support-ticket-${ticket.id}`}
                 className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -231,8 +235,9 @@ export function SupportTicketList({
 
       {/* Paginação */}
       {totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-center gap-3">
+        <div data-testid="support-pagination" className="mt-6 flex items-center justify-center gap-3">
           <Button
+            data-testid="support-pagination-prev-button"
             size="sm"
             variant="outline"
             disabled={currentPage <= 1}
@@ -246,6 +251,7 @@ export function SupportTicketList({
             Página {currentPage} de {totalPages}
           </span>
           <Button
+            data-testid="support-pagination-next-button"
             size="sm"
             variant="outline"
             disabled={currentPage >= totalPages}

@@ -72,7 +72,7 @@ export default async function NotesPage({ params }: Props) {
   }
 
   return (
-    <PageWrapper className="max-w-3xl">
+    <PageWrapper data-testid="page-history-notes-detail" className="max-w-3xl">
       <nav
         aria-label="Breadcrumb"
         className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground"
@@ -86,14 +86,14 @@ export default async function NotesPage({ params }: Props) {
         </span>
       </nav>
 
-      <header className="mb-6">
+      <header data-testid="history-notes-detail-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Caderno da aula</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Anotacoes registradas durante a sessao, em modo somente leitura.
         </p>
       </header>
 
-      <ReadOnlyNotesViewer {...viewer} />
+      <ReadOnlyNotesViewer data-testid="history-notes-detail-content" {...viewer} />
     </PageWrapper>
   );
 }

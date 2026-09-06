@@ -43,7 +43,7 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div className="text-center space-y-3 py-4">
+      <div data-testid="form-forgot-password-success" className="text-center space-y-3 py-4">
         <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
         <h2 className="text-base font-semibold text-foreground">Verifique seu email</h2>
         <p className="text-sm text-muted-foreground">
@@ -55,10 +55,11 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form data-testid="form-forgot-password" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="space-y-1.5">
         <Label htmlFor="email" className="text-sm font-medium">Email</Label>
         <Input
+          data-testid="form-forgot-password-email-input"
           id="email"
           type="email"
           placeholder="seu@email.com"
@@ -72,7 +73,7 @@ export function ForgotPasswordForm() {
           <p id="forgot-email-error" className="text-xs text-destructive" role="alert">{errors.email.message}</p>
         )}
       </div>
-      <Button type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
+      <Button data-testid="form-forgot-password-submit-button" type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
         {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Enviando...</> : 'Enviar link de recuperação'}
       </Button>
     </form>

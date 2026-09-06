@@ -78,6 +78,7 @@ function CookieBanner({ className }: CookieBannerProps) {
   return (
     <>
       <div
+        data-testid="cookie-banner"
         role="dialog"
         aria-label={t("aria")}
         className={cn(
@@ -93,6 +94,7 @@ function CookieBanner({ className }: CookieBannerProps) {
             <p className="text-sm text-muted-foreground">
               {t("description")}{" "}
               <Link
+                data-testid="cookie-banner-privacy-link"
                 href={ROUTES.PRIVACY}
                 className="underline underline-offset-4 hover:text-foreground"
               >
@@ -100,6 +102,7 @@ function CookieBanner({ className }: CookieBannerProps) {
               </Link>
               .{" "}
               <Link
+                data-testid="cookie-banner-preferences-link"
                 href={ROUTES.COOKIE_PREFERENCES}
                 className="underline underline-offset-4 hover:text-foreground"
               >
@@ -109,14 +112,14 @@ function CookieBanner({ className }: CookieBannerProps) {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
-            <Button variant="ghost" size="sm" onClick={handleCustomize}>
+          <div data-testid="cookie-banner-actions" className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
+            <Button data-testid="cookie-banner-customize-button" variant="ghost" size="sm" onClick={handleCustomize}>
               {t("customize")}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleReject}>
+            <Button data-testid="cookie-banner-reject-button" variant="outline" size="sm" onClick={handleReject}>
               {t("reject")}
             </Button>
-            <Button size="sm" onClick={handleAcceptAll}>
+            <Button data-testid="cookie-banner-accept-all-button" size="sm" onClick={handleAcceptAll}>
               {t("accept_all")}
             </Button>
           </div>

@@ -106,32 +106,35 @@ export default async function BlogPostPage({
   };
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-10">
+    <article data-testid="page-blog-post-detail" className="mx-auto max-w-3xl px-4 py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       {preview === '1' && post.content.status !== 'PUBLISHED' && (
-        <div className="mb-6 rounded-lg bg-warning/10 border border-warning text-warning p-3 text-sm">
+        <div data-testid="blog-post-detail-preview-banner" className="mb-6 rounded-lg bg-warning/10 border border-warning text-warning p-3 text-sm">
           Pré-visualização - status: {post.content.status}
         </div>
       )}
 
       {isFallback && (
-        <div className="mb-6 rounded-lg bg-muted border border-border text-muted-foreground p-3 text-sm">
+        <div data-testid="blog-post-detail-fallback-banner" className="mb-6 rounded-lg bg-muted border border-border text-muted-foreground p-3 text-sm">
           Conteúdo indisponível em {locale}; exibindo a versão em {resolvedLocale}.
         </div>
       )}
 
-      <h1 className="text-3xl font-bold text-foreground mb-2">{post.title}</h1>
-      {post.excerpt && <p className="text-muted-foreground mb-6">{post.excerpt}</p>}
-      {post.content.publishedAt && (
-        <p className="text-xs text-muted-foreground mb-6">
-          {new Date(post.content.publishedAt).toLocaleDateString(resolvedLocale)}
-        </p>
-      )}
+      <div data-testid="blog-post-detail-header">
+        <h1 className="text-3xl font-bold text-foreground mb-2">{post.title}</h1>
+        {post.excerpt && <p className="text-muted-foreground mb-6">{post.excerpt}</p>}
+        {post.content.publishedAt && (
+          <p className="text-xs text-muted-foreground mb-6">
+            {new Date(post.content.publishedAt).toLocaleDateString(resolvedLocale)}
+          </p>
+        )}
+      </div>
       <div
+        data-testid="blog-post-detail-content"
         className="prose prose-neutral max-w-none"
         dangerouslySetInnerHTML={{ __html: post.body }}
       />

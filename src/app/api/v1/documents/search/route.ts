@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(apiResponse(null, 'Nao autenticado.'), { status: 401 });
   }
 
-  const rl = checkRateLimit(`docs-search:${userId}`, RATE_LIMITS.SESSIONS_CREATE);
+  const rl = await checkRateLimit(`docs-search:${userId}`, RATE_LIMITS.SESSIONS_CREATE);
   if (!rl.allowed) {
     return NextResponse.json(
       apiResponse(null, 'Muitas tentativas. Aguarde 1 minuto.'),

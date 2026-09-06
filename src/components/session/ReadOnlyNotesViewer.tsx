@@ -9,6 +9,7 @@ export interface ReadOnlyNotesViewerProps {
   plainText?: string;
   updatedAt?: Date;
   errorKind?: 'forbidden' | 'not_found' | 'server';
+  'data-testid'?: string;
 }
 
 function formatUpdatedAt(updatedAt: Date): string {
@@ -28,12 +29,13 @@ export function ReadOnlyNotesViewer({
   plainText,
   updatedAt,
   errorKind,
+  'data-testid': testId,
 }: ReadOnlyNotesViewerProps) {
   const router = useRouter();
 
   if (state === 'loading') {
     return (
-      <div className="animate-pulse space-y-4" aria-busy="true" aria-live="polite">
+      <div data-testid={testId} className="animate-pulse space-y-4" aria-busy="true" aria-live="polite">
         <span className="sr-only">Carregando anotacoes da aula</span>
         <div className="h-5 w-40 rounded bg-muted" />
         <div className="space-y-3 rounded-xl border border-border p-5">
@@ -48,7 +50,7 @@ export function ReadOnlyNotesViewer({
 
   if (state === 'empty') {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
+      <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
         <NotebookText className="h-9 w-9 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm text-muted-foreground max-w-sm">
           Nenhuma anotacao registrada nesta sessao.
@@ -62,7 +64,7 @@ export function ReadOnlyNotesViewer({
 
     if (kind === 'forbidden') {
       return (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
+        <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
           <Lock className="h-9 w-9 text-destructive" aria-hidden="true" />
           <h2 className="text-base font-semibold text-foreground">Acesso negado</h2>
           <p className="text-sm text-muted-foreground max-w-sm">
@@ -74,7 +76,7 @@ export function ReadOnlyNotesViewer({
 
     if (kind === 'not_found') {
       return (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
+        <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
           <SearchX className="h-9 w-9 text-muted-foreground" aria-hidden="true" />
           <h2 className="text-base font-semibold text-foreground">Sessao nao encontrada</h2>
           <p className="text-sm text-muted-foreground max-w-sm">
@@ -85,7 +87,7 @@ export function ReadOnlyNotesViewer({
     }
 
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
+      <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
         <AlertTriangle className="h-9 w-9 text-destructive" aria-hidden="true" />
         <h2 className="text-base font-semibold text-foreground">Algo deu errado</h2>
         <p className="text-sm text-muted-foreground max-w-sm">
@@ -98,7 +100,7 @@ export function ReadOnlyNotesViewer({
 
   // state === 'ok'
   return (
-    <article className="rounded-xl border border-border bg-card">
+    <article data-testid={testId} className="rounded-xl border border-border bg-card">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <FileText className="h-4 w-4 text-primary" aria-hidden="true" />

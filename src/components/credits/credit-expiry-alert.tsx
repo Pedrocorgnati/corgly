@@ -64,6 +64,7 @@ export function CreditExpiryAlert({ batches }: CreditExpiryAlertProps) {
 
   return (
     <div
+      data-testid="credit-expiry-alert"
       role="alert"
       aria-live="polite"
       className="relative bg-amber-600 text-white rounded-xl p-4 mb-6"
@@ -75,6 +76,7 @@ export function CreditExpiryAlert({ batches }: CreditExpiryAlertProps) {
             {t('message', { count: totalExpiring, days: daysUntil })}
           </p>
           <Link
+            data-testid="credit-expiry-alert-buy-link"
             href={ROUTES.CREDITS}
             className="text-sm font-semibold underline underline-offset-2 hover:no-underline mt-1 inline-block"
           >
@@ -82,6 +84,7 @@ export function CreditExpiryAlert({ batches }: CreditExpiryAlertProps) {
           </Link>
         </div>
         <button
+          data-testid="credit-expiry-alert-dismiss-button"
           type="button"
           onClick={handleDismiss}
           aria-label={t('dismiss')}

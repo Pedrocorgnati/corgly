@@ -50,14 +50,14 @@ function ResetPasswordContent() {
   if (!token) {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-reset-password" className="w-full max-w-[384px]">
+          <div data-testid="auth-reset-password-no-token" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Link inválido ou expirado</h1>
             <p className="text-sm text-muted-foreground">
               Este link de recuperação é inválido ou já expirou. Solicite um novo link.
             </p>
-            <Link href={ROUTES.FORGOT_PASSWORD} className={cn(buttonVariants(), 'w-full')}>Solicitar novo link</Link>
+            <Link data-testid="auth-reset-password-forgot-link" href={ROUTES.FORGOT_PASSWORD} className={cn(buttonVariants(), 'w-full')}>Solicitar novo link</Link>
           </div>
         </div>
       </AuthPageWrapper>
@@ -67,14 +67,14 @@ function ResetPasswordContent() {
   if (done) {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-reset-password" className="w-full max-w-[384px]">
+          <div data-testid="auth-reset-password-success" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Senha redefinida!</h1>
             <p className="text-sm text-muted-foreground">
               Sua senha foi alterada com sucesso. Faça login com a nova senha.
             </p>
-            <Link href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>Ir para o login</Link>
+            <Link data-testid="auth-reset-password-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>Ir para o login</Link>
           </div>
         </div>
       </AuthPageWrapper>
@@ -102,21 +102,22 @@ function ResetPasswordContent() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
+    <div data-testid="page-auth-reset-password" className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
       <div className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
-          <div className="mb-6">
+          <div data-testid="auth-reset-password-header" className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">Nova senha</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Crie uma senha forte para proteger sua conta.
             </p>
           </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <form data-testid="form-reset-password" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-sm font-medium">Nova senha</Label>
               <div className="relative">
                 <Input
                   id="password"
+                  data-testid="form-reset-password-password-input"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Mínimo 8 caracteres"
                   autoComplete="new-password"
@@ -145,6 +146,7 @@ function ResetPasswordContent() {
               <div className="relative">
                 <Input
                   id="confirmPassword"
+                  data-testid="form-reset-password-confirm-password-input"
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Digite a nova senha novamente"
                   autoComplete="new-password"
@@ -168,7 +170,7 @@ function ResetPasswordContent() {
               )}
             </div>
 
-            <Button type="submit" className="w-full min-h-[48px]" disabled={isLoading}>
+            <Button type="submit" data-testid="form-reset-password-submit-button" className="w-full min-h-[48px]" disabled={isLoading}>
               {isLoading ? (
                 <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</>
               ) : (
@@ -178,7 +180,7 @@ function ResetPasswordContent() {
           </form>
         </div>
         <p className="text-center text-sm text-muted-foreground mt-4">
-          <Link href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
+          <Link data-testid="auth-reset-password-login-link" href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
             ← Voltar para o login
           </Link>
         </p>

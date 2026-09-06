@@ -1,7 +1,11 @@
 /**
  * session.types.ts — Contratos cross-module para módulo 6 (Calendário/Agendamento)
  *
- * Usado por: SessionService, CronService, AvailabilityService
+ * Usado por: SessionService, CronService, AvailabilityService e pela fronteira
+ * API/UI (src/actions/dashboard.ts) via reexport em '@/lib/types'.
+ *
+ * FONTE ÚNICA DE VERDADE do shape de sessão. Qualquer mudança aqui tem que
+ * andar junto com o serializador `sessionToMeta` (src/services/session.service.ts).
  * Não importar Prisma types diretamente para manter contratos estáveis.
  */
 
@@ -29,6 +33,10 @@ export interface SlotLockContext {
 
 // ---------------------------------------------------------------------------
 // Sessão com metadados calculados — resposta da API
+//
+// É EXATAMENTE isto que GET /api/v1/sessions devolve dentro de `data[]`.
+// O horário de início é `startAt` (ISO): não existe `scheduledAt`, e a duração
+// se calcula com `endAt - startAt` — não existe `durationMinutes`.
 // ---------------------------------------------------------------------------
 export interface SessionWithMeta {
   id: string;

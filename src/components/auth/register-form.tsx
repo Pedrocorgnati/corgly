@@ -15,6 +15,7 @@ import { ROUTES, API } from '@/lib/constants/routes';
 import { COUNTRIES, TIMEZONES } from '@/lib/constants/geo';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { RegisterFormSchema, type RegisterFormInput } from '@/schemas/auth.schema';
+import { LOCALE_COOKIE, localeToSupportedLanguage, locales, type Locale } from '../../../i18n/config';
 import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter';
 import Link from 'next/link';
 
@@ -42,6 +43,15 @@ export function RegisterForm() {
   const onSubmit = async (data: RegisterFormInput) => {
     setIsLoading(true);
     try {
+      const cookieLocale = document.cookie
+        .split('; ')
+        .find((c) => c.startsWith(`${LOCALE_COOKIE}=`))
+        ?.split('=')[1];
+      const preferredLanguage =
+        cookieLocale && locales.includes(cookieLocale as Locale)
+          ? localeToSupportedLanguage(cookieLocale as Locale)
+          : undefined;
+
       await apiClient.post(API.AUTH.REGISTER, {
         name: data.name,
         email: data.email,
@@ -51,6 +61,7 @@ export function RegisterForm() {
         termsAccepted: data.termsAccepted,
         privacyAccepted: data.privacyAccepted,
         marketingOptIn: data.marketingOptIn ?? false,
+        preferredLanguage,
       });
 
       toast.success('Conta criada! Verifique seu email para confirmar.');
@@ -73,11 +84,12 @@ export function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form data-testid="form-register" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {/* Nome */}
       <div className="space-y-1.5">
         <Label htmlFor="name" className="text-sm font-medium">Nome completo</Label>
         <Input
+          data-testid="form-register-name-input"
           id="name"
           type="text"
           placeholder="João Silva"
@@ -96,6 +108,7 @@ export function RegisterForm() {
       <div className="space-y-1.5">
         <Label htmlFor="email" className="text-sm font-medium">Email</Label>
         <Input
+          data-testid="form-register-email-input"
           id="email"
           type="email"
           placeholder="joao@exemplo.com"
@@ -115,6 +128,7 @@ export function RegisterForm() {
         <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
         <div className="relative">
           <Input
+            data-testid="form-register-password-input"
             id="password"
             type={showPassword ? 'text' : 'password'}
             placeholder="Mínimo 8 caracteres"
@@ -127,6 +141,7 @@ export function RegisterForm() {
           />
           <button
             type="button"
+            data-testid="form-register-toggle-password-button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
@@ -146,6 +161,7 @@ export function RegisterForm() {
         <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar senha</Label>
         <div className="relative">
           <Input
+            data-testid="form-register-confirm-password-input"
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
             placeholder="Digite a senha novamente"
@@ -158,6 +174,7 @@ export function RegisterForm() {
           />
           <button
             type="button"
+            data-testid="form-register-toggle-confirm-password-button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
@@ -175,6 +192,7 @@ export function RegisterForm() {
         <Label htmlFor="country" className="text-sm font-medium">País</Label>
         <Select onValueChange={(v) => setValue('country', v as string)} disabled={isLoading}>
           <SelectTrigger
+            data-testid="form-register-country-select"
             id="country"
             aria-invalid={!!errors.country}
             aria-describedby={errors.country ? 'country-error' : undefined}
@@ -202,6 +220,7 @@ export function RegisterForm() {
           disabled={isLoading}
         >
           <SelectTrigger
+            data-testid="form-register-timezone-select"
             id="timezone"
             aria-invalid={!!errors.timezone}
             aria-describedby={errors.timezone ? 'timezone-error' : undefined}
@@ -224,6 +243,7 @@ export function RegisterForm() {
       <div className="space-y-3 pt-2">
         <div className="flex items-start gap-3">
           <Checkbox
+            data-testid="form-register-terms-checkbox"
             id="termsAccepted"
             disabled={isLoading}
             onCheckedChange={(v) => setValue('termsAccepted', v === true)}
@@ -246,6 +266,7 @@ export function RegisterForm() {
 
         <div className="flex items-start gap-3">
           <Checkbox
+            data-testid="form-register-privacy-checkbox"
             id="privacyAccepted"
             disabled={isLoading}
             onCheckedChange={(v) => setValue('privacyAccepted', v === true)}
@@ -265,6 +286,7 @@ export function RegisterForm() {
 
         <div className="flex items-start gap-3">
           <Checkbox
+            data-testid="form-register-marketing-checkbox"
             id="marketingOptIn"
             disabled={isLoading}
             onCheckedChange={(v) => setValue('marketingOptIn', v === true)}
@@ -278,6 +300,7 @@ export function RegisterForm() {
 
       {/* Submit */}
       <Button
+        data-testid="form-register-submit-button"
         type="submit"
         className="w-full min-h-[52px] md:min-h-[40px] bg-primary text-primary-foreground hover:bg-primary/90 font-semibold sticky bottom-4 md:static shadow-lg md:shadow-none"
         disabled={isLoading}

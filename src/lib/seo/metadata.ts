@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
-
-// Single source of truth for site URL — validated at build time via env
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://corgly.app';
+import { SITE_URL } from '@/lib/constants/landing';
 
 /** Supported locales for hreflang alternates. */
 export const SEO_LOCALES = ['pt-BR', 'en-US', 'es-ES', 'it-IT'] as const;
@@ -13,10 +11,6 @@ export type SeoLocale = (typeof SEO_LOCALES)[number];
  * Since this project serves all languages from the same URL (locale is
  * negotiated via cookie/Accept-Language in i18n/request.ts), every language
  * alternate points to the same absolute URL. `x-default` is also included.
- *
- * @param path - Path starting with "/" (e.g. "/", "/privacy", "/blog/pt-BR/foo")
- * @param perLocalePath - Optional map to override path per locale (used for
- *                       routes that DO have locale-prefixed URLs, e.g. blog).
  */
 export function buildAlternates(
   path: string,
@@ -30,7 +24,7 @@ export function buildAlternates(
     const p = perLocalePath?.[loc] ?? normalized;
     languages[loc] = `${SITE_URL}${p.startsWith('/') ? p : `/${p}`}`;
   }
-  languages['x-default'] = canonical;
+  languages['x-default'] = `${SITE_URL}/`;
 
   return { canonical, languages };
 }
@@ -39,37 +33,37 @@ const META_BY_LOCALE: Record<
   string,
   { title: string; description: string; ogTitle: string; ogDescription: string }
 > = {
-  'pt-BR': {
-    title: 'Corgly — Aprenda Português Brasileiro com Professor Nativo',
-    description:
-      'Aulas 1:1 de português brasileiro ao vivo. Metodologia Corgly Method. Primeira aula 50% OFF.',
-    ogTitle: 'Corgly — Aprenda Português com Pedro',
-    ogDescription:
-      'Aulas personalizadas de português brasileiro para alunos internacionais.',
-  },
   'en-US': {
-    title: 'Corgly — Learn Brazilian Portuguese with a Native Teacher',
+    title: 'Corgly — Brazilian Portuguese Tutor Online | Private Live Lessons',
     description:
-      'Live 1:1 Brazilian Portuguese lessons. Corgly Method. First lesson 50% OFF.',
-    ogTitle: 'Corgly — Learn Portuguese with Pedro',
+      'Learn Brazilian Portuguese with a native tutor. Private live lessons. First lesson 50% off at US$ 12.50.',
+    ogTitle: 'Corgly — Brazilian Portuguese Tutor Online | Private Live Lessons',
     ogDescription:
-      'Personalized Brazilian Portuguese lessons for international students.',
+      'Learn Brazilian Portuguese with a native tutor. Private live lessons. First lesson 50% off at US$ 12.50.',
+  },
+  'pt-BR': {
+    title: 'Corgly — Aulas particulares de português brasileiro ao vivo',
+    description:
+      'Aprenda português brasileiro com um professor nativo. Aulas particulares ao vivo. Primeira aula com 50% OFF por US$ 12,50.',
+    ogTitle: 'Corgly — Aulas particulares de português brasileiro ao vivo',
+    ogDescription:
+      'Aprenda português brasileiro com um professor nativo. Aulas particulares ao vivo. Primeira aula com 50% OFF por US$ 12,50.',
   },
   'es-ES': {
-    title: 'Corgly — Aprende Portugués Brasileño con Profesor Nativo',
+    title: 'Corgly — Clases particulares de portugués brasileño en vivo',
     description:
-      'Clases 1:1 de portugués brasileño en vivo. Método Corgly. Primera clase 50% DESCUENTO.',
-    ogTitle: 'Corgly — Aprende Portugués con Pedro',
+      'Aprende portugués brasileño con un profesor nativo. Clases particulares en vivo. Primera clase con 50% de descuento a US$ 12,50.',
+    ogTitle: 'Corgly — Clases particulares de portugués brasileño en vivo',
     ogDescription:
-      'Clases personalizadas de portugués brasileño para estudiantes internacionales.',
+      'Aprende portugués brasileño con un profesor nativo. Clases particulares en vivo. Primera clase con 50% de descuento a US$ 12,50.',
   },
   'it-IT': {
-    title: "Corgly — Impara il Portoghese Brasiliano con un Insegnante Madrelingua",
+    title: 'Corgly — Lezioni private di portoghese brasiliano dal vivo',
     description:
-      "Lezioni 1:1 di portoghese brasiliano dal vivo. Metodo Corgly. Prima lezione 50% SCONTO.",
-    ogTitle: "Corgly — Impara il Portoghese con Pedro",
+      'Impara il portoghese brasiliano con un insegnante madrelingua. Lezioni private dal vivo. Prima lezione scontata del 50% a US$ 12.50.',
+    ogTitle: 'Corgly — Lezioni private di portoghese brasiliano dal vivo',
     ogDescription:
-      "Lezioni personalizzate di portoghese brasiliano per studenti internazionali.",
+      'Impara il portoghese brasiliano con un insegnante madrelingua. Lezioni private dal vivo. Prima lezione scontata del 50% a US$ 12.50.',
   },
 };
 
@@ -118,13 +112,13 @@ export function generateLandingMetadata(locale = 'en-US'): Metadata {
 
 /**
  * Generates Metadata for individual public pages.
- * noindex is applied to error/not-found pages.
+ * noindex is applied to error/not-found pages and hidden /content.
  */
 export function generatePageMetadata(
   page: 'privacy' | 'terms' | 'content' | 'not-found' | 'error',
   locale = 'en-US',
 ): Metadata {
-  const noIndexPages: string[] = ['not-found', 'error'];
+  const noIndexPages: string[] = ['not-found', 'error', 'content'];
   return {
     ...generateLandingMetadata(locale),
     robots: noIndexPages.includes(page)

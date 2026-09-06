@@ -82,6 +82,7 @@ export function AdminSupportFilters({ initial }: AdminSupportFiltersProps) {
 
   return (
     <form
+      data-testid="admin-support-filter-bar"
       className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-6"
       onSubmit={(e) => {
         e.preventDefault();
@@ -93,6 +94,7 @@ export function AdminSupportFilters({ initial }: AdminSupportFiltersProps) {
           Aluno (nome ou e-mail)
         </Label>
         <Input
+          data-testid="admin-support-filter-search-input"
           id="support-search"
           value={values.search}
           onChange={(e) => set('search')(e.target.value)}
@@ -106,6 +108,7 @@ export function AdminSupportFilters({ initial }: AdminSupportFiltersProps) {
           Status
         </Label>
         <select
+          data-testid="admin-support-filter-status-select"
           id="support-status"
           value={values.status}
           onChange={(e) => set('status')(e.target.value)}
@@ -125,6 +128,7 @@ export function AdminSupportFilters({ initial }: AdminSupportFiltersProps) {
           Prioridade
         </Label>
         <select
+          data-testid="admin-support-filter-priority-select"
           id="support-priority"
           value={values.priority}
           onChange={(e) => set('priority')(e.target.value)}
@@ -144,6 +148,7 @@ export function AdminSupportFilters({ initial }: AdminSupportFiltersProps) {
           De
         </Label>
         <Input
+          data-testid="admin-support-filter-date-from-input"
           id="support-date-from"
           type="date"
           value={values.dateFrom}
@@ -157,6 +162,7 @@ export function AdminSupportFilters({ initial }: AdminSupportFiltersProps) {
           Até
         </Label>
         <Input
+          data-testid="admin-support-filter-date-to-input"
           id="support-date-to"
           type="date"
           value={values.dateTo}
@@ -165,13 +171,13 @@ export function AdminSupportFilters({ initial }: AdminSupportFiltersProps) {
         />
       </div>
 
-      <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-6">
-        <Button type="submit" className="gap-2">
+      <div data-testid="admin-support-filter-actions" className="flex items-end gap-2 sm:col-span-2 lg:col-span-6">
+        <Button data-testid="admin-support-filter-apply-button" type="submit" className="gap-2">
           <Search className="h-4 w-4" />
           Filtrar
         </Button>
         {hasActiveFilters && (
-          <Button type="button" variant="outline" className="gap-2" onClick={clear}>
+          <Button data-testid="admin-support-filter-clear-button" type="button" variant="outline" className="gap-2" onClick={clear}>
             <X className="h-4 w-4" />
             Limpar
           </Button>

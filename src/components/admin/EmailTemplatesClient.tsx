@@ -137,9 +137,10 @@ export function EmailTemplatesClient() {
   }
 
   return (
-    <div className="space-y-4">
+    <div data-testid="admin-email-templates" className="space-y-4">
       {banner && (
         <div
+          data-testid="admin-email-templates-banner"
           role="status"
           className={`rounded-lg px-4 py-2 text-sm ${
             banner.kind === 'success'
@@ -151,8 +152,9 @@ export function EmailTemplatesClient() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div data-testid="admin-email-templates-filter-bar" className="flex flex-wrap items-center gap-2">
         <select
+          data-testid="admin-email-templates-filter-type-select"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
           className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
@@ -166,6 +168,7 @@ export function EmailTemplatesClient() {
           ))}
         </select>
         <select
+          data-testid="admin-email-templates-filter-status-select"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
@@ -179,6 +182,7 @@ export function EmailTemplatesClient() {
           ))}
         </select>
         <button
+          data-testid="admin-email-templates-refresh-button"
           type="button"
           onClick={() => load()}
           className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm"
@@ -186,6 +190,7 @@ export function EmailTemplatesClient() {
           <RefreshCw className="h-4 w-4" /> Atualizar
         </button>
         <button
+          data-testid="admin-email-templates-create-button"
           type="button"
           onClick={() => setShowCreate(true)}
           className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium"
@@ -194,7 +199,7 @@ export function EmailTemplatesClient() {
         </button>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-x-auto">
+      <div data-testid="admin-email-templates-table" className="bg-card border border-border rounded-2xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-muted-foreground">
@@ -208,29 +213,34 @@ export function EmailTemplatesClient() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
+              <tr data-testid="admin-email-templates-loading">
                 <td colSpan={6} className="py-6 text-center text-muted-foreground">
                   Carregando...
                 </td>
               </tr>
             ) : error ? (
-              <tr>
+              <tr data-testid="admin-email-templates-error">
                 <td colSpan={6} className="py-6 text-center text-destructive">
                   {error}{' '}
-                  <button type="button" onClick={() => load()} className="underline">
+                  <button
+                    data-testid="admin-email-templates-error-retry-button"
+                    type="button"
+                    onClick={() => load()}
+                    className="underline"
+                  >
                     Tentar novamente
                   </button>
                 </td>
               </tr>
             ) : items.length === 0 ? (
-              <tr>
+              <tr data-testid="admin-email-templates-empty">
                 <td colSpan={6} className="py-6 text-center text-muted-foreground">
                   Nenhum template encontrado.
                 </td>
               </tr>
             ) : (
               items.map((it) => (
-                <tr key={it.id} className="border-b border-border/50 hover:bg-muted/30">
+                <tr key={it.id} data-testid={`admin-email-templates-row-${it.id}`} className="border-b border-border/50 hover:bg-muted/30">
                   <td className="py-2 px-4 font-medium text-foreground">{it.type}</td>
                   <td className="py-2 px-4">{it.locale}</td>
                   <td className="py-2 px-4">v{it.version}</td>
@@ -245,8 +255,9 @@ export function EmailTemplatesClient() {
                   </td>
                   <td className="py-2 px-4 max-w-[18rem] truncate">{it.subject}</td>
                   <td className="py-2 px-4">
-                    <div className="flex items-center justify-end gap-1">
+                    <div data-testid={`admin-email-templates-row-${it.id}-actions`} className="flex items-center justify-end gap-1">
                       <button
+                        data-testid={`admin-email-templates-row-${it.id}-preview-button`}
                         type="button"
                         onClick={() => openPreview(it)}
                         disabled={busyId === it.id}
@@ -257,6 +268,7 @@ export function EmailTemplatesClient() {
                       </button>
                       {it.status === 'DRAFT' && (
                         <button
+                          data-testid={`admin-email-templates-row-${it.id}-publish-button`}
                           type="button"
                           onClick={() => act(it, 'publish')}
                           disabled={busyId === it.id}
@@ -268,6 +280,7 @@ export function EmailTemplatesClient() {
                       )}
                       {it.status !== 'ARCHIVED' && (
                         <button
+                          data-testid={`admin-email-templates-row-${it.id}-archive-button`}
                           type="button"
                           onClick={() => act(it, 'archive')}
                           disabled={busyId === it.id}
@@ -358,12 +371,13 @@ function CreateVersionModal({
   }
 
   return (
-    <Modal title="Nova versao de template" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
+    <Modal title="Nova versao de template" testId="modal-email-template-create" onClose={onClose}>
+      <form data-testid="form-email-template" onSubmit={submit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm">
             <span className="text-muted-foreground">Tipo</span>
             <select
+              data-testid="form-email-template-type-select"
               value={type}
               onChange={(e) => setType(e.target.value)}
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2"
@@ -378,6 +392,7 @@ function CreateVersionModal({
           <label className="text-sm">
             <span className="text-muted-foreground">Locale</span>
             <select
+              data-testid="form-email-template-locale-select"
               value={locale}
               onChange={(e) => setLocale(e.target.value)}
               className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2"
@@ -393,6 +408,7 @@ function CreateVersionModal({
         <label className="block text-sm">
           <span className="text-muted-foreground">Assunto</span>
           <input
+            data-testid="form-email-template-subject-input"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             required
@@ -405,6 +421,7 @@ function CreateVersionModal({
             Variaveis permitidas (separadas por virgula)
           </span>
           <input
+            data-testid="form-email-template-variables-input"
             value={variables}
             onChange={(e) => setVariables(e.target.value)}
             placeholder="user_name, action_url"
@@ -416,6 +433,7 @@ function CreateVersionModal({
             HTML do corpo (sem script, iframe ou handlers inline)
           </span>
           <textarea
+            data-testid="form-email-template-html-body-input"
             value={htmlBody}
             onChange={(e) => setHtmlBody(e.target.value)}
             required
@@ -423,8 +441,9 @@ function CreateVersionModal({
             className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs"
           />
         </label>
-        <div className="flex items-center justify-end gap-2 pt-2">
+        <div data-testid="form-email-template-actions" className="flex items-center justify-end gap-2 pt-2">
           <button
+            data-testid="form-email-template-cancel-button"
             type="button"
             onClick={onClose}
             className="rounded-lg border border-border px-4 py-2 text-sm"
@@ -432,6 +451,7 @@ function CreateVersionModal({
             Cancelar
           </button>
           <button
+            data-testid="form-email-template-submit-button"
             type="submit"
             disabled={submitting}
             className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium disabled:opacity-50"
@@ -454,21 +474,26 @@ function PreviewModal({
   onClose: () => void;
 }) {
   return (
-    <Modal title={`Preview — ${row.type} v${row.version} (${row.locale})`} onClose={onClose}>
+    <Modal
+      title={`Preview — ${row.type} v${row.version} (${row.locale})`}
+      testId="modal-email-template-preview"
+      onClose={onClose}
+    >
       <div className="space-y-3">
         {!data.safe && (
-          <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <div data-testid="modal-email-template-preview-unsafe" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
             Conteudo bloqueado: o HTML renderizado contem elementos inseguros.
           </div>
         )}
         {data.unknownVariables.length > 0 && (
-          <div className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+          <div data-testid="modal-email-template-preview-unknown-variables" className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
             Variaveis fora da allowlist (nao interpoladas):{' '}
             {data.unknownVariables.join(', ')}
           </div>
         )}
         {/* iframe sandbox sem allow-scripts: o preview nunca executa JS. */}
         <iframe
+          data-testid="modal-email-template-preview-iframe"
           title="Preview do template"
           sandbox=""
           srcDoc={data.html}
@@ -481,19 +506,22 @@ function PreviewModal({
 
 function Modal({
   title,
+  testId,
   onClose,
   children,
 }: {
   title: string;
+  testId?: string;
   onClose: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div data-testid={testId} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-2xl rounded-2xl bg-card border border-border p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+          <h2 data-testid={testId ? `${testId}-title` : undefined} className="text-lg font-semibold text-foreground">{title}</h2>
           <button
+            data-testid={testId ? `${testId}-close-button` : undefined}
             type="button"
             onClick={onClose}
             className="rounded-md p-1 hover:bg-muted"

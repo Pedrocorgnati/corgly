@@ -605,7 +605,15 @@ model Subscription {
   userId               String
   stripeSubscriptionId String             @unique
   status               SubscriptionStatus
+  /// Cadencia legada (aulas por semana, 1..5). Continua sendo a fonte de
+  /// precificacao e de concessao de creditos das assinaturas antigas, criadas
+  /// antes do eixo mensal. NAO remover: ha assinaturas vivas so com este campo.
   weeklyFrequency      Int
+  /// Eixo canonico novo: volume mensal contratado (10 ou 20 aulas por mes),
+  /// espelhando os planos da landing. Null = assinatura legada, precificada e
+  /// creditada por `weeklyFrequency`. Quando presente, vence o eixo legado
+  /// tanto no preco quanto nos creditos mensais concedidos.
+  monthlyLessons       Int?
   currentPeriodStart   DateTime
   currentPeriodEnd     DateTime
   cancelledAt          DateTime?

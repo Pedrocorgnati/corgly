@@ -106,7 +106,7 @@ export function DataRightsRequestForm({
   // ─── Estado de sucesso ──────────────────────────────────────────────────
   if (result) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm" role="status">
+      <div data-testid="form-data-rights-success" className="bg-card border border-border rounded-2xl p-6 shadow-sm" role="status">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-foreground">Pedido registrado</h3>
@@ -127,11 +127,11 @@ export function DataRightsRequestForm({
 
   // ─── Formulário ─────────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-5">
+    <form data-testid="form-data-rights" onSubmit={handleSubmit} className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-5">
       <div className="space-y-2">
         <Label htmlFor="dsr-type">Tipo de solicitação</Label>
         <Select value={type} onValueChange={(value) => setType(value as RequestType)}>
-          <SelectTrigger id="dsr-type">
+          <SelectTrigger id="dsr-type" data-testid="form-data-rights-type-select">
             <SelectValue placeholder="Selecione" />
           </SelectTrigger>
           <SelectContent>
@@ -148,6 +148,7 @@ export function DataRightsRequestForm({
         <Label htmlFor="dsr-email">E-mail</Label>
         <Input
           id="dsr-email"
+          data-testid="form-data-rights-email-input"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -167,6 +168,7 @@ export function DataRightsRequestForm({
           <Label htmlFor="dsr-correction">Dados a corrigir</Label>
           <Textarea
             id="dsr-correction"
+            data-testid="form-data-rights-correction-input"
             value={correction}
             onChange={(event) => setCorrection(event.target.value)}
             placeholder="Descreva quais informações estão incorretas e os valores corretos."
@@ -179,6 +181,7 @@ export function DataRightsRequestForm({
         <Label htmlFor="dsr-message">Mensagem (opcional)</Label>
         <Textarea
           id="dsr-message"
+          data-testid="form-data-rights-message-input"
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           placeholder="Algum detalhe adicional sobre o seu pedido."
@@ -190,6 +193,7 @@ export function DataRightsRequestForm({
       <label className="flex items-start gap-2 text-sm text-muted-foreground">
         <input
           type="checkbox"
+          data-testid="form-data-rights-consent-checkbox"
           checked={privacyAccepted}
           onChange={(event) => setPrivacyAccepted(event.target.checked)}
           className="mt-1"
@@ -201,12 +205,12 @@ export function DataRightsRequestForm({
       </label>
 
       {error && (
-        <p className="text-sm text-destructive" role="alert">
+        <p data-testid="form-data-rights-error" className="text-sm text-destructive" role="alert">
           {error}
         </p>
       )}
 
-      <Button type="submit" disabled={isSubmitting} className="gap-2">
+      <Button type="submit" data-testid="form-data-rights-submit-button" disabled={isSubmitting} className="gap-2">
         {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
         Enviar solicitação
       </Button>

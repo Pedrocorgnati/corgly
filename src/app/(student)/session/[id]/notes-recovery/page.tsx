@@ -27,12 +27,17 @@ export default async function NotesRecoveryPage({ params }: Props) {
   if (!id) notFound();
 
   return (
-    <PageWrapper className="max-w-lg">
+    <PageWrapper data-testid="page-session-notes-recovery" className="max-w-lg">
       <nav
+        data-testid="session-notes-recovery-breadcrumb"
         aria-label="Breadcrumb"
         className="text-sm text-muted-foreground mb-6 flex items-center gap-1.5"
       >
-        <Link href={ROUTES.SESSION(id)} className="hover:text-foreground transition-colors">
+        <Link
+          data-testid="session-notes-recovery-breadcrumb-session-link"
+          href={ROUTES.SESSION(id)}
+          className="hover:text-foreground transition-colors"
+        >
           ← Voltar para a aula
         </Link>
         <span>/</span>
@@ -40,7 +45,7 @@ export default async function NotesRecoveryPage({ params }: Props) {
           Recuperar caderno
         </span>
       </nav>
-      <header className="mb-6">
+      <header data-testid="session-notes-recovery-header" className="mb-6">
         <h1 className="text-xl font-semibold text-foreground">Recuperar caderno</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Exporte o caderno desta aula ou restaure uma versão salva anteriormente.

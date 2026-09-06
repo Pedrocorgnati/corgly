@@ -4,38 +4,36 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Calculator, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { useLocale, useTranslations } from 'next-intl';
 import { PageWrapper } from '@/components/shared';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button-variants';
+import { PriceDisplay } from '@/components/billing/PriceDisplay';
 import { apiClient, ApiError } from '@/lib/api-client';
-import { calculateSubscriptionMonthlyAmountCents } from '@/lib/billing/subscription-pricing';
+import {
+  calculateMonthlyLessonsAmountCents,
+  calculateSubscriptionMonthlyAmountCents,
+  normalizeMonthlyLessons,
+  stripeCurrencyToCurrency,
+} from '@/lib/billing/subscription-pricing';
 import { API, ROUTES } from '@/lib/constants/routes';
 import { cn } from '@/lib/utils';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useSubscription, type SubscriptionUpdatePayload } from '@/hooks/useSubscription';
+import type { MonthlyLessonsPlan } from '@/schemas/checkout.schema';
+// Contrato do preview importado como TIPO do proprio produtor
+// (`previewSubscriptionChange`), para nao existir uma copia local que envelhece.
+// `import type` e apagado na compilacao, entao o `server-only` do modulo nao
+// chega ao bundle do cliente.
+import type { SubscriptionChangePreview } from '@/lib/billing/subscription-preview.service';
 
-const FREQUENCY_OPTIONS = [1, 2, 3, 4, 5] as const;
+/** Volumes mensais publicados (mesma vitrine da landing e do dashboard). */
+const MONTHLY_PLAN_OPTIONS: readonly MonthlyLessonsPlan[] = [10, 20];
 
-interface SubscriptionChangePreview {
-  currentWeeklyFrequency: number;
-  requestedWeeklyFrequency: number;
-  changeType: 'upgrade' | 'downgrade' | 'current_plan';
-  currency: string;
-  currentMonthlyAmountCents: number;
-  nextMonthlyAmountCents: number;
-  prorationAmountCents: number;
-  estimatedTaxCents: number;
-  amountDueNowCents: number;
-  effectiveAt: string;
-  currentPeriodEnd: string;
-  previewPayload: {
-    weeklyFrequency: number;
-    prorationDate: number;
-  };
-}
+/** Cadencias semanais aceitas pelo endpoint legado (1..5). */
+const WEEKLY_PLAN_OPTIONS: readonly number[] = [1, 2, 3, 4, 5];
 
 interface ApiResponse<T> {
   data: T;
@@ -43,73 +41,158 @@ interface ApiResponse<T> {
   message?: string | null;
 }
 
-function formatMoney(cents: number, currency: string) {
-  const currencyCode = currency.toUpperCase();
+/**
+ * Selecao de plano nos DOIS eixos aceitos pela API. Sempre exatamente um eixo:
+ * `POST /api/v1/subscriptions/update` e o preview recusam os dois juntos.
+ */
+type PlanSelection =
+  | { axis: 'monthly'; monthlyLessons: MonthlyLessonsPlan }
+  | { axis: 'weekly'; weeklyFrequency: number };
 
-  try {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(cents / 100);
-  } catch {
-    return `${currencyCode} ${(cents / 100).toFixed(2)}`;
+/**
+ * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
+ * Em desenvolvimento estoura no primeiro render; em producao devolve string
+ * vazia — a chave crua NUNCA aparece para o usuario final.
+ *
+ * DUPLICADO nos outros arquivos deste work package: um modulo compartilhado
+ * ficaria fora da lista de arquivos de propriedade.
+ */
+function missingMessage(fullKey: string): string {
+  if (process.env.NODE_ENV !== 'production') {
+    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
   }
+  return '';
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
+function toRequestBody(selection: PlanSelection): SubscriptionUpdatePayload {
+  return selection.axis === 'monthly'
+    ? { monthlyLessons: selection.monthlyLessons }
+    : { weeklyFrequency: selection.weeklyFrequency };
 }
 
-function buildIdempotencyKey() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
+/** Valor mensal de referencia da opcao, pela tabela unica de precos. */
+function optionAmountCents(selection: PlanSelection): number {
+  return selection.axis === 'monthly'
+    ? calculateMonthlyLessonsAmountCents(selection.monthlyLessons, 'USD')
+    : calculateSubscriptionMonthlyAmountCents(selection.weeklyFrequency, 'USD');
+}
 
-  return `subscription-change-${Date.now()}`;
+function isSameSelection(a: PlanSelection, b: PlanSelection): boolean {
+  if (a.axis !== b.axis) return false;
+  return a.axis === 'monthly' && b.axis === 'monthly'
+    ? a.monthlyLessons === b.monthlyLessons
+    : a.axis === 'weekly' && b.axis === 'weekly'
+      ? a.weeklyFrequency === b.weeklyFrequency
+      : false;
+}
+
+/**
+ * O preview so vale para a opcao que o usuario esta vendo selecionada: trocar a
+ * selecao invalida o painel (e o botao de confirmar) em vez de confirmar numeros
+ * de outra simulacao.
+ */
+function previewMatchesSelection(
+  preview: SubscriptionChangePreview | null,
+  selection: PlanSelection | null,
+): boolean {
+  if (!preview || !selection) return false;
+  if (selection.axis === 'monthly') {
+    return preview.requestedMonthlyLessons === selection.monthlyLessons;
+  }
+  return (
+    preview.requestedMonthlyLessons === null &&
+    preview.requestedWeeklyFrequency === selection.weeklyFrequency
+  );
 }
 
 export default function ChangeSubscriptionPlanPage() {
   const router = useRouter();
-  const { subscription, isLoading, error, refetch } = useSubscription();
-  const [selectedFrequency, setSelectedFrequency] = useState<number>(2);
+  const t = useTranslations('credits.subscription');
+  const locale = useLocale();
+  const text = (key: string, values?: Record<string, string | number>): string =>
+    t.has(key) ? t(key, values) : missingMessage(`credits.subscription.${key}`);
+
+  const { subscription, isLoading, error, refetch, updatePlan, isUpdating } = useSubscription();
+  const [selection, setSelection] = useState<PlanSelection | null>(null);
   const [preview, setPreview] = useState<SubscriptionChangePreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const previewMatchesSelection = preview?.requestedWeeklyFrequency === selectedFrequency;
-  const selectedIsCurrent = subscription?.weeklyFrequency === selectedFrequency;
+  /** Plano vigente traduzido para os mesmos eixos das opcoes da tela. */
+  const currentSelection: PlanSelection | null = subscription
+    ? subscription.monthlyLessons != null
+      ? { axis: 'monthly', monthlyLessons: normalizeMonthlyLessons(subscription.monthlyLessons) }
+      : { axis: 'weekly', weeklyFrequency: subscription.weeklyFrequency }
+    : null;
+
+  // Sem escolha explicita, a tela abre no plano atual (nunca num plano inventado).
+  const activeSelection = selection ?? currentSelection;
+
+  /**
+   * A cadencia semanal so aparece para quem ja esta nela. Oferecer o eixo legado
+   * a uma assinatura mensal empurraria o aluno de volta para a tabela antiga de
+   * preco (US$ 16/aula x 4,33 semanas), que nao e mais vendida.
+   */
+  const showLegacyOptions = subscription?.monthlyLessons == null;
+
+  const previewMatches = previewMatchesSelection(preview, activeSelection);
+  const selectedIsCurrent =
+    activeSelection != null &&
+    currentSelection != null &&
+    isSameSelection(activeSelection, currentSelection);
   const canConfirm =
-    previewMatchesSelection &&
+    previewMatches &&
     preview?.changeType !== 'current_plan' &&
     !isPreviewing &&
-    !isConfirming;
+    !isConfirming &&
+    !isUpdating;
+
+  const planLabel = (monthlyLessons: number | null, weeklyFrequency: number): string =>
+    monthlyLessons != null
+      ? text('lessonsPerMonth', { count: monthlyLessons })
+      : text('perWeek', { count: weeklyFrequency });
+
+  const selectionLabel = (option: PlanSelection): string =>
+    option.axis === 'monthly'
+      ? text('lessonsPerMonth', { count: option.monthlyLessons })
+      : text('perWeek', { count: option.weeklyFrequency });
+
+  const formatDateTime = (value: string): string => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat(locale, {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  };
+
+  function handleSelect(option: PlanSelection) {
+    setSelection(option);
+    // Preview antigo nao vale para outra opcao: some junto com a troca.
+    setPreview(null);
+    setPreviewError(null);
+  }
 
   async function handlePreview() {
+    if (!activeSelection) return;
+
     setPreviewError(null);
     setIsPreviewing(true);
 
     try {
       const response = await apiClient.post<ApiResponse<SubscriptionChangePreview>>(
         API.BILLING_SUBSCRIPTION_PREVIEW_CHANGE,
-        { weeklyFrequency: selectedFrequency },
+        toRequestBody(activeSelection),
       );
       setPreview(response.data);
     } catch (err) {
-      const message = err instanceof ApiError
-        ? err.message
-        : 'Não foi possível calcular o preview da mudança.';
+      const message = err instanceof ApiError ? err.message : text('changePreviewError');
       setPreview(null);
       setPreviewError(message);
-      toast.error(message);
     } finally {
       setIsPreviewing(false);
     }
@@ -120,19 +203,14 @@ export default function ChangeSubscriptionPlanPage() {
 
     setIsConfirming(true);
     try {
-      await apiClient.post(
-        API.SUBSCRIPTIONS_UPDATE,
-        preview.previewPayload,
-        { headers: { 'Idempotency-Key': buildIdempotencyKey() } },
-      );
-      toast.success('Alteração de assinatura confirmada.');
+      // Corpo montado pelo proprio preview: carrega o eixo pedido e a
+      // `prorationDate` daquela simulacao, entao a cobranca confirmada e
+      // exatamente a que foi exibida.
+      await updatePlan(preview.previewPayload);
       router.push(ROUTES.BILLING_SUBSCRIPTION);
       router.refresh();
-    } catch (err) {
-      const message = err instanceof ApiError
-        ? err.message
-        : 'Não foi possível confirmar a alteração.';
-      toast.error(message);
+    } catch {
+      // Toast de erro ja emitido pelo hook; a tela continua com o preview.
     } finally {
       setIsConfirming(false);
     }
@@ -140,8 +218,8 @@ export default function ChangeSubscriptionPlanPage() {
 
   if (isLoading) {
     return (
-      <PageWrapper className="max-w-4xl">
-        <div className="space-y-4">
+      <PageWrapper data-testid="page-billing-subscription-change-plan" className="max-w-4xl">
+        <div data-testid="billing-change-plan-loading" className="space-y-4">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="h-40 w-full rounded-lg" />
           <Skeleton className="h-64 w-full rounded-lg" />
@@ -152,101 +230,129 @@ export default function ChangeSubscriptionPlanPage() {
 
   if (error) {
     return (
-      <PageWrapper className="max-w-4xl">
-        <ErrorState message={error} onRetry={refetch} />
+      <PageWrapper data-testid="page-billing-subscription-change-plan" className="max-w-4xl">
+        <ErrorState data-testid="billing-change-plan-error" message={error} onRetry={refetch} />
       </PageWrapper>
     );
   }
 
-  if (!subscription) {
+  if (!subscription || !activeSelection) {
     return (
-      <PageWrapper className="max-w-4xl">
+      <PageWrapper data-testid="page-billing-subscription-change-plan" className="max-w-4xl">
         <EmptyState
+          data-testid="billing-change-plan-empty"
           icon={Calculator}
-          title="Sem assinatura ativa"
-          description="Assine um plano mensal antes de simular uma troca de frequência."
-          actionLabel="Ver planos"
+          title={text('empty')}
+          description={text('emptyDesc')}
+          actionLabel={text('emptyAction')}
           actionHref={ROUTES.CREDITS}
         />
       </PageWrapper>
     );
   }
 
+  const renderOption = (option: PlanSelection, testId: string) => {
+    const isSelected = isSameSelection(activeSelection, option);
+    const isCurrent = currentSelection != null && isSameSelection(currentSelection, option);
+
+    return (
+      <button
+        key={testId}
+        data-testid={testId}
+        type="button"
+        onClick={() => handleSelect(option)}
+        className={cn(
+          'min-h-[92px] rounded-lg border p-4 text-left transition-colors',
+          isSelected ? 'border-primary bg-primary/10' : 'border-border bg-background hover:bg-muted',
+        )}
+        aria-pressed={isSelected}
+      >
+        <span className="flex items-center justify-between gap-2">
+          <span className="text-base font-semibold text-foreground">
+            {selectionLabel(option)}
+          </span>
+          {isCurrent && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              {text('changeCurrentBadge')}
+            </span>
+          )}
+        </span>
+        <span className="mt-2 flex flex-wrap items-baseline gap-1 text-sm text-muted-foreground">
+          <PriceDisplay
+            amountCents={optionAmountCents(option)}
+            currency="USD"
+            locale={locale}
+          />
+          <span>{text('changeEstimated')}</span>
+        </span>
+      </button>
+    );
+  };
+
+  const previewCurrency = preview ? stripeCurrencyToCurrency(preview.currency) : 'USD';
+
   return (
-    <PageWrapper className="max-w-4xl">
-      <div className="mb-6">
+    <PageWrapper data-testid="page-billing-subscription-change-plan" className="max-w-4xl">
+      <div data-testid="billing-change-plan-header" className="mb-6">
         <Link
           href={ROUTES.BILLING_SUBSCRIPTION}
+          data-testid="billing-change-plan-back-link"
           className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Voltar para assinatura
+          {text('changeBack')}
         </Link>
 
         <div className="flex items-start gap-3">
           <Calculator className="mt-1 h-6 w-6 text-primary" aria-hidden="true" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Alterar plano</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Simule a cobrança proporcional antes de confirmar a nova frequência semanal.
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">{text('changePlan')}</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">{text('changeSubtitle')}</p>
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <section className="rounded-lg border border-border bg-card p-5">
+        <section data-testid="billing-change-plan-list" className="rounded-lg border border-border bg-card p-5">
           <div className="mb-4">
-            <h2 className="text-base font-semibold text-foreground">
-              Escolha a nova frequência
-            </h2>
+            <h2 className="text-base font-semibold text-foreground">{text('changeChooseTitle')}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Plano atual: {subscription.weeklyFrequency}x por semana.
+              {text('changeCurrentPlan', {
+                plan: planLabel(subscription.monthlyLessons, subscription.weeklyFrequency),
+              })}
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {FREQUENCY_OPTIONS.map((frequency) => {
-              const isSelected = selectedFrequency === frequency;
-              const isCurrent = subscription.weeklyFrequency === frequency;
-
-              return (
-                <button
-                  key={frequency}
-                  type="button"
-                  onClick={() => {
-                    setSelectedFrequency(frequency);
-                    setPreview(null);
-                    setPreviewError(null);
-                  }}
-                  className={cn(
-                    'min-h-[92px] rounded-lg border p-4 text-left transition-colors',
-                    isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border bg-background hover:bg-muted',
-                  )}
-                  aria-pressed={isSelected}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="text-base font-semibold text-foreground">
-                      {frequency}x por semana
-                    </span>
-                    {isCurrent && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        Atual
-                      </span>
-                    )}
-                  </span>
-                  <span className="mt-2 block text-sm text-muted-foreground">
-                    {formatMoney(calculateSubscriptionMonthlyAmountCents(frequency), 'usd')}/mês estimado
-                  </span>
-                </button>
-              );
-            })}
+          <h3 className="mb-2 text-sm font-medium text-foreground">{text('changeMonthlyGroup')}</h3>
+          <div data-testid="billing-change-plan-monthly-options" className="grid gap-3 sm:grid-cols-2">
+            {MONTHLY_PLAN_OPTIONS.map((lessons) =>
+              renderOption(
+                { axis: 'monthly', monthlyLessons: lessons },
+                `billing-change-plan-monthly-${lessons}`,
+              ),
+            )}
           </div>
+
+          {showLegacyOptions && (
+            <>
+              <h3 className="mb-2 mt-5 text-sm font-medium text-foreground">
+                {text('changeLegacyGroup')}
+              </h3>
+              <p className="mb-2 text-xs text-muted-foreground">{text('changeLegacyHint')}</p>
+              <div data-testid="billing-change-plan-weekly-options" className="grid gap-3 sm:grid-cols-2">
+                {WEEKLY_PLAN_OPTIONS.map((frequency) =>
+                  renderOption(
+                    { axis: 'weekly', weeklyFrequency: frequency },
+                    `billing-change-plan-plan-${frequency}`,
+                  ),
+                )}
+              </div>
+            </>
+          )}
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <Button
+              data-testid="billing-change-plan-preview-button"
               type="button"
               onClick={handlePreview}
               disabled={isPreviewing}
@@ -256,17 +362,18 @@ export default function ChangeSubscriptionPlanPage() {
               {isPreviewing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Calculando
+                  {text('changePreviewLoading')}
                 </>
               ) : (
                 <>
                   <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                  Gerar preview
+                  {text('changePreviewCta')}
                 </>
               )}
             </Button>
 
             <button
+              data-testid="billing-change-plan-confirm-button"
               type="button"
               onClick={handleConfirm}
               disabled={!canConfirm}
@@ -276,86 +383,107 @@ export default function ChangeSubscriptionPlanPage() {
               {isConfirming ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Confirmando
+                  {text('changeConfirmLoading')}
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                  Confirmar mudança
+                  {text('changeConfirmCta')}
                 </>
               )}
             </button>
           </div>
 
           {selectedIsCurrent && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Essa opção já é seu plano atual. Gere o preview para conferir os valores sem alterar a assinatura.
+            <p data-testid="billing-change-plan-current-note" className="mt-3 text-sm text-muted-foreground">
+              {text('changeSelectedIsCurrent')}
             </p>
           )}
 
           {previewError && (
-            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <div
+              data-testid="billing-change-plan-preview-error"
+              role="alert"
+              className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+            >
               {previewError}
             </div>
           )}
         </section>
 
-        <aside className="rounded-lg border border-border bg-card p-5">
-          <h2 className="text-base font-semibold text-foreground">Preview financeiro</h2>
+        <aside data-testid="billing-change-plan-preview-panel" className="rounded-lg border border-border bg-card p-5">
+          <h2 className="text-base font-semibold text-foreground">{text('changePreviewTitle')}</h2>
 
-          {!previewMatchesSelection && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Gere um preview para ver proration, impostos estimados e data efetiva antes da confirmação.
-            </p>
+          {!previewMatches && (
+            <p className="mt-3 text-sm text-muted-foreground">{text('changePreviewHint')}</p>
           )}
 
-          {previewMatchesSelection && preview && (
+          {previewMatches && preview && (
             <div className="mt-4 space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Mudança</p>
-                <p className="text-base font-semibold text-foreground">
-                  {preview.currentWeeklyFrequency}x para {preview.requestedWeeklyFrequency}x por semana
+                <p className="text-sm text-muted-foreground">{text('changeSummaryLabel')}</p>
+                <p data-testid="billing-change-plan-summary" className="text-base font-semibold text-foreground">
+                  {text('changeSummaryValue', {
+                    from: planLabel(preview.currentMonthlyLessons, preview.currentWeeklyFrequency),
+                    to: planLabel(preview.requestedMonthlyLessons, preview.requestedWeeklyFrequency),
+                  })}
                 </p>
               </div>
 
               <dl className="space-y-3 text-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">Novo mensal</dt>
+                  <dt className="text-muted-foreground">{text('changeNextMonthly')}</dt>
                   <dd className="font-medium text-foreground">
-                    {formatMoney(preview.nextMonthlyAmountCents, preview.currency)}
+                    <PriceDisplay
+                      amountCents={preview.nextMonthlyAmountCents}
+                      currency={previewCurrency}
+                      locale={locale}
+                    />
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">Proration</dt>
+                  <dt className="text-muted-foreground">{text('changeProration')}</dt>
                   <dd className="font-medium text-foreground">
-                    {formatMoney(preview.prorationAmountCents, preview.currency)}
+                    <PriceDisplay
+                      amountCents={preview.prorationAmountCents}
+                      currency={previewCurrency}
+                      locale={locale}
+                    />
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">Imposto estimado</dt>
+                  <dt className="text-muted-foreground">{text('changeTax')}</dt>
                   <dd className="font-medium text-foreground">
-                    {formatMoney(preview.estimatedTaxCents, preview.currency)}
+                    <PriceDisplay
+                      amountCents={preview.estimatedTaxCents}
+                      currency={previewCurrency}
+                      locale={locale}
+                    />
                   </dd>
                 </div>
                 <div className="border-t border-border pt-3">
                   <div className="flex items-center justify-between gap-3">
-                    <dt className="text-muted-foreground">Cobrança agora</dt>
-                    <dd className="text-lg font-semibold text-foreground">
-                      {formatMoney(preview.amountDueNowCents, preview.currency)}
+                    <dt className="text-muted-foreground">{text('changeDueNow')}</dt>
+                    <dd data-testid="billing-change-plan-due-now" className="text-lg font-semibold text-foreground">
+                      <PriceDisplay
+                        amountCents={preview.amountDueNowCents}
+                        currency={previewCurrency}
+                        locale={locale}
+                      />
                     </dd>
                   </div>
                 </div>
               </dl>
 
               <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-                Efetiva em {formatDateTime(preview.effectiveAt)}. O período atual termina em{' '}
-                {formatDateTime(preview.currentPeriodEnd)}.
+                {text('changeEffective', {
+                  effectiveAt: formatDateTime(preview.effectiveAt),
+                  periodEnd: formatDateTime(preview.currentPeriodEnd),
+                })}
               </div>
 
               {preview.changeType === 'current_plan' && (
-                <p className="text-sm text-muted-foreground">
-                  O plano selecionado já está ativo. Nenhuma cobrança ou alteração será enviada.
-                </p>
+                <p className="text-sm text-muted-foreground">{text('changeCurrentPlanNotice')}</p>
               )}
             </div>
           )}

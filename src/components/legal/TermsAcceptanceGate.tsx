@@ -111,7 +111,7 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
 
   if (state.phase === 'loading') {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6" role="status" aria-busy="true">
+      <div data-testid="terms-gate-loading" className="flex min-h-[60vh] items-center justify-center p-6" role="status" aria-busy="true">
         <div className="w-full max-w-lg space-y-4">
           <Skeleton className="h-6 w-1/2" />
           <Skeleton className="h-40 w-full" />
@@ -124,7 +124,7 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
 
   if (state.phase === 'error') {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <div data-testid="terms-gate-error" className="flex min-h-[60vh] items-center justify-center p-6">
         <ErrorState
           title="Nao foi possivel carregar os termos"
           message="O acesso depende da leitura e do aceite dos termos. Tente novamente."
@@ -138,6 +138,7 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
     const { document } = state;
     return (
       <div
+        data-testid="modal-terms-acceptance"
         className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
@@ -154,12 +155,13 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto whitespace-pre-wrap p-6 text-sm text-foreground">
+          <div data-testid="modal-terms-acceptance-content" className="flex-1 overflow-y-auto whitespace-pre-wrap p-6 text-sm text-foreground">
             {document.content}
           </div>
 
           <div className="flex flex-col-reverse gap-2 border-t p-6 sm:flex-row sm:justify-end">
             <Button
+              data-testid="modal-terms-acceptance-decline-button"
               variant="outline"
               disabled={submitting}
               onClick={() =>
@@ -168,7 +170,7 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
             >
               Recusar
             </Button>
-            <Button onClick={() => void handleAccept()} disabled={submitting}>
+            <Button data-testid="modal-terms-acceptance-accept-button" onClick={() => void handleAccept()} disabled={submitting}>
               {submitting ? 'Registrando...' : 'Li e aceito os termos'}
             </Button>
           </div>

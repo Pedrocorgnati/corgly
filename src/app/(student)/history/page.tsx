@@ -21,8 +21,8 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const sessions = await getSessions({ page, limit: PAGINATION.STUDENT_HISTORY, status });
 
   return (
-    <PageWrapper className="max-w-4xl">
-      <div className="mb-6 flex items-center gap-3">
+    <PageWrapper data-testid="page-history" className="max-w-4xl">
+      <div data-testid="history-header" className="mb-6 flex items-center gap-3">
         <History className="h-6 w-6 text-primary" />
         <div>
           <h1 className="text-2xl font-bold text-foreground">Histórico de Aulas</h1>

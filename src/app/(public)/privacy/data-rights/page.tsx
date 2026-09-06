@@ -31,9 +31,9 @@ const RIGHTS = [
 
 export default function PublicDataRightsPage() {
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-privacy-data-rights" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
+        <div data-testid="privacy-data-rights-header" className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Seus direitos sobre os dados</h1>
           <p className="text-sm text-muted-foreground mt-2">
             Em conformidade com a LGPD e o GDPR, você pode solicitar acesso, correção, portabilidade
@@ -60,10 +60,10 @@ export default function PublicDataRightsPage() {
         <DataRightsRequestForm />
 
         <div className="mt-8 pt-6 border-t border-border">
-          <Link href={ROUTES.PRIVACY} className="text-primary text-sm font-medium hover:underline mr-4">
+          <Link href={ROUTES.PRIVACY} data-testid="privacy-data-rights-privacy-link" className="text-primary text-sm font-medium hover:underline mr-4">
             Política de Privacidade
           </Link>
-          <Link href={ROUTES.HOME} className="text-muted-foreground text-sm hover:underline">
+          <Link href={ROUTES.HOME} data-testid="privacy-data-rights-back-link" className="text-muted-foreground text-sm hover:underline">
             &larr; Voltar ao início
           </Link>
         </div>

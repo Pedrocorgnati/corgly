@@ -25,7 +25,8 @@
       "buy": "Comprar créditos",
       "settings": "Configuración",
       "creditsBalance": "Saldo: {count} créditos",
-      "library": "Biblioteca"
+      "library": "Biblioteca",
+      "exercises": "Ejercicios"
     },
     "admin": {
       "dashboard": "Panel",
@@ -50,15 +51,23 @@
     "home": "Inicio",
     "schedule": "Programar",
     "progress": "Progreso",
-    "account": "Cuenta"
+    "account": "Cuenta",
+    "buy": "Comprar",
+    "exercises": "Ejercicios"
   },
   "footer": {
     "copyright": "© {year} Corgly. Todos los derechos reservados.",
     "privacy": "Política de Privacidad",
+    "privacy_short": "Privacidad",
     "terms": "Términos de Uso",
+    "terms_short": "Términos",
     "cookies": "Cookies",
     "languageLabel": "Idioma",
-    "preferences": "Preferencias de cookies"
+    "preferences": "Preferencias de cookies",
+    "tagline": "Conversaciones reales. Aprendizaje que conecta.",
+    "method": "Método",
+    "pricing": "Precios",
+    "faq": "FAQ"
   },
   "creditBadge": {
     "credits": "{count} créditos",
@@ -197,195 +206,235 @@
   },
   "landing": {
     "header": {
-      "login": "Iniciar sesión",
-      "register": "Crear cuenta",
+      "login": "Entrar",
+      "cta": "Primera clase — US$ 12,50",
       "nav": {
+        "how_it_works": "Cómo funciona",
         "method": "Método",
         "pricing": "Precios",
-        "content": "Contenido",
-        "contact": "Contacto"
+        "faq": "FAQ"
       },
       "nav_aria": "Navegación principal",
       "menuOpen": "Abrir menú"
     },
     "hero": {
-      "title": "Aprende portugués brasileño con un profesor nativo",
-      "subtitle": "Clases 1:1 en vivo con el Método Corgly. Progreso medible, apoyo real.",
-      "cta_primary": "Crear cuenta gratis",
-      "cta_secondary": "Ver precios",
-      "cta_primary_aria": "Crear cuenta gratuita en Corgly",
-      "cta_secondary_aria": "Ver planes y precios de Corgly",
-      "first_lesson_badge": "Primera clase 50% DESCUENTO — solo $12.50",
-      "professor_alt": "Pedro Corgnati, profesor de portugués brasileño, sonriendo en su oficina",
-      "professor_name": "Pedro Corgnati"
+      "eyebrow": "1:1 en vivo · profesor nativo",
+      "title": "Habla portugués brasileño con naturalidad",
+      "subtitle": "Clases particulares con Pedro. Progreso visible en cada ciclo.",
+      "proof_countries": "20+ países",
+      "proof_duration": "clase de 50 min",
+      "proof_feedback": "feedback después de cada clase",
+      "cta_primary": "Reservar primera clase",
+      "cta_secondary": "Ver planes",
+      "microcopy": "{price} la primera clase · sin mensualidad obligatoria",
+      "overlay_name": "Pedro · Profesor nativo · PT-BR",
+      "overlay_chip": "Próxima clase · {minutes} min",
+      "languages": "Clases en inglés, español e italiano",
+      "brazil_vs_pt": "Portugués de Brasil, no el de Portugal",
+      "professor_alt": "Pedro, profesor nativo de portugués brasileño, en clase en vivo",
+      "from": "de"
+    },
+    "goals": {
+      "eyebrow": "Tu objetivo",
+      "title": "Trae el motivo por el que necesitas portugués. Yo armo el camino.",
+      "chips": {
+        "zero": "empezar de cero",
+        "travel": "viajar",
+        "move": "vivir en Brasil",
+        "work": "trabajo y reuniones",
+        "family": "familia y día a día",
+        "confidence": "hablar con confianza"
+      },
+      "authority": {
+        "rating": "4.8 / 15 reseñas",
+        "countries": "Alumnos de 20+ países",
+        "postgrad": "Profesor de portugués, posgraduado en metodología de enseñanza",
+        "background": "Administración e ingeniería de software"
+      }
+    },
+    "how_it_works": {
+      "eyebrow": "Cómo funciona",
+      "title": "De la primera clase al progreso visible",
+      "steps": {
+        "01": {
+          "title": "Reserva",
+          "body": "Reservas la clase en el horario que te funciona."
+        },
+        "02": {
+          "title": "Clase en vivo 1:1",
+          "body": "Una clase particular en vivo con un profesor especializado, en Zoom."
+        },
+        "03": {
+          "title": "Feedback estructurado",
+          "body": "Feedback claro, personal y accionable."
+        },
+        "04": {
+          "title": "Siguiente ciclo",
+          "body": "Aplícalo, mejora y pasa al siguiente nivel."
+        }
+      }
     },
     "professor": {
-      "badge": "Profesor Nativo",
+      "badge": "Profesor nativo",
       "title": "Conoce a Pedro",
-      "subtitle": "Profesor nativo de portugués brasileño con metodología propia",
-      "bio": "Soy Pedro Corgnati, profesor nativo de portugués brasileño con años de experiencia enseñando a estudiantes internacionales de todos los niveles. Desarrollé el Método Corgly para garantizar progreso medible en cada ciclo de clases.",
-      "image_alt": "Pedro Corgnati, profesor de portugués brasileño, sonriendo en su oficina",
-      "credentials": {
-        "international": "Experiencia con alumnos de 20+ países",
-        "method": "Creador del Método Corgly",
-        "live": "Disponible para clases 1:1 en vivo",
-        "feedback": "Retroalimentación estructurada después de cada clase"
+      "bio": "Profesor nativo de portugués brasileño con pasión por ayudar a estudiantes internacionales a hablar con confianza y naturalidad. Mis clases son personalizadas, prácticas y centradas en la comunicación real del día a día.",
+      "positioning": "Estudias conmigo.",
+      "image_alt": "Pedro, profesor nativo de portugués brasileño",
+      "credentials_aria": "Credenciales del profesor",
+      "metrics": {
+        "years": {
+          "value": "8 años",
+          "label": "enseñando portugués brasileño"
+        },
+        "countries": {
+          "value": "20+ países",
+          "label": "de alumnos de todo el mundo que ya aprendieron conmigo."
+        },
+        "one_to_one": {
+          "value": "1:1 siempre",
+          "label": "clases individuales 100% personalizadas"
+        }
+      },
+      "checks": {
+        "adults": "Experiencia sólida enseñando a adultos y profesionales internacionales",
+        "fluency": "Especializado en conversación, pronunciación y fluidez natural",
+        "certified": "Profesor de portugués, posgraduado en metodología de enseñanza"
       }
     },
     "method": {
-      "badge": "Metodología",
-      "title": "El Método Corgly",
-      "subtitle": "Una metodología desarrollada para garantizar progreso real y medible en el portugués brasileño.",
+      "title": "El método Corgly, sin jerga",
+      "subtitle": "Cuatro acuerdos simples para que cada clase particular en vivo te mueva adelante.",
       "pillars": {
         "commitment": {
-          "title": "Commitment",
-          "description": "Compromiso con metas claras y responsabilidad mutua entre alumno y profesor."
+          "title": "Compromiso",
+          "description": "Asumimos el compromiso y entregamos."
         },
-        "time_boxed": {
-          "title": "Time-Boxed",
-          "description": "Ciclos de aprendizaje con tiempos definidos para enfoque y progreso constante."
+        "closed_cycle": {
+          "title": "Ciclo cerrado",
+          "description": "Empezamos juntos, terminamos juntos."
         },
-        "cycle_based": {
-          "title": "Cycle-Based",
-          "description": "Estructura de ciclos que integra práctica, retroalimentación y consolidación del aprendizaje."
+        "continuous_context": {
+          "title": "Contexto continuo",
+          "description": "Entendemos el conjunto para acertar en lo que importa."
         },
-        "shared_context": {
-          "title": "Shared Context",
-          "description": "Contexto compartido entre clases para continuidad y evolución real."
-        },
-        "feedback_loop": {
-          "title": "Feedback Loop",
-          "description": "Retroalimentación constante y estructurada para corrección y mejora continua."
+        "real_feedback": {
+          "title": "Feedback de verdad",
+          "description": "Hablamos con claridad y ayudamos de verdad."
         }
       }
     },
     "pricing": {
-      "badge": "Planes",
-      "title": "Invierte en tu portugués",
-      "subtitle": "Elige el plan que mejor se adapte a tu rutina",
-      "discount_banner": "★ Tu primera clase tiene 50% de descuento — ¡solo $12.50!",
-      "most_popular": "MÁS POPULAR",
+      "title": "Elige el ritmo",
+      "subtitle": "Tres formas de estudiar. Precios públicos en dólares.",
+      "discount_banner": "Primera clase con 50% OFF — US$ 12,50 (de US$ 25)",
+      "most_chosen": "Más elegido",
+      "best_cost": "mejor costo por clase",
       "per_lesson_suffix": "/clase",
+      "per_lesson": "por clase",
+      "per_month": "por mes · {count} clases incluidas",
+      "monthly_options_aria": "Opciones del plan mensual",
+      "monthly_option": "{count} clases",
+      "first_lesson_label": "Primera clase",
+      "following_lessons_label": "Clases siguientes",
+      "equivalent_to": "equivalente a",
       "lesson_suffix": "clase",
       "lessons_suffix": "clases",
+      "footnote": "Los créditos duran 6 meses · cancela la mensual al final del ciclo",
+      "footnote_credits": "Los créditos duran 6 meses",
+      "footnote_cancel": "cancela la mensual al final del ciclo",
       "packages": {
         "single": {
-          "name": "Individual",
-          "cta": "Empezar ahora",
+          "name": "Suelta",
+          "cta": "Empezar por la primera clase",
           "features": [
-            "1 clase de 55 min",
-            "Retroalimentación estructurada",
-            "Sala virtual con doc colaborativo",
-            "Soporte por email"
-          ]
-        },
-        "pack5": {
-          "name": "Pack 5",
-          "cta": "Comprar Pack 5",
-          "features": [
-            "5 clases de 55 min",
-            "Retroalimentación estructurada",
-            "Sala virtual con doc colaborativo",
-            "Progreso y gráficos",
-            "Soporte prioritario"
+            "Sin compromiso",
+            "Créditos válidos 6 meses"
           ]
         },
         "pack10": {
           "name": "Pack 10",
-          "cta": "Comprar Pack 10",
+          "cta": "Elegir Pack 10",
           "features": [
-            "10 clases de 55 min",
-            "Retroalimentación estructurada",
-            "Sala virtual con doc colaborativo",
-            "Progreso y gráficos",
-            "Historial completo",
-            "Soporte prioritario",
-            "Acceso al contenido P1"
+            "10 clases incluidas",
+            "Créditos válidos 6 meses"
           ]
         },
         "monthly": {
           "name": "Mensual",
-          "cta": "Suscribirse Mensual",
+          "cta": "Elegir Mensual",
           "features": [
-            "8 clases por mes",
-            "Retroalimentación estructurada",
-            "Sala virtual con doc colaborativo",
-            "Progreso y gráficos",
-            "Renovación automática",
-            "Soporte prioritario"
+            "Mejor costo por clase",
+            "Cancela la mensual al final del ciclo"
           ]
         }
       }
     },
-    "content_preview": {
-      "badge": "Contenido Gratuito",
-      "title": "Próximamente: clases gratuitas",
-      "subtitle": "Estamos preparando contenido gratuito de gramática, vocabulario y pronunciación. Regístrate para ser notificado cuando lancemos.",
-      "cta": "Ver todo el contenido"
-    },
     "testimonials": {
-      "title": "Qué dicen los alumnos",
-      "subtitle": "Resultados reales de alumnos de todo el mundo",
-      "items": {
-        "maria": {
-          "name": "Maria Chen",
-          "country": "Estados Unidos",
-          "text": "En 3 meses con Pedro, logré comunicarme con la familia brasileña de mi esposo por primera vez. ¡El Método Corgly es increíble!"
-        },
-        "giulia": {
-          "name": "Giulia Rossi",
-          "country": "Italia",
-          "text": "Las clases 1:1 hicieron toda la diferencia. La retroalimentación estructurada después de cada sesión me ayuda a enfocarme en lo que realmente necesita mejorar."
-        },
-        "james": {
-          "name": "James O'Brien",
-          "country": "Irlanda",
-          "text": "Probé varias apps de idiomas antes y ninguna funcionó como las clases en vivo con Pedro. Recomiendo sin dudar."
-        }
-      }
+      "title": "Lo que dicen los alumnos",
+      "subtitle": "Reseñas reales, sin carrusel",
+      "band": "4.8 / 5 · 15 reseñas · Claridad 5.0 · Confiabilidad 4.8 · Progreso 4.7",
+      "show_translation": "Mostrar traducción",
+      "show_original": "Mostrar original",
+      "all_15": "Ver las 15 reseñas"
     },
     "faq": {
-      "title": "Preguntas Frecuentes",
+      "title": "FAQ",
       "items": {
-        "how_it_works": {
-          "q": "¿Cómo funcionan las clases?",
-          "a": "Las clases son 1:1 en vivo por videoconferencia, con una duración de 50 minutos. Programas en el horario que prefieras y recibes el enlace de acceso por email."
-        },
         "duration": {
-          "q": "¿Cuánto dura cada clase?",
-          "a": "50 minutos en punto."
+          "q": "¿Cuánto dura cada clase en vivo?",
+          "a": "Cada clase en vivo dura 50 minutos, siempre, para mantener el foco, el ritmo y el aprendizaje de forma productiva."
         },
         "cancel": {
-          "q": "¿Puedo cancelar?",
-          "a": "Sí, con hasta 24 horas de antelación sin perder el crédito. Las cancelaciones con menos de 24 horas resultan en la deducción del crédito."
+          "q": "¿Puedo cancelar o reprogramar?",
+          "a": "Sí, hasta 24h antes. Después se usa el crédito."
         },
-        "timezone": {
-          "q": "¿Cómo funciona la zona horaria?",
-          "a": "Puedes programar en cualquier zona horaria. El sistema convierte automáticamente a tu horario local."
+        "credits": {
+          "q": "¿Los créditos del pack caducan?",
+          "a": "Sí, 6 meses después de la compra. Los de la mensual siguen el ciclo de cobro."
         },
-        "credits_expire": {
-          "q": "¿Caducan los créditos?",
-          "a": "Sí, los créditos caducan 6 meses después de la fecha de compra."
+        "pack_vs_monthly": {
+          "q": "¿Cuál es la diferencia entre Pack 10 y Mensual?",
+          "a": "Pack 10 son 10 créditos para usar cuando quieras (valen 6 meses). Mensual: 10 clases a US$ 17 o 20 clases a US$ 15 por clase, cobrado cada ciclo. Cancela al final del ciclo."
+        },
+        "beginner": {
+          "q": "¿Necesito saber portugués ya?",
+          "a": "No. Empezamos de cero. Las clases pueden ser en inglés, español o italiano hasta que el portugués tome el control."
+        },
+        "intensive": {
+          "q": "Tengo un viaje, una mudanza o una entrevista pronto. ¿Podemos ir más rápido?",
+          "a": "Sí. Plan intensivo: conversación, vocabulario prioritario, errores frecuentes, metas semanales."
+        },
+        "business": {
+          "q": "¿Enseñas portugués para el trabajo?",
+          "a": "Sí. Reuniones, correos, presentaciones, entrevistas, negociación y vocabulario del área. Formación en administración y software."
+        },
+        "brazil_vs_pt": {
+          "q": "¿Portugués de Brasil o de Portugal?",
+          "a": "Solo el de Brasil. El portugués que hablan los brasileños de verdad."
         },
         "first_lesson": {
-          "q": "¿Cómo funciona el descuento en la primera clase?",
-          "a": "$12.50 (50% DESCUENTO) — válido una vez por cuenta para nuevos alumnos."
+          "q": "¿Cómo funciona el precio de la primera clase?",
+          "a": "US$ 12,50 una vez por alumno nuevo (50% de US$ 25). En esa clase mapeamos nivel, objetivos y bloqueos y armamos un plan simple."
+        },
+        "timezone": {
+          "q": "¿Cómo funciona el huso horario?",
+          "a": "Reservas en tu hora local. El calendario convierte."
+        },
+        "platform": {
+          "q": "¿Dónde ocurre la clase?",
+          "a": "En vivo en Zoom. El enlace llega por correo."
+        },
+        "payment": {
+          "q": "¿Cómo pago?",
+          "a": "En dólares, tarjeta vía Stripe."
         }
       }
     },
     "cta": {
-      "title": "¿Listo para aprender portugués de verdad?",
-      "subtitle": "Primera clase con 50% de descuento. Sin compromiso a largo plazo.",
-      "button": "Crear cuenta ahora",
-      "button_secondary": "Ver Planes"
-    },
-    "footer": {
-      "copyright": "© 2026 Corgly. Todos los derechos reservados.",
-      "links": {
-        "terms": "Términos de Uso",
-        "privacy": "Privacidad",
-        "contact": "Contacto"
-      }
+      "title": "¿Listo para la primera conversación de verdad?",
+      "subtitle": "Clase particular en vivo en Zoom. Primera clase US$ 12,50.",
+      "button": "Quiero mi clase por {price}",
+      "button_secondary": "Ver planes"
     }
   },
   "content": {
@@ -467,12 +516,17 @@
       "pack10Desc": "10 créditos",
       "pack10Badge": "Mejor relación calidad-precio",
       "monthlyTitle": "Mensual",
-      "monthlyDesc": "8 créditos/mes",
+      "monthlyDesc": "10 o 20 créditos/mes",
       "buyBtn": "Comprar",
       "subscribing": "Suscribiendo...",
       "buying": "Comprando...",
       "perLesson": "/clase",
-      "perMonth": "/mes"
+      "perMonth": "/mes",
+      "subscribeBtn": "Suscribirse mensual",
+      "checkoutError": "No fue posible iniciar el pago. Inténtalo de nuevo.",
+      "redirecting": "Redirigiendo al pago seguro...",
+      "firstPurchaseNote": "Descuento de primera clase aplicado automáticamente en el pago.",
+      "selectedPlan": "Plan elegido en la página de inicio"
     },
     "discount": {
       "title": "Primera compra",
@@ -510,7 +564,67 @@
       "updateMsg": "¿Cambiar frecuencia a {count}x por semana?",
       "updateConfirm": "Confirmar",
       "empty": "Sin suscripción activa",
-      "emptyDesc": "Suscríbete para renovar tus créditos automáticamente cada mes."
+      "emptyDesc": "Suscríbete para renovar tus créditos automáticamente cada mes.",
+      "lessonsPerMonth": "{count} clases por mes",
+      "perWeek": "{count}x por semana",
+      "perMonth": "/mes",
+      "planLabel": "Plan",
+      "periodLabel": "Periodo actual",
+      "creditsLabel": "Créditos mensuales",
+      "creditsPerMonth": "{count} créditos por mes",
+      "priceNote": "Importe de referencia en dólares. El cobro sigue la moneda registrada en la suscripción.",
+      "trial": "Periodo de prueba",
+      "pastDue": "Pago pendiente",
+      "paused": "Pausada",
+      "changePlan": "Cambiar plan",
+      "emptyAction": "Ver planes",
+      "cancelKeep": "Mantener la suscripción",
+      "cancelMsgDated": "Tu suscripción se cancelará al final del periodo actual ({date}). Los créditos ya liberados siguen válidos hasta su fecha de vencimiento.",
+      "cancelNotice": "Tu suscripción finalizará el {date}.",
+      "loadError": "No fue posible cargar tu suscripción. Inténtalo de nuevo.",
+      "cancelSuccess": "Suscripción cancelada. Sigue activa hasta el final del periodo actual.",
+      "cancelError": "No fue posible cancelar la suscripción. Inténtalo de nuevo.",
+      "updateSuccess": "Plan cambiado correctamente.",
+      "updateError": "No fue posible cambiar el plan. Inténtalo de nuevo.",
+      "axisError": "Elige un plan mensual O una frecuencia semanal, nunca ambos.",
+      "pageTitle": "Suscripción",
+      "pageSubtitle": "Consulta tu plan actual y gestiona el pago y los datos de facturación en el portal seguro de Stripe.",
+      "planSectionTitle": "Tu plan",
+      "portalTitle": "Portal seguro de Stripe",
+      "portalDesc": "Abre una sesión autenticada para actualizar el método de pago, ver los datos de la suscripción o resolver cobros pendientes. Al terminar, vuelves a esta página.",
+      "portalCta": "Abrir portal",
+      "portalOpening": "Abriendo portal...",
+      "portalRedirecting": "Redirigiendo al portal de Stripe.",
+      "portalError": "No fue posible abrir el portal de facturación. Inténtalo de nuevo.",
+      "portalConnectionError": "Error de conexión al abrir el portal de facturación. Inténtalo de nuevo.",
+      "pastDueNotice": "Si tu suscripción tiene un pago pendiente, usa el portal para actualizar el método de pago. El regreso a la aplicación está restringido al dominio configurado de Corgly.",
+      "supportTitle": "Soporte financiero",
+      "supportCta": "Hablar con soporte",
+      "changeBack": "Volver a la suscripción",
+      "changeSubtitle": "Simula el cobro prorrateado, los impuestos estimados y la fecha efectiva antes de confirmar.",
+      "changeChooseTitle": "Elige el nuevo plan",
+      "changeCurrentPlan": "Plan actual: {plan}.",
+      "changeMonthlyGroup": "Planes mensuales",
+      "changeLegacyGroup": "Frecuencia semanal",
+      "changeLegacyHint": "Disponible solo para suscripciones contratadas por frecuencia semanal.",
+      "changeCurrentBadge": "Actual",
+      "changeEstimated": "por mes (estimado)",
+      "changePreviewCta": "Simular cambio",
+      "changePreviewLoading": "Simulando...",
+      "changeConfirmCta": "Confirmar cambio",
+      "changeConfirmLoading": "Confirmando...",
+      "changeSelectedIsCurrent": "Este ya es tu plan actual. Elige otro para simular el cambio.",
+      "changePreviewTitle": "Resumen de la simulación",
+      "changePreviewHint": "Elige un plan y pulsa Simular cambio para ver los importes antes de confirmar.",
+      "changeSummaryLabel": "Cambio",
+      "changeSummaryValue": "{from} a {to}",
+      "changeNextMonthly": "Nuevo importe mensual",
+      "changeProration": "Ajuste prorrateado",
+      "changeTax": "Impuestos estimados",
+      "changeDueNow": "Total a pagar ahora",
+      "changeEffective": "Efectiva el {effectiveAt}. El periodo actual termina el {periodEnd}.",
+      "changeCurrentPlanNotice": "La simulación apunta al mismo plan que ya tienes: no se cobrará nada.",
+      "changePreviewError": "No fue posible simular el cambio de plan. Inténtalo de nuevo."
     },
     "breakdown": {
       "title": "Desglose de Créditos",
@@ -561,7 +675,19 @@
         "emptyFiltered": "Sin registros para los filtros seleccionados."
       }
     },
-    "checkoutSuccess": "¡Compra realizada con éxito! Tus créditos fueron agregados."
+    "checkoutSuccess": "¡Compra realizada con éxito! Tus créditos fueron agregados.",
+    "currency": {
+      "label": "Moneda",
+      "groupAria": "Elegir la moneda de visualización de los precios",
+      "optionAria": "Mostrar precios en {currency}",
+      "loading": "Cargando tu preferencia de moneda...",
+      "saving": "Guardando tu preferencia de moneda...",
+      "loadError": "No fue posible cargar tu preferencia de moneda guardada. Mostrando en {currency}.",
+      "saveError": "No fue posible guardar tu preferencia de moneda. La elección vale solo en este navegador.",
+      "retry": "Reintentar",
+      "note": "La moneda cobrada se confirma en el pago.",
+      "usdcNote": "USDC disponible según el soporte de la pasarela."
+    }
   },
   "errors": {
     "notFound": {
@@ -613,5 +739,41 @@
     "resourcesDownload": "Descargar",
     "resourcesDownloadAria": "Descargar recurso {name}",
     "resourcesError": "No se pudo generar el enlace de descarga. Intentalo de nuevo."
+  },
+  "skipNav": {
+    "label": "Saltar al contenido principal"
+  },
+  "exercises": {
+    "pageTitle": "Ejercicios",
+    "pageDescription": "Practica el contenido de las clases a tu ritmo.",
+    "breadcrumbDashboard": "Panel",
+    "emptyTitle": "Todavía no hay ejercicios",
+    "emptyDescription": "En cuanto se publique una clase con ejercicios, aparecerá aquí.",
+    "emptyExercise": "Esta clase todavía no tiene preguntas de opción múltiple.",
+    "lessonBadge": "Clase {number}",
+    "levelBadge": "Nivel {level}",
+    "kindMultipleChoice": "Opción múltiple",
+    "questionCount": "{count, plural, one {# pregunta} other {# preguntas}}",
+    "instructions": "Elige una opción y comprueba la respuesta.",
+    "grammarToggle": "Punto gramatical de la clase",
+    "progress": "Pregunta {current} de {total}",
+    "progressDone": "{total, plural, one {# pregunta respondida} other {# preguntas respondidas}}",
+    "optionLabel": "Opción {letter}",
+    "checkButton": "Comprobar respuesta",
+    "nextButton": "Siguiente pregunta",
+    "finishButton": "Ver resultado",
+    "retryButton": "Repetir el ejercicio",
+    "noSelectionWarning": "Elige una opción antes de comprobar.",
+    "correctTitle": "Has acertado",
+    "incorrectTitle": "Has fallado",
+    "yourAnswer": "Tu respuesta: {letter}) {text}",
+    "correctAnswer": "Respuesta correcta: {letter}) {text}",
+    "summaryTitle": "Ejercicio terminado",
+    "summaryScore": "Has acertado {correct} de {total}.",
+    "summaryHint": "Repítelo las veces que quieras: las preguntas y el orden de las opciones no cambian nunca.",
+    "restarted": "Ejercicio reiniciado. Has vuelto a la primera pregunta.",
+    "errorTitle": "Error al cargar los ejercicios",
+    "errorDescription": "No hemos podido montar el ejercicio de esta clase. Inténtalo de nuevo.",
+    "errorRetry": "Intentar de nuevo"
   }
 }

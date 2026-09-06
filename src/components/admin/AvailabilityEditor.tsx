@@ -121,20 +121,21 @@ export function AvailabilityEditor({
   };
 
   return (
-    <div className="space-y-6">
+    <div data-testid="admin-availability" className="space-y-6">
       {/* Generate form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <h3 className="font-semibold text-foreground">Gerar horários</h3>
+      <form data-testid="form-generate-slots" onSubmit={handleSubmit(onSubmit)} className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <h3 data-testid="admin-availability-header" className="font-semibold text-foreground">Gerar horários</h3>
 
         {/* Days of week */}
         <div>
           <label className="text-sm font-medium text-foreground block mb-2">
             Dias da semana
           </label>
-          <div className="flex gap-2 flex-wrap">
+          <div data-testid="form-generate-slots-days" className="flex gap-2 flex-wrap">
             {WEEKDAY_LABELS.map((label, i) => (
               <button
                 key={i}
+                data-testid={`form-generate-slots-day-${i}-button`}
                 type="button"
                 onClick={() => toggleDay(i)}
                 aria-pressed={selectedDays?.includes(i) ?? false}
@@ -149,7 +150,7 @@ export function AvailabilityEditor({
             ))}
           </div>
           {errors.days && (
-            <p className="text-xs text-destructive mt-1">{errors.days.message}</p>
+            <p data-testid="form-generate-slots-days-error" className="text-xs text-destructive mt-1">{errors.days.message}</p>
           )}
         </div>
 
@@ -158,10 +159,11 @@ export function AvailabilityEditor({
           <label className="text-sm font-medium text-foreground block mb-2">
             Faixas de horário
           </label>
-          <div className="space-y-2">
+          <div data-testid="form-generate-slots-ranges" className="space-y-2">
             {(ranges ?? []).map((_, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} data-testid={`form-generate-slots-range-${i}`} className="flex items-center gap-2">
                 <input
+                  data-testid={`form-generate-slots-range-${i}-start-input`}
                   type="time"
                   aria-label={`Hora início da faixa ${i + 1}`}
                   {...register(`ranges.${i}.start`)}
@@ -169,6 +171,7 @@ export function AvailabilityEditor({
                 />
                 <span className="text-muted-foreground text-sm">até</span>
                 <input
+                  data-testid={`form-generate-slots-range-${i}-end-input`}
                   type="time"
                   aria-label={`Hora fim da faixa ${i + 1}`}
                   {...register(`ranges.${i}.end`)}
@@ -176,6 +179,7 @@ export function AvailabilityEditor({
                 />
                 {(ranges?.length ?? 0) > 1 && (
                   <button
+                    data-testid={`form-generate-slots-range-${i}-remove-button`}
                     type="button"
                     onClick={() => removeRange(i)}
                     className="text-muted-foreground hover:text-destructive"
@@ -187,6 +191,7 @@ export function AvailabilityEditor({
               </div>
             ))}
             <button
+              data-testid="form-generate-slots-add-range-button"
               type="button"
               onClick={addRange}
               className="text-sm text-primary hover:underline flex items-center gap-1"
@@ -195,7 +200,7 @@ export function AvailabilityEditor({
             </button>
           </div>
           {errors.ranges && (
-            <p className="text-xs text-destructive mt-1">{errors.ranges.message}</p>
+            <p data-testid="form-generate-slots-ranges-error" className="text-xs text-destructive mt-1">{errors.ranges.message}</p>
           )}
         </div>
 
@@ -205,6 +210,7 @@ export function AvailabilityEditor({
             Semanas à frente
           </label>
           <input
+            data-testid="form-generate-slots-weeks-ahead-input"
             id="weeksAhead"
             type="number"
             min={1}
@@ -213,12 +219,13 @@ export function AvailabilityEditor({
             className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
           {errors.weeksAhead && (
-            <p className="text-xs text-destructive mt-1">{errors.weeksAhead.message}</p>
+            <p data-testid="form-generate-slots-weeks-ahead-error" className="text-xs text-destructive mt-1">{errors.weeksAhead.message}</p>
           )}
         </div>
 
         {skippedAlert && (
           <div
+            data-testid="form-generate-slots-skipped-alert"
             role="alert"
             className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning"
           >
@@ -230,7 +237,7 @@ export function AvailabilityEditor({
           </div>
         )}
 
-        <Button type="submit" disabled={isSubmitting}>
+        <Button data-testid="form-generate-slots-submit-button" type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -244,14 +251,15 @@ export function AvailabilityEditor({
 
       {/* Existing slots list */}
       {existingSlots.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-semibold text-foreground mb-4">
+        <div data-testid="admin-availability-existing" className="bg-card border border-border rounded-2xl p-6">
+          <h3 data-testid="admin-availability-existing-header" className="font-semibold text-foreground mb-4">
             Slots existentes ({existingSlots.length})
           </h3>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          <div data-testid="admin-availability-slot-list" className="space-y-2 max-h-[400px] overflow-y-auto">
             {existingSlots.map((slot) => (
               <div
                 key={slot.id}
+                data-testid={`admin-availability-slot-${slot.id}`}
                 className="flex items-center justify-between p-3 rounded-lg border border-border"
               >
                 <div>
@@ -277,6 +285,7 @@ export function AvailabilityEditor({
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
+                    data-testid={`admin-availability-slot-${slot.id}-block-button`}
                     variant="ghost"
                     size="sm"
                     onClick={() => handleBlockToggle(slot)}
@@ -290,6 +299,7 @@ export function AvailabilityEditor({
                     )}
                   </Button>
                   <Button
+                    data-testid={`admin-availability-slot-${slot.id}-delete-button`}
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(slot.id)}

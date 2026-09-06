@@ -116,6 +116,7 @@ export function PastDueBanner({
 
   return (
     <section
+      data-testid="billing-past-due-banner"
       className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100"
       role="alert"
       aria-labelledby="past-due-banner-title"
@@ -136,6 +137,7 @@ export function PastDueBanner({
 
         <div className="flex flex-col gap-2 sm:min-w-48">
           <Button
+            data-testid="billing-past-due-portal-button"
             type="button"
             onClick={openPortal}
             disabled={isOpeningPortal}
@@ -155,6 +157,7 @@ export function PastDueBanner({
             )}
           </Button>
           <Link
+            data-testid="billing-past-due-support-link"
             href={ROUTES.SUPPORT}
             className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-amber-300 bg-white/70 px-3 text-sm font-medium text-amber-950 transition-colors hover:bg-white dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
           >

@@ -20,8 +20,8 @@ export default async function AdminSessionsPage({ searchParams }: AdminSessionsP
   const sessions = await getSessions({ page, limit: PAGINATION.ADMIN_SESSIONS, status });
 
   return (
-    <PageWrapper>
-      <div className="mb-6">
+    <PageWrapper data-testid="page-admin-sessions">
+      <div data-testid="admin-sessions-header" className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Sessões</h1>
         <p className="text-sm text-muted-foreground mt-1">Todas as aulas da plataforma</p>
       </div>

@@ -22,16 +22,16 @@ export default function ContentDetailError({
   }, [error, pathname]);
 
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8 max-w-3xl mx-auto flex flex-col items-center justify-center min-h-[400px] gap-4">
+    <div data-testid="content-detail-error" className="px-4 py-6 md:px-6 md:py-8 max-w-3xl mx-auto flex flex-col items-center justify-center min-h-[400px] gap-4">
       <AlertCircle className="h-10 w-10 text-destructive" />
       <h2 className="text-lg font-semibold text-foreground">Erro ao carregar conteúdo</h2>
       <p className="text-sm text-muted-foreground text-center max-w-md">
         Não foi possível carregar este conteúdo. Tente novamente ou explore outros materiais.
       </p>
       <div className="flex gap-3 flex-wrap justify-center">
-        <Button onClick={reset}>Tentar novamente</Button>
+        <Button data-testid="content-detail-error-retry-button" onClick={reset}>Tentar novamente</Button>
         <Button variant="outline" asChild>
-          <Link href={ROUTES.CONTENT}>Ver todos os conteúdos</Link>
+          <Link data-testid="content-detail-error-all-link" href={ROUTES.CONTENT}>Ver todos os conteúdos</Link>
         </Button>
       </div>
     </div>

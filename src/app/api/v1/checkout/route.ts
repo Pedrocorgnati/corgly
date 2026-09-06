@@ -33,10 +33,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { packageType, weeklyFrequency, isSubscription, currency } = body;
+    const { packageType, weeklyFrequency, monthlyLessons, isSubscription, currency } = body;
 
     if (isSubscription) {
-      const parsed = CreateSubscriptionCheckoutSchema.safeParse({ weeklyFrequency, currency });
+      // Dois eixos aceitos: monthlyLessons (10 ou 20, canonico) ou
+      // weeklyFrequency (1..5, legado). O schema recusa ambos e recusa nenhum.
+      const parsed = CreateSubscriptionCheckoutSchema.safeParse({
+        monthlyLessons,
+        weeklyFrequency,
+        currency,
+      });
       if (!parsed.success) {
         return NextResponse.json(
           apiResponse(null, 'Dados inválidos.', parsed.error.issues[0]?.message ?? null),

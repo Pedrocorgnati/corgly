@@ -13,10 +13,10 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
   return (
     <AuthPageWrapper>
-      <div className="w-full max-w-[448px]">
+      <div data-testid="page-auth-register" className="w-full max-w-[448px]">
         {/* Card */}
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
-          <div className="mb-6">
+          <div data-testid="auth-register-header" className="mb-6">
             <h1 className="text-2xl md:text-[26px] font-bold text-foreground">
               Criar Conta
             </h1>

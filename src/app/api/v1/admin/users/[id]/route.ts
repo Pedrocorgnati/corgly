@@ -56,21 +56,39 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       }),
       prisma.session.findMany({
         where:   { studentId },
-        select:  { id: true, status: true, startAt: true, completedAt: true, feedback: { select: { clarityScore: true, didacticsScore: true, punctualityScore: true, engagementScore: true } } },
+        // A relacao feedback precisa ser carregada de verdade para `hasFeedback`
+        // nao ler propriedade inexistente no payload da sessao.
+        select:  { id: true, status: true, startAt: true, completedAt: true, feedback: { select: { id: true } } },
         orderBy: { startAt: 'desc' },
         take:    PAGINATION.USER_DETAIL_SESSIONS,
       }),
       prisma.feedback.findMany({
         where:   { session: { studentId } },
-        select:  { id: true, clarityScore: true, didacticsScore: true, punctualityScore: true, engagementScore: true, comment: true, reviewed: true, reviewedAt: true, createdAt: true, session: { select: { startAt: true } } },
+        // Dimensoes reais do model Feedback (schema.prisma): listening, speaking,
+        // writing e vocabulary. overallFeedback e o texto publico ao aluno;
+        // privateNote (nota interna do admin) segue fora de proposito.
+        select:  {
+          id:                 true,
+          listeningScore:     true,
+          speakingScore:      true,
+          writingScore:       true,
+          vocabularyScore:    true,
+          overallFeedback:    true,
+          reviewed:           true,
+          reviewedAt:         true,
+          createdAt:          true,
+          session:            { select: { startAt: true } },
+        },
         orderBy: { createdAt: 'desc' },
         take:    PAGINATION.USER_DETAIL_TOP_SESSIONS,
       }),
     ]);
 
-    // Compute credit balance
+    // Saldo de creditos — mesmo predicado de CreditService.getBalance:
+    // lote nao expirado (expiresAt futuro OU null) e ainda com credito sobrando.
+    const now = new Date();
     const creditBalance = creditBatches
-      .filter((b) => !b.expiresAt || b.expiresAt > new Date())
+      .filter((b) => (!b.expiresAt || b.expiresAt > now) && b.usedCredits < b.totalCredits)
       .reduce((s, b) => s + (b.totalCredits - b.usedCredits), 0);
 
     // Session counts by status
@@ -98,7 +116,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       recentFeedbacks: recentFeedbacks.map((f) => ({
         id:           f.id,
         sessionDate:  f.session.startAt,
-        averageScore: (f.clarityScore + f.didacticsScore + f.punctualityScore + f.engagementScore) / 4,
+        scores: {
+          listening:  f.listeningScore,
+          speaking:   f.speakingScore,
+          writing:    f.writingScore,
+          vocabulary: f.vocabularyScore,
+        },
+        averageScore: Math.round(
+          ((f.listeningScore + f.speakingScore + f.writingScore + f.vocabularyScore) / 4) * 10,
+        ) / 10,
+        overallFeedback: f.overallFeedback,
         reviewed:     f.reviewed,
         reviewedAt:   f.reviewedAt,
         createdAt:    f.createdAt,

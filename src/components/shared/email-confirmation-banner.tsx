@@ -50,6 +50,7 @@ export function EmailConfirmationBanner({ emailConfirmed }: EmailConfirmationBan
 
   return (
     <div
+      data-testid="email-confirmation-banner"
       role="alert"
       aria-live="polite"
       className="flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 text-sm"
@@ -60,6 +61,7 @@ export function EmailConfirmationBanner({ emailConfirmed }: EmailConfirmationBan
       </p>
 
       <Button
+        data-testid="email-confirmation-resend-button"
         variant="outline"
         size="sm"
         onClick={handleResend}
@@ -78,6 +80,7 @@ export function EmailConfirmationBanner({ emailConfirmed }: EmailConfirmationBan
       </Button>
 
       <button
+        data-testid="email-confirmation-dismiss-button"
         type="button"
         onClick={handleDismiss}
         className="shrink-0 text-amber-600 hover:text-amber-900 min-h-[36px] min-w-[36px] flex items-center justify-center rounded"

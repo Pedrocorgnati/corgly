@@ -161,7 +161,7 @@ export function BroadcastsClient() {
   }
 
   return (
-    <div className="space-y-8">
+    <div data-testid="admin-broadcasts" className="space-y-8">
       {banner && (
         <div
           role="status"
@@ -176,12 +176,13 @@ export function BroadcastsClient() {
       )}
 
       {/* Composer */}
-      <section className="rounded-lg border border-border bg-card p-5">
+      <section data-testid="form-broadcast" className="rounded-lg border border-border bg-card p-5">
         <h2 className="text-lg font-semibold text-foreground mb-4">Novo broadcast</h2>
         <div className="grid gap-4">
           <label className="grid gap-1">
             <span className="text-sm font-medium text-foreground">Segmento</span>
             <select
+              data-testid="form-broadcast-segment-select"
               value={segment}
               onChange={(e) => setSegment(e.target.value)}
               disabled={sending}
@@ -198,6 +199,7 @@ export function BroadcastsClient() {
           <label className="grid gap-1">
             <span className="text-sm font-medium text-foreground">Assunto</span>
             <input
+              data-testid="form-broadcast-subject-input"
               type="text"
               value={subject}
               maxLength={180}
@@ -211,6 +213,7 @@ export function BroadcastsClient() {
           <label className="grid gap-1">
             <span className="text-sm font-medium text-foreground">Conteudo (HTML)</span>
             <textarea
+              data-testid="form-broadcast-html-textarea"
               value={html}
               onChange={(e) => setHtml(e.target.value)}
               disabled={sending}
@@ -226,6 +229,7 @@ export function BroadcastsClient() {
           <div>
             <button
               type="button"
+              data-testid="admin-broadcasts-send-button"
               onClick={requestSend}
               disabled={sending}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
@@ -238,11 +242,12 @@ export function BroadcastsClient() {
       </section>
 
       {/* History */}
-      <section>
+      <section data-testid="admin-broadcasts-history">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-foreground">Historico de broadcasts</h2>
           <button
             type="button"
+            data-testid="admin-broadcasts-refresh-button"
             onClick={() => load()}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
@@ -252,13 +257,13 @@ export function BroadcastsClient() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground py-6">Carregando broadcasts...</p>
+          <p data-testid="admin-broadcasts-loading" className="text-sm text-muted-foreground py-6">Carregando broadcasts...</p>
         ) : listError ? (
-          <p className="text-sm text-destructive py-6">{listError}</p>
+          <p data-testid="admin-broadcasts-error" className="text-sm text-destructive py-6">{listError}</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6">Nenhum broadcast enviado ainda.</p>
+          <p data-testid="admin-broadcasts-empty" className="text-sm text-muted-foreground py-6">Nenhum broadcast enviado ainda.</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <div data-testid="admin-broadcasts-table" className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-muted-foreground">
                 <tr>
@@ -273,7 +278,7 @@ export function BroadcastsClient() {
               </thead>
               <tbody>
                 {items.map((row) => (
-                  <tr key={row.broadcastId} className="border-t border-border">
+                  <tr key={row.broadcastId} data-testid={`admin-broadcasts-row-${row.broadcastId}`} className="border-t border-border">
                     <td className="px-4 py-2 text-foreground whitespace-nowrap">
                       {new Date(row.createdAt).toLocaleString('pt-BR')}
                     </td>
@@ -285,6 +290,7 @@ export function BroadcastsClient() {
                     <td className="px-4 py-2 text-right">
                       <button
                         type="button"
+                        data-testid={`admin-broadcasts-view-deliveries-${row.broadcastId}-button`}
                         onClick={() => viewDeliveries(row.broadcastId)}
                         className="inline-flex items-center gap-1.5 text-primary hover:underline"
                       >
@@ -302,7 +308,7 @@ export function BroadcastsClient() {
 
       {/* Confirm dialog */}
       {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div data-testid="modal-confirm-broadcast" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
@@ -318,6 +324,7 @@ export function BroadcastsClient() {
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
+                data-testid="modal-confirm-broadcast-cancel-button"
                 onClick={() => setShowConfirm(false)}
                 disabled={sending}
                 className="rounded-md border border-border px-4 py-2 text-sm text-foreground disabled:opacity-50"
@@ -326,6 +333,7 @@ export function BroadcastsClient() {
               </button>
               <button
                 type="button"
+                data-testid="modal-confirm-broadcast-submit-button"
                 onClick={confirmSend}
                 disabled={sending}
                 className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
@@ -339,12 +347,13 @@ export function BroadcastsClient() {
 
       {/* Deliveries panel */}
       {deliveries && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div data-testid="modal-broadcast-deliveries" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-3xl max-h-[80vh] overflow-hidden rounded-lg border border-border bg-card shadow-lg flex flex-col">
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <h3 className="text-base font-semibold text-foreground">Entregas do broadcast</h3>
               <button
                 type="button"
+                data-testid="modal-broadcast-deliveries-close-button"
                 onClick={() => setDeliveries(null)}
                 className="text-muted-foreground hover:text-foreground"
                 aria-label="Fechar"

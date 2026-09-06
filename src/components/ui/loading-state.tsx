@@ -8,6 +8,7 @@ interface LoadingStateProps {
   message?: string
   skeletonLines?: number
   className?: string
+  'data-testid'?: string
 }
 
 function LoadingState({
@@ -15,10 +16,12 @@ function LoadingState({
   message,
   skeletonLines = 3,
   className,
+  'data-testid': testId,
 }: LoadingStateProps) {
   if (variant === "skeleton") {
     return (
       <div
+        data-testid={testId}
         role="status"
         aria-busy="true"
         className={cn("space-y-3", className)}
@@ -43,6 +46,7 @@ function LoadingState({
 
   return (
     <div
+      data-testid={testId}
       role="status"
       aria-busy="true"
       className={cn(

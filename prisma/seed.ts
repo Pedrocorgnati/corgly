@@ -64,8 +64,20 @@ async function main() {
       preferredLanguage: SupportedLanguage.PT_BR,
       termsAcceptedAt: new Date(),
       termsVersion: '1.0',
+      // Admin nao passa pelo onboarding de aluno: nasce com o marco preenchido.
+      onboardingCompletedAt: new Date(),
     },
   })
+
+  // Backfill idempotente: admin criado antes deste marco continuaria parecendo
+  // aluno sem onboarding. Preserva a data existente quando ja houver uma.
+  if (!admin.onboardingCompletedAt) {
+    await prisma.user.update({
+      where: { id: admin.id },
+      data: { onboardingCompletedAt: new Date() },
+    })
+    console.log('✅ Admin onboarding backfilled:', admin.id)
+  }
   console.log('✅ Admin created:', admin.id)
 
   // ─── Test student ────────────────────────────────────────────────────
@@ -360,7 +372,7 @@ async function main() {
   const existingSubBatch = await prisma.creditBatch.findFirst({ where: { userId: studentSub.id, type: CreditType.MONTHLY } })
   if (!existingSubBatch) {
     await prisma.creditBatch.create({
-      data: { userId: studentSub.id, type: CreditType.MONTHLY, totalCredits: 8, usedCredits: 0, expiresAt: null, reason: 'Seed: créditos mensais studentSub' },
+      data: { userId: studentSub.id, type: CreditType.MONTHLY, totalCredits: 10, usedCredits: 0, expiresAt: null, reason: 'Seed: créditos mensais studentSub' },
     })
   }
 

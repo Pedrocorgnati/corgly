@@ -1,8 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
-
-const API_BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+import { internalApiOrigin } from '@/lib/internal-api';
 
 export interface AuthUser {
   id?: string;
@@ -24,7 +23,7 @@ export interface AuthUser {
 export const getAuthUser = cache(async (): Promise<AuthUser | null> => {
   try {
     const cookieStore = await cookies();
-    const res = await fetch(`${API_BASE}/api/v1/auth/me`, {
+    const res = await fetch(`${await internalApiOrigin()}/api/v1/auth/me`, {
       cache: 'no-store',
       headers: { Cookie: cookieStore.toString() },
     });

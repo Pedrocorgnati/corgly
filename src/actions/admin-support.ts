@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { env } from '@/lib/env';
+import { internalApiOrigin } from '@/lib/internal-api';
 import type {
   PaginatedAdminTickets,
   StudentNotesPayload,
@@ -19,7 +19,6 @@ import type {
  * `@/lib/support/admin-ticket.schema` (módulo `'use server'` só exporta funções).
  */
 
-const API_BASE = env.NEXT_PUBLIC_APP_URL;
 
 const EMPTY_PAGE: PaginatedAdminTickets = {
   data: [],
@@ -34,7 +33,7 @@ async function apiFetch<T>(
   init?: RequestInit,
 ): Promise<{ data: T | null; error: string | null }> {
   const cookieStore = await cookies();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${await internalApiOrigin()}${path}`, {
     ...init,
     cache: 'no-store',
     headers: {

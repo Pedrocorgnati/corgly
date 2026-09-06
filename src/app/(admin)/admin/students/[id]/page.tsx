@@ -95,8 +95,8 @@ export default async function AdminStudentDetailPage({ params }: Props) {
     }
 
     return (
-      <PageWrapper className="max-w-4xl">
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center">
+      <PageWrapper className="max-w-4xl" data-testid="page-admin-student-detail">
+        <div data-testid="admin-student-detail-error" className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center">
           <p className="text-sm text-destructive">Erro ao carregar dados do aluno: {error}</p>
         </div>
       </PageWrapper>
@@ -106,9 +106,9 @@ export default async function AdminStudentDetailPage({ params }: Props) {
   const { user, stats, creditBatches, recentSessions, recentFeedbacks } = data;
 
   return (
-    <PageWrapper className="max-w-4xl space-y-6">
+    <PageWrapper className="max-w-4xl space-y-6" data-testid="page-admin-student-detail">
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <nav data-testid="admin-student-detail-breadcrumb" aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href={ROUTES.ADMIN_STUDENTS} className="hover:text-foreground transition-colors">
           Alunos
         </Link>
@@ -117,7 +117,7 @@ export default async function AdminStudentDetailPage({ params }: Props) {
       </nav>
 
       {/* 1. Profile card */}
-      <section className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+      <section data-testid="admin-student-detail-profile" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
           <div>
             <h1 className="text-xl font-bold text-foreground">{user.name}</h1>
@@ -135,6 +135,7 @@ export default async function AdminStudentDetailPage({ params }: Props) {
             </div>
             <Link
               href={ROUTES.ADMIN_STUDENT_NOTES(id)}
+              data-testid="admin-student-detail-notes-link"
               className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               <StickyNote className="h-4 w-4" aria-hidden="true" />
@@ -182,7 +183,7 @@ export default async function AdminStudentDetailPage({ params }: Props) {
       </section>
 
       {/* 2. Stats row */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <section data-testid="admin-student-detail-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={CreditCard} label="Créditos" value={stats.creditBalance} color="var(--primary)" />
         <StatCard icon={Calendar} label="Total de sessões" value={stats.totalSessions} color="var(--primary)" />
         <StatCard icon={CheckCircle} label="Concluídas" value={stats.completedSessions} color="var(--success)" />
@@ -191,7 +192,7 @@ export default async function AdminStudentDetailPage({ params }: Props) {
 
       {/* 3. Credit batches */}
       {creditBatches.length > 0 && (
-        <section>
+        <section data-testid="admin-student-detail-credit-batches">
           <h2 className="text-base font-semibold text-foreground mb-3">Lotes de Créditos</h2>
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -207,7 +208,7 @@ export default async function AdminStudentDetailPage({ params }: Props) {
                 </thead>
                 <tbody>
                   {creditBatches.map((batch) => (
-                    <tr key={batch.id} className="border-b border-border last:border-0">
+                    <tr key={batch.id} data-testid={`admin-student-detail-credit-batch-row-${batch.id}`} className="border-b border-border last:border-0">
                       <td className="px-4 py-3 text-sm text-foreground capitalize">{batch.type}</td>
                       <td className="px-4 py-3 text-sm text-foreground">{batch.total}</td>
                       <td className="px-4 py-3 text-sm text-foreground">{batch.used}</td>
@@ -226,7 +227,7 @@ export default async function AdminStudentDetailPage({ params }: Props) {
 
       {/* 4. Recent sessions */}
       {recentSessions.length > 0 && (
-        <section>
+        <section data-testid="admin-student-detail-sessions">
           <h2 className="text-base font-semibold text-foreground mb-3">Sessões Recentes</h2>
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -241,7 +242,7 @@ export default async function AdminStudentDetailPage({ params }: Props) {
                 </thead>
                 <tbody>
                   {recentSessions.map((session) => (
-                    <tr key={session.id} className="border-b border-border last:border-0">
+                    <tr key={session.id} data-testid={`admin-student-detail-session-row-${session.id}`} className="border-b border-border last:border-0">
                       <td className="px-4 py-3 text-sm text-foreground">{formatDateTimePtBR(session.startAt)}</td>
                       <td className="px-4 py-3">
                         <SessionStatusBadge status={session.status} />
@@ -272,12 +273,13 @@ export default async function AdminStudentDetailPage({ params }: Props) {
 
       {/* 5. Recent feedbacks */}
       {recentFeedbacks.length > 0 && (
-        <section>
+        <section data-testid="admin-student-detail-feedbacks">
           <h2 className="text-base font-semibold text-foreground mb-3">Feedbacks Recentes</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {recentFeedbacks.map((fb) => (
               <div
                 key={fb.id}
+                data-testid={`admin-student-detail-feedback-card-${fb.id}`}
                 className="bg-card border border-border rounded-2xl p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between mb-3">

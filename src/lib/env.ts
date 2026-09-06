@@ -66,9 +66,34 @@ const envSchema = z.object({
 
   // Error Tracking — opcional
   NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+
+  // Bypass do gate de MFA admin — SOMENTE desenvolvimento local.
+  // Configurar em `.env.development.local` (lido apenas por `next dev`), nunca
+  // em `.env`. Com valor 'true' fora de NODE_ENV=development o boot e recusado
+  // (superRefine abaixo). Consumido por src/lib/auth/mfa-bypass.ts.
+  ADMIN_MFA_DEV_BYPASS: z.enum(['true', 'false']).optional(),
+}).superRefine((data, ctx) => {
+  if (data.ADMIN_MFA_DEV_BYPASS === 'true' && data.NODE_ENV !== 'development') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['ADMIN_MFA_DEV_BYPASS'],
+      message:
+        "ADMIN_MFA_DEV_BYPASS=true só é permitido com NODE_ENV=development (defina apenas em .env.development.local)",
+    });
+  }
 });
 
-const _parsed = envSchema.safeParse(process.env);
+// dotenv sempre entrega string: uma chave declarada e vazia (`TURN_SERVER_URL=`)
+// chega como '' e reprova em `.url().optional()` mesmo sendo opcional, derrubando
+// o boot inteiro. Os templates do proprio projeto (.env.example, .env.docker,
+// .env.docker.example) usam `CHAVE=` como "nao configurado", entao string vazia e
+// normalizada para ausente antes do parse. Isso NAO afrouxa variavel obrigatoria:
+// sem a chave o schema acusa campo faltando e o boot continua sendo recusado.
+const _rawEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([, value]) => value !== ''),
+) as NodeJS.ProcessEnv;
+
+const _parsed = envSchema.safeParse(_rawEnv);
 
 if (!_parsed.success) {
   const formatted = _parsed.error.issues

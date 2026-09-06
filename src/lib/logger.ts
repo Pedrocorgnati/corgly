@@ -14,7 +14,26 @@
  *   logger.info('mensagem', { userId });
  */
 
-import { getRequestContext } from '@/lib/request-context';
+/**
+ * O logger e isomorfico: os error boundaries (client components) tambem o usam.
+ * `request-context` depende de node:async_hooks e nao pode entrar no bundle do
+ * browser, entao o contexto por request e INJETADO pelo servidor via
+ * `setRequestContextResolver` em vez de importado aqui. No browser o resolver
+ * default devolve {} e o log sai sem correlationId.
+ */
+type RequestContextSnapshot = {
+  correlationId?: string;
+  userId?: string;
+  route?: string;
+};
+
+let resolveRequestContext: () => RequestContextSnapshot = () => ({});
+
+export function setRequestContextResolver(
+  resolver: () => RequestContextSnapshot,
+): void {
+  resolveRequestContext = resolver;
+}
 
 type LogContext = {
   route?: string;
@@ -36,7 +55,7 @@ function formatStructured(
   context?: LogContext,
   error?: unknown,
 ): string {
-  const reqCtx = getRequestContext();
+  const reqCtx = resolveRequestContext();
   const base: Record<string, unknown> = {
     ts: new Date().toISOString(),
     level,

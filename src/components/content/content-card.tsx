@@ -18,6 +18,7 @@ export function ContentCard({ id, title, thumbnail, category, duration }: Conten
   return (
     <Link
       href={`/content/${id}`}
+      data-testid={`content-card-${id}`}
       className={cn(
         'group block rounded-2xl border border-border bg-card overflow-hidden',
         'transition-shadow duration-200 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',

@@ -34,21 +34,28 @@ export function LanguageSelector() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 text-muted-foreground hover:text-foreground h-9"
-          aria-label="Selecionar idioma"
-        >
-          <Globe className="h-4 w-4" />
-          <span className="hidden sm:inline text-sm">{currentLang.code.toUpperCase()}</span>
-        </Button>
+      {/* base-ui compoe pelo prop `render`: o Trigger ja emite um <button>, entao
+          passar <Button> como filho gerava <button> dentro de <button> (HTML
+          invalido) e quebrava a hidratacao da pagina inteira. */}
+      <DropdownMenuTrigger
+        render={
+          <Button
+            data-testid="language-selector-trigger-button"
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-muted-foreground hover:text-foreground h-9"
+            aria-label="Selecionar idioma"
+          />
+        }
+      >
+        <Globe className="h-4 w-4" />
+        <span className="hidden sm:inline text-sm">{currentLang.code.toUpperCase()}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[140px]">
+      <DropdownMenuContent data-testid="language-selector-menu" align="end" className="min-w-[140px]">
         {LANGUAGES.map((lang) => (
           <DropdownMenuItem
             key={lang.code}
+            data-testid={`language-selector-option-${lang.code}`}
             className={cn(
               'gap-2 cursor-pointer',
               lang.code === locale && 'bg-accent font-medium'

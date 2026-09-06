@@ -36,8 +36,8 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
   });
 
   return (
-    <PageWrapper className="max-w-4xl">
-      <div className="mb-6 flex items-start justify-between gap-4">
+    <PageWrapper data-testid="page-support" className="max-w-4xl">
+      <div data-testid="support-header" className="mb-6 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <LifeBuoy className="h-6 w-6 text-primary" />
           <div>
@@ -48,7 +48,7 @@ export default async function SupportPage({ searchParams }: SupportPageProps) {
           </div>
         </div>
 
-        <ButtonLink href={ROUTES.SUPPORT_NEW} size="sm" className="gap-1.5">
+        <ButtonLink href={ROUTES.SUPPORT_NEW} size="sm" className="gap-1.5" data-testid="support-new-ticket-button">
           <Plus className="h-4 w-4" />
           Abrir chamado
         </ButtonLink>

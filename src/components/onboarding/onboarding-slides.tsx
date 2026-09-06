@@ -58,10 +58,11 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
   const isLast = currentSlide === TOTAL_SLIDES - 1;
 
   return (
-    <div className="min-h-dvh flex items-center justify-center px-4 py-12 bg-background">
+    <div data-testid="onboarding" className="min-h-dvh flex items-center justify-center px-4 py-12 bg-background">
       <div className="w-full max-w-lg">
         {/* Slide container */}
         <div
+          data-testid="onboarding-slide-content"
           aria-live="polite"
           className="min-h-[360px] flex flex-col items-center justify-center text-center transition-opacity duration-300"
           key={currentSlide}
@@ -74,6 +75,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
 
         {/* Progress dots */}
         <div
+          data-testid="onboarding-progress"
           role="tablist"
           aria-label={t('progress', { current: currentSlide + 1, total: TOTAL_SLIDES })}
           className="flex items-center justify-center gap-2 mt-8 mb-6"
@@ -81,6 +83,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
           {Array.from({ length: TOTAL_SLIDES }, (_, i) => (
             <button
               key={i}
+              data-testid={`onboarding-progress-dot-${i}-button`}
               role="tab"
               aria-selected={i === currentSlide}
               aria-label={t('progress', { current: i + 1, total: TOTAL_SLIDES })}
@@ -96,8 +99,9 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between gap-3">
+        <div data-testid="onboarding-actions" className="flex items-center justify-between gap-3">
           <Button
+            data-testid="onboarding-prev-button"
             variant="ghost"
             onClick={goPrev}
             disabled={isFirst}
@@ -108,6 +112,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
           </Button>
 
           <Button
+            data-testid="onboarding-skip-button"
             variant="ghost"
             onClick={onSkip}
             className="text-muted-foreground hover:text-foreground"
@@ -117,6 +122,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
 
           {!isLast && (
             <Button
+              data-testid="onboarding-next-button"
               onClick={goNext}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
@@ -127,6 +133,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
 
           {isLast && (
             <Button
+              data-testid="onboarding-later-button"
               variant="ghost"
               onClick={() => {
                 setIsSkipping(true);
@@ -150,10 +157,10 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
 function SlideWelcome({ t }: { t: ReturnType<typeof useTranslations<'onboarding'>> }) {
   return (
     <>
-      <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
+      <div data-testid="onboarding-slide-welcome" className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
         <CheckCircle className="h-8 w-8 text-primary" />
       </div>
-      <h1 className="text-3xl font-bold text-foreground tracking-tight mb-3">
+      <h1 data-testid="onboarding-slide-welcome-title" className="text-3xl font-bold text-foreground tracking-tight mb-3">
         {t('slide1.title')}
       </h1>
       <p className="text-muted-foreground text-base max-w-sm">
@@ -174,18 +181,19 @@ function SlidePillars({ t }: { t: ReturnType<typeof useTranslations<'onboarding'
 
   return (
     <>
-      <h2 className="text-2xl font-bold text-foreground tracking-tight mb-2">
+      <h2 data-testid="onboarding-slide-pillars-title" className="text-2xl font-bold text-foreground tracking-tight mb-2">
         {t('slide2.title')}
       </h2>
       <p className="text-muted-foreground text-sm mb-6">
         {t('slide2.description')}
       </p>
-      <ul className="space-y-3 w-full max-w-xs">
+      <ul data-testid="onboarding-slide-pillars-list" className="space-y-3 w-full max-w-xs">
         {pillars.map((pillar, i) => {
           const Icon = PILLAR_ICONS[i];
           return (
             <li
               key={i}
+              data-testid={`onboarding-slide-pillars-item-${i}`}
               className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border text-left"
             >
               <Icon className="h-5 w-5 text-primary shrink-0" />
@@ -208,18 +216,19 @@ function SlideCycle({ t }: { t: ReturnType<typeof useTranslations<'onboarding'>>
 
   return (
     <>
-      <h2 className="text-2xl font-bold text-foreground tracking-tight mb-2">
+      <h2 data-testid="onboarding-slide-cycle-title" className="text-2xl font-bold text-foreground tracking-tight mb-2">
         {t('slide3.title')}
       </h2>
       <p className="text-muted-foreground text-sm mb-6">
         {t('slide3.description')}
       </p>
-      <ol className="space-y-3 w-full max-w-xs">
+      <ol data-testid="onboarding-slide-cycle-list" className="space-y-3 w-full max-w-xs">
         {steps.map((step, i) => {
           const Icon = STEP_ICONS[i];
           return (
             <li
               key={i}
+              data-testid={`onboarding-slide-cycle-item-${i}`}
               className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border text-left"
             >
               <div className="shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 text-primary text-xs font-bold">
@@ -243,22 +252,23 @@ function SlideCTA({
 }) {
   return (
     <>
-      <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
+      <div data-testid="onboarding-slide-cta" className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-6">
         <Coins className="h-8 w-8 text-primary" />
       </div>
-      <h2 className="text-2xl font-bold text-foreground tracking-tight mb-2">
+      <h2 data-testid="onboarding-slide-cta-title" className="text-2xl font-bold text-foreground tracking-tight mb-2">
         {t('slide4.title')}
       </h2>
       <p className="text-muted-foreground text-sm mb-4">
         {t('slide4.description')}
       </p>
-      <div className="flex items-baseline gap-2 mb-6">
+      <div data-testid="onboarding-slide-cta-price" className="flex items-baseline gap-2 mb-6">
         <span className="text-3xl font-bold text-primary">{t('slide4.price')}</span>
         <span className="text-lg text-muted-foreground line-through">
           {t('slide4.original_price')}
         </span>
       </div>
       <Button
+        data-testid="onboarding-slide-cta-button"
         onClick={onComplete}
         size="lg"
         className="w-full max-w-xs bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"

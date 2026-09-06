@@ -36,7 +36,7 @@ function CookieCustomizeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent data-testid="modal-cookie-preferences" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("dialog_title")}</DialogTitle>
           <DialogDescription>{t("dialog_description")}</DialogDescription>
@@ -46,6 +46,7 @@ function CookieCustomizeDialog({
           {/* Essential - always on */}
           <div className="flex items-start gap-3">
             <Checkbox
+              data-testid="modal-cookie-preferences-essential-checkbox"
               checked
               disabled
               className="mt-0.5"
@@ -64,6 +65,7 @@ function CookieCustomizeDialog({
           {/* Analytics */}
           <div className="flex items-start gap-3">
             <Checkbox
+              data-testid="modal-cookie-preferences-analytics-checkbox"
               checked={analytics}
               onCheckedChange={(checked) => setAnalytics(checked)}
               className="mt-0.5"
@@ -82,6 +84,7 @@ function CookieCustomizeDialog({
           {/* Marketing */}
           <div className="flex items-start gap-3">
             <Checkbox
+              data-testid="modal-cookie-preferences-marketing-checkbox"
               checked={marketing}
               onCheckedChange={(checked) => setMarketing(checked)}
               className="mt-0.5"
@@ -99,7 +102,7 @@ function CookieCustomizeDialog({
         </div>
 
         <DialogFooter>
-          <Button onClick={handleSave}>{t("save_preferences")}</Button>
+          <Button data-testid="modal-cookie-preferences-save-button" onClick={handleSave}>{t("save_preferences")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

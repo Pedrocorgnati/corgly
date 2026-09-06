@@ -10,6 +10,7 @@ interface ButtonLinkProps extends VariantProps<typeof buttonVariants> {
   target?: string;
   rel?: string;
   external?: boolean;
+  'data-testid'?: string;
 }
 
 export function ButtonLink({
@@ -20,12 +21,14 @@ export function ButtonLink({
   className,
   target,
   rel,
+  'data-testid': testId,
 }: ButtonLinkProps) {
   return (
     <Link
       href={href}
       target={target}
       rel={rel}
+      data-testid={testId}
       className={cn(buttonVariants({ variant, size }), className)}
     >
       {children}

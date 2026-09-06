@@ -154,8 +154,8 @@ export default function SessionReconnectingPage() {
 
   if (!sessionId) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
+      <main data-testid="page-session-reconnecting" className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div data-testid="session-reconnecting-error" className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
           <h1 className="mt-4 text-xl font-semibold text-foreground">
             Sessão não identificada
@@ -165,6 +165,7 @@ export default function SessionReconnectingPage() {
           </p>
           <Link
             href={ROUTES.DASHBOARD}
+            data-testid="session-reconnecting-dashboard-link"
             className="mt-6 inline-flex rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Voltar ao Dashboard
@@ -176,8 +177,8 @@ export default function SessionReconnectingPage() {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="flex flex-col items-center gap-3" aria-live="polite">
+      <main data-testid="page-session-reconnecting" className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div data-testid="session-reconnecting-loading" className="flex flex-col items-center gap-3" aria-live="polite">
           <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Verificando sua conexão...</p>
         </div>
@@ -189,8 +190,9 @@ export default function SessionReconnectingPage() {
   const formatted = formatReconnectCountdown(countdown)
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+    <main data-testid="page-session-reconnecting" className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <section
+        data-testid="session-reconnecting-panel"
         className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm"
         role="alert"
         aria-live="assertive"
@@ -198,13 +200,14 @@ export default function SessionReconnectingPage() {
       >
         <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" aria-hidden="true" />
 
-        <h1 className="mt-4 text-xl font-semibold text-foreground">Reconectando...</h1>
+        <h1 data-testid="session-reconnecting-header" className="mt-4 text-xl font-semibold text-foreground">Reconectando...</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Sua conexão caiu. Vamos tentar restabelecer a aula automaticamente nos
           próximos 2 minutos.
         </p>
 
         <p
+          data-testid="session-reconnecting-countdown"
           className={cn(
             'mt-4 font-mono text-2xl font-semibold tabular-nums text-foreground',
             isUrgent && 'animate-pulse text-red-500',
@@ -217,7 +220,7 @@ export default function SessionReconnectingPage() {
         </p>
 
         {healthNotice && (
-          <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
+          <p data-testid="session-reconnecting-notice" className="mt-3 text-xs text-muted-foreground" aria-live="polite">
             {healthNotice}
           </p>
         )}
@@ -229,6 +232,9 @@ export default function SessionReconnectingPage() {
             onInterrupt={handleInterrupt}
             interruptLabel="Interromper sessão"
             isBusy={isBusy}
+            retryConnectionTestId="session-reconnecting-retry-button"
+            supportTestId="session-reconnecting-support-button"
+            interruptTestId="session-reconnecting-interrupt-button"
           />
         </div>
 

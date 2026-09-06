@@ -9,7 +9,7 @@ const GENERIC_MESSAGE = 'Se este email estiver cadastrado e não confirmado, um 
 /** POST /api/v1/auth/resend-confirmation */
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
-  const rl = checkRateLimit(`resend-confirm:${ip}`, RATE_LIMITS.AUTH_RESEND);
+  const rl = await checkRateLimit(`resend-confirm:${ip}`, RATE_LIMITS.AUTH_RESEND);
   if (!rl.allowed) {
     return NextResponse.json(
       apiResponse(null, 'Muitas tentativas. Aguarde 15 minutos.'),

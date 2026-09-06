@@ -30,8 +30,8 @@ export default async function StudentNotesPage({ params }: PageProps) {
       notFound();
     }
     return (
-      <PageWrapper>
-        <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+      <PageWrapper data-testid="page-admin-student-notes">
+        <div data-testid="admin-student-notes-error" className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <p className="font-medium">Não foi possível carregar as notas.</p>
@@ -49,7 +49,7 @@ export default async function StudentNotesPage({ params }: PageProps) {
   const { student, notes, openTickets } = payload;
 
   return (
-    <PageWrapper>
+    <PageWrapper data-testid="page-admin-student-notes">
       <nav className="mb-4 flex items-center gap-1 text-sm text-muted-foreground" aria-label="Trilha">
         <Link href={ROUTES.ADMIN_STUDENTS} className="hover:text-foreground hover:underline">
           Alunos
@@ -65,7 +65,7 @@ export default async function StudentNotesPage({ params }: PageProps) {
         <span className="text-foreground">Notas internas</span>
       </nav>
 
-      <div className="mb-6">
+      <div data-testid="admin-student-notes-header" className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">Notas internas</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {student.name} · {student.email}
@@ -79,15 +79,17 @@ export default async function StudentNotesPage({ params }: PageProps) {
           </h2>
           {notes.length === 0 ? (
             <EmptyState
+              data-testid="admin-student-notes-empty"
               icon={StickyNote}
               title="Nenhuma nota interna"
               description="Registre a primeira anotação operacional sobre este aluno."
             />
           ) : (
-            <ul className="space-y-3">
+            <ul data-testid="admin-student-notes-list" className="space-y-3">
               {notes.map((note) => (
                 <li
                   key={note.id}
+                  data-testid={`admin-student-notes-card-${note.id}`}
                   className="rounded-2xl border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -110,7 +112,7 @@ export default async function StudentNotesPage({ params }: PageProps) {
           )}
         </section>
 
-        <aside className="lg:col-span-1">
+        <aside data-testid="admin-student-notes-form" className="lg:col-span-1">
           <AddInternalNoteForm studentId={student.id} openTickets={openTickets} />
         </aside>
       </div>

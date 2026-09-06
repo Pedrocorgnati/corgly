@@ -28,7 +28,7 @@ export function LgpdSection() {
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+    <div data-testid="profile-lgpd-section" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <ShieldCheck className="h-5 w-5 text-primary" />
         <h3 className="font-semibold text-foreground">Privacidade e dados (LGPD)</h3>
@@ -47,6 +47,7 @@ export function LgpdSection() {
             </p>
           </div>
           <Button
+            data-testid="profile-lgpd-export-button"
             variant="outline"
             size="sm"
             className="gap-2"
@@ -73,6 +74,7 @@ export function LgpdSection() {
             </p>
           </div>
           <Button
+            data-testid="profile-lgpd-delete-account-button"
             variant="destructive"
             size="sm"
             className="gap-2"

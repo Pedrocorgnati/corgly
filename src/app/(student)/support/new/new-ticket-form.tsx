@@ -162,17 +162,23 @@ export function NewTicketForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+    <form
+      data-testid="form-new-ticket"
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-5"
+      noValidate
+    >
       <div className="space-y-1.5">
         <Label htmlFor="subject">Assunto</Label>
         <Input
+          data-testid="form-new-ticket-subject-input"
           id="subject"
           placeholder="Ex.: Não consigo entrar na minha aula"
           aria-invalid={!!errors.subject}
           {...register('subject')}
         />
         {errors.subject && (
-          <p className="text-xs text-destructive">{errors.subject.message}</p>
+          <p data-testid="form-new-ticket-subject-error" className="text-xs text-destructive">{errors.subject.message}</p>
         )}
       </div>
 
@@ -187,7 +193,12 @@ export function NewTicketForm() {
             })
           }
         >
-          <SelectTrigger id="priority" aria-invalid={!!errors.priority} className="w-full">
+          <SelectTrigger
+            data-testid="form-new-ticket-priority-select"
+            id="priority"
+            aria-invalid={!!errors.priority}
+            className="w-full"
+          >
             <SelectValue placeholder="Selecione a prioridade" />
           </SelectTrigger>
           <SelectContent>
@@ -199,13 +210,14 @@ export function NewTicketForm() {
           </SelectContent>
         </Select>
         {errors.priority && (
-          <p className="text-xs text-destructive">{errors.priority.message}</p>
+          <p data-testid="form-new-ticket-priority-error" className="text-xs text-destructive">{errors.priority.message}</p>
         )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="message">Mensagem</Label>
         <Textarea
+          data-testid="form-new-ticket-message-input"
           id="message"
           rows={6}
           placeholder="Descreva o que aconteceu com o máximo de detalhes possível."
@@ -213,17 +225,18 @@ export function NewTicketForm() {
           {...register('message')}
         />
         {errors.message && (
-          <p className="text-xs text-destructive">{errors.message.message}</p>
+          <p data-testid="form-new-ticket-message-error" className="text-xs text-destructive">{errors.message.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
+      <div data-testid="form-new-ticket-attachments" className="space-y-2">
         <Label>Anexos (opcional)</Label>
         <p className="text-xs text-muted-foreground">
           Até {MAX_ATTACHMENTS_PER_MESSAGE} arquivos, 10 MiB cada. Imagens, PDF ou texto.
         </p>
 
         <input
+          data-testid="form-new-ticket-attachments-input"
           ref={fileInputRef}
           type="file"
           multiple
@@ -232,6 +245,7 @@ export function NewTicketForm() {
           onChange={(e) => handleAddFiles(e.target.files)}
         />
         <Button
+          data-testid="form-new-ticket-add-attachment-button"
           type="button"
           variant="outline"
           size="sm"
@@ -244,10 +258,11 @@ export function NewTicketForm() {
         </Button>
 
         {attachments.length > 0 && (
-          <ul className="mt-2 space-y-1.5">
+          <ul data-testid="form-new-ticket-attachment-list" className="mt-2 space-y-1.5">
             {attachments.map((file, index) => (
               <li
                 key={`${file.name}-${file.size}`}
+                data-testid={`form-new-ticket-attachment-${index}`}
                 className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm"
               >
                 <span className="flex min-w-0 items-center gap-2">
@@ -258,6 +273,7 @@ export function NewTicketForm() {
                   </span>
                 </span>
                 <button
+                  data-testid={`form-new-ticket-attachment-${index}-remove-button`}
                   type="button"
                   onClick={() => removeAttachment(index)}
                   className="shrink-0 text-muted-foreground hover:text-destructive"
@@ -271,12 +287,13 @@ export function NewTicketForm() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 pt-2">
-        <Button type="submit" disabled={isSubmitting} className="gap-1.5">
-          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+      <div data-testid="form-new-ticket-actions" className="flex items-center gap-3 pt-2">
+        <Button data-testid="form-new-ticket-submit-button" type="submit" disabled={isSubmitting} className="gap-1.5">
+          {isSubmitting && <Loader2 data-testid="form-new-ticket-loading" className="h-4 w-4 animate-spin" />}
           {isSubmitting ? 'Enviando...' : 'Abrir chamado'}
         </Button>
         <Button
+          data-testid="form-new-ticket-cancel-button"
           type="button"
           variant="ghost"
           disabled={isSubmitting}

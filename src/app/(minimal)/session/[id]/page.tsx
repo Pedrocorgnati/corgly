@@ -66,21 +66,23 @@ export default async function SessionPage({ params }: Props) {
   }
 
   return (
-    <SessionPageClient
-      session={{
-        id: session.id,
-        startAt: session.startAt.toISOString(),
-        endAt: session.endAt.toISOString(),
-        status: session.status,
-        extendedBy: session.extendedBy ?? 0,
-        student: session.student,
-      }}
-      currentUser={{
-        id: currentUser.userId,
-        role: currentUser.role,
-      }}
-      iceServers={iceServersData}
-      hocuspocusUrl={hocuspocusUrl}
-    />
+    <div data-testid="page-session-detail">
+      <SessionPageClient
+        session={{
+          id: session.id,
+          startAt: session.startAt.toISOString(),
+          endAt: session.endAt.toISOString(),
+          status: session.status,
+          extendedBy: session.extendedBy ?? 0,
+          student: session.student,
+        }}
+        currentUser={{
+          id: currentUser.userId,
+          role: currentUser.role,
+        }}
+        iceServers={iceServersData}
+        hocuspocusUrl={hocuspocusUrl}
+      />
+    </div>
   )
 }

@@ -20,9 +20,9 @@ export default async function FeedbackPage({ params }: Props) {
   if (!id) notFound();
 
   return (
-    <PageWrapper className="max-w-lg">
-      <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground mb-6 flex items-center gap-1.5">
-        <Link href={ROUTES.DASHBOARD} className="hover:text-foreground transition-colors">
+    <PageWrapper data-testid="page-session-feedback" className="max-w-lg">
+      <nav data-testid="session-feedback-breadcrumb" aria-label="Breadcrumb" className="text-sm text-muted-foreground mb-6 flex items-center gap-1.5">
+        <Link data-testid="session-feedback-breadcrumb-dashboard-link" href={ROUTES.DASHBOARD} className="hover:text-foreground transition-colors">
           ← Dashboard
         </Link>
         <span>/</span>

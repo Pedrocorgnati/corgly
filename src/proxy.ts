@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayloadFromRequest, apiResponse } from '@/lib/auth';
 import { isMfaRecent } from '@/lib/auth/mfa-recency';
+import { isAdminMfaBypassed } from '@/lib/auth/mfa-bypass';
 import { checkRateLimit, RATE_LIMITS, type RateLimitConfig } from '@/lib/rate-limit';
 import { UserRole } from '@/lib/constants/enums';
+import { resolveLandingLocaleFromRequest } from '@/lib/landing-locale-server';
 
 const PUBLIC_API_PATHS = [
   '/api/v1/auth/register',
@@ -56,7 +58,7 @@ function addSecurityHeaders(response: NextResponse, correlationId?: string): Nex
 }
 
 // Internal trust headers that must never be accepted from clients.
-// These are set exclusively by the middleware after JWT verification.
+// These are set exclusively by the proxy after JWT verification.
 const INTERNAL_HEADERS = ['x-user-id', 'x-user-role', 'x-token-version'];
 
 function stripInternalHeaders(request: NextRequest): NextRequest {
@@ -86,8 +88,27 @@ function nextWithStripped(
   return NextResponse.next({ request: { headers: merged } });
 }
 
+function isPublicLandingPath(pathname: string): boolean {
+  if (pathname.startsWith('/api')) return false;
+  if (pathname.startsWith('/_next')) return false;
+  const privatePrefixes = [
+    '/dashboard',
+    '/admin',
+    '/session',
+    '/schedule',
+    '/credits',
+    '/progress',
+    '/account',
+    '/billing',
+    '/history',
+    '/library',
+    '/onboarding',
+  ];
+  return !privatePrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 function generateCorrelationId(): string {
-  // crypto.randomUUID disponivel no Edge runtime via Web Crypto
+  // crypto.randomUUID disponivel via Web Crypto (proxy roda no runtime Node.js no Next 16)
   try {
     return crypto.randomUUID();
   } catch {
@@ -95,8 +116,8 @@ function generateCorrelationId(): string {
   }
 }
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
 
   // Strip internal trust headers from ALL incoming requests.
   // Prevents clients from forging x-user-id/x-user-role/x-token-version.
@@ -140,16 +161,24 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl, { status: 307 });
       }
 
-      // Admin autenticado mas MFA ausente ou expirado: redirect para challenge
-      if (!isMfaRecent(adminPayload.mfaAt)) {
+      // Admin autenticado mas MFA ausente ou expirado: redirect para challenge.
+      // Em desenvolvimento com ADMIN_MFA_DEV_BYPASS=true (.env.development.local)
+      // apenas ESTE redirect e pulado; o redirect para login acima continua valendo.
+      if (!isAdminMfaBypassed() && !isMfaRecent(adminPayload.mfaAt)) {
+        // pathname + search: a query (paginacao, filtros) sobrevive ao challenge;
+        // a pagina de challenge sanitiza o valor (sanitizeAdminRedirectTo).
         const challengeUrl = new URL(MFA_CHALLENGE_PATH, request.url);
-        challengeUrl.searchParams.set('redirectTo', pathname);
+        challengeUrl.searchParams.set('redirectTo', pathname + search);
         const res = NextResponse.redirect(challengeUrl, { status: 307 });
         return addSecurityHeaders(res, correlationId);
       }
     }
 
-    return addSecurityHeaders(nextWithStripped(request, { 'x-request-id': correlationId }), correlationId);
+    const extraHeaders: Record<string, string> = { 'x-request-id': correlationId };
+    if (isPublicLandingPath(pathname)) {
+      extraHeaders['x-landing-locale'] = resolveLandingLocaleFromRequest(request);
+    }
+    return addSecurityHeaders(nextWithStripped(request, extraHeaders), correlationId);
   }
 
   // ─── Rate limiting (skip webhooks Stripe) ─────────────────────────────────

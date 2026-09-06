@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiResponse } from '@/lib/auth';
 import { requireAdmin } from '@/lib/auth-guard';
+import { logger } from '@/lib/logger';
 import { UserRole } from '@/lib/constants/enums';
 
 /** GET /api/v1/admin/students/[id] */
@@ -21,7 +22,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         country: true,
         timezone: true,
         preferredLanguage: true,
-        emailVerified: true,
+        // Nome real da coluna no model User (schema.prisma): emailConfirmed.
+        emailConfirmed: true,
         maxFutureSessions: true,
         createdAt: true,
       },
@@ -32,7 +34,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     return NextResponse.json(apiResponse(user));
-  } catch {
+  } catch (err) {
+    logger.error(
+      'GET /api/v1/admin/students/[id]',
+      { action: 'admin.students.get', route: '/api/v1/admin/students/[id]' },
+      err,
+    );
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
 }

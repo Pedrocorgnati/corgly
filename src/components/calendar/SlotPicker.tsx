@@ -52,7 +52,7 @@ export function SlotPicker({
 }: SlotPickerProps) {
   if (isLoading) {
     return (
-      <div className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm animate-pulse">
+      <div data-testid="schedule-loading" className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm animate-pulse">
         <div className="h-5 w-40 bg-muted rounded mb-2" />
         <div className="h-4 w-32 bg-muted rounded mb-4" />
         <div className="space-y-2">
@@ -66,7 +66,7 @@ export function SlotPicker({
 
   if (!selectedDate) {
     return (
-      <div className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm">
+      <div data-testid="schedule-slot-picker-idle" className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm">
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-muted-foreground">
           <p className="text-sm text-center">
             Selecione um dia no calendário para ver os horários disponíveis
@@ -77,18 +77,18 @@ export function SlotPicker({
   }
 
   return (
-    <div className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm">
+    <div data-testid="schedule-slot-picker" className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm">
       <h3 className="font-semibold text-foreground mb-1">Horários disponíveis</h3>
       <p className="text-xs text-muted-foreground mb-4">
         {formatSelectedDate(selectedDate)}
       </p>
 
       {slots.length === 0 ? (
-        <div className="py-8 text-center text-muted-foreground">
+        <div data-testid="schedule-empty" className="py-8 text-center text-muted-foreground">
           <p className="text-sm">Nenhum horário disponível neste dia.</p>
         </div>
       ) : (
-        <div className="space-y-2" role="listbox" aria-label="Horários disponíveis">
+        <div data-testid="schedule-slot-list" className="space-y-2" role="listbox" aria-label="Horários disponíveis">
           {slots.map((slot) => {
             const isSelected = selectedSlotId === slot.id;
             const studentTime = formatTimeInTz(slot.startAt, studentTz);
@@ -96,6 +96,7 @@ export function SlotPicker({
             return (
               <button
                 key={slot.id}
+                data-testid={`schedule-slot-${slot.id}`}
                 onClick={() => onSelectSlot(slot)}
                 role="option"
                 aria-selected={isSelected}

@@ -97,7 +97,7 @@ export function CookiePreferencesForm() {
   };
 
   return (
-    <div className="space-y-6">
+    <div data-testid="form-cookie-preferences" className="space-y-6">
       <div className="space-y-4" role="group" aria-label="Categorias de cookies">
         {CATEGORIES.map((category) => {
           const checked = category.locked
@@ -106,6 +106,7 @@ export function CookiePreferencesForm() {
           return (
             <div
               key={category.key}
+              data-testid={`form-cookie-preferences-${category.key}`}
               className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5"
             >
               <div className="space-y-1">
@@ -118,6 +119,7 @@ export function CookiePreferencesForm() {
               </div>
               <Switch
                 id={`consent-${category.key}`}
+                data-testid={`form-cookie-preferences-${category.key}-toggle`}
                 checked={checked}
                 disabled={category.locked || !loaded}
                 onCheckedChange={(value: boolean) =>
@@ -133,11 +135,11 @@ export function CookiePreferencesForm() {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button onClick={handleSave} disabled={saving}>
+        <Button data-testid="form-cookie-preferences-save-button" onClick={handleSave} disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar preferências'}
         </Button>
         {saved ? (
-          <span className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          <span data-testid="form-cookie-preferences-saved" className="text-sm text-muted-foreground" role="status" aria-live="polite">
             Preferências aplicadas.
           </span>
         ) : null}

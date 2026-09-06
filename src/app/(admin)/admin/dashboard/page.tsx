@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { Users } from 'lucide-react';
-import { PageWrapper } from '@/components/shared';
+import { CalendarDays, MessageSquare, Users } from 'lucide-react';
+import { DashboardHeaderChip, DashboardPageHeader, PageWrapper } from '@/components/shared';
 import { getAdminDashboard } from '@/actions/admin-dashboard';
 import { TodayWidget } from '@/components/admin/TodayWidget';
 import { PendingFeedbackWidget } from '@/components/admin/PendingFeedbackWidget';
@@ -17,9 +17,9 @@ export default async function AdminDashboardPage() {
 
   if (error || !data) {
     return (
-      <PageWrapper>
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-          <p className="text-sm text-destructive">
+      <PageWrapper data-testid="page-admin-dashboard">
+        <div data-testid="admin-dashboard-error" className="card-corgly p-6">
+          <p className="text-[13.5px] text-destructive">
             Erro ao carregar dados do dashboard: {error ?? 'Dados indisponíveis'}
           </p>
         </div>
@@ -27,25 +27,50 @@ export default async function AdminDashboardPage() {
     );
   }
 
+  const todayTotal =
+    data.today.scheduled + data.today.inProgress + data.today.completed + data.today.cancelled;
+
   return (
-    <PageWrapper>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard Admin</h1>
-        <p className="text-sm text-muted-foreground mt-1">Visão geral da plataforma</p>
-      </div>
+    <PageWrapper data-testid="page-admin-dashboard">
+      {/* Mesma faixa lilas do hero da landing */}
+      <DashboardPageHeader
+        data-testid="admin-dashboard-header"
+        eyebrow="Área do professor"
+        title="Dashboard Admin"
+        subtitle="Visão geral da plataforma."
+        chips={
+          <>
+            <DashboardHeaderChip icon={Users} data-testid="admin-dashboard-header-chip-students">
+              {data.totalStudents} aluno{data.totalStudents === 1 ? '' : 's'}
+            </DashboardHeaderChip>
+            <DashboardHeaderChip icon={CalendarDays} data-testid="admin-dashboard-header-chip-today">
+              {todayTotal} aula{todayTotal === 1 ? '' : 's'} hoje
+            </DashboardHeaderChip>
+            <DashboardHeaderChip
+              icon={MessageSquare}
+              data-testid="admin-dashboard-header-chip-pending"
+            >
+              {data.pendingFeedbacks.count} feedback
+              {data.pendingFeedbacks.count === 1 ? '' : 's'} pendente
+              {data.pendingFeedbacks.count === 1 ? '' : 's'}
+            </DashboardHeaderChip>
+          </>
+        }
+      />
 
       {/* Metricas de periodo (cards dinamicos) */}
-      <MetricsPanel />
+      <div data-testid="admin-dashboard-kpis">
+        <MetricsPanel />
+      </div>
 
       {/* Row 1: Today + Pending Feedbacks */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div data-testid="admin-dashboard-cards-row-1" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <TodayWidget today={data.today} />
         <PendingFeedbackWidget pendingFeedbacks={data.pendingFeedbacks} />
       </div>
 
       {/* Row 2: Expiring Credits + Student Growth */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div data-testid="admin-dashboard-cards-row-2" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ExpiringCreditsWidget expiringCredits={data.expiringCredits} />
         <StudentGrowthWidget totalStudents={data.totalStudents} />
       </div>

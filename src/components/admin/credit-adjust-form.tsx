@@ -92,15 +92,16 @@ export function CreditAdjustForm() {
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-foreground mb-4">{t('title')}</h2>
+    <div data-testid="admin-credit-adjust" className="bg-card border border-border rounded-xl p-5 shadow-sm">
+      <h2 data-testid="admin-credit-adjust-header" className="text-base font-semibold text-foreground mb-4">{t('title')}</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form data-testid="form-credit-adjust" onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="adjust-userId" className="block text-sm font-medium text-foreground mb-1">
             {t('userId')}
           </label>
           <Input
+            data-testid="form-credit-adjust-user-id-input"
             id="adjust-userId"
             type="text"
             value={userId}
@@ -111,7 +112,7 @@ export function CreditAdjustForm() {
             aria-describedby={errors.userId ? 'adjust-userId-error' : undefined}
           />
           {errors.userId && (
-            <p id="adjust-userId-error" className="text-destructive text-xs mt-1">{errors.userId}</p>
+            <p data-testid="form-credit-adjust-user-id-error" id="adjust-userId-error" className="text-destructive text-xs mt-1">{errors.userId}</p>
           )}
         </div>
 
@@ -120,6 +121,7 @@ export function CreditAdjustForm() {
             {t('credits', { min: MIN_CREDITS, max: MAX_CREDITS })}
           </label>
           <Input
+            data-testid="form-credit-adjust-credits-input"
             id="adjust-credits"
             type="number"
             min={MIN_CREDITS}
@@ -132,7 +134,7 @@ export function CreditAdjustForm() {
             aria-describedby={errors.credits ? 'adjust-credits-error' : undefined}
           />
           {errors.credits && (
-            <p id="adjust-credits-error" className="text-destructive text-xs mt-1">{errors.credits}</p>
+            <p data-testid="form-credit-adjust-credits-error" id="adjust-credits-error" className="text-destructive text-xs mt-1">{errors.credits}</p>
           )}
         </div>
 
@@ -141,6 +143,7 @@ export function CreditAdjustForm() {
             {t('reason', { min: MIN_REASON_LENGTH })}
           </label>
           <Textarea
+            data-testid="form-credit-adjust-reason-input"
             id="adjust-reason"
             rows={3}
             value={reason}
@@ -152,18 +155,19 @@ export function CreditAdjustForm() {
             className="min-h-[88px] resize-none"
           />
           {errors.reason && (
-            <p id="adjust-reason-error" className="text-destructive text-xs mt-1">{errors.reason}</p>
+            <p data-testid="form-credit-adjust-reason-error" id="adjust-reason-error" className="text-destructive text-xs mt-1">{errors.reason}</p>
           )}
         </div>
 
         <Button
+          data-testid="form-credit-adjust-submit-button"
           type="submit"
           disabled={isPending}
           className="w-full min-h-[44px]"
         >
           {isPending ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 data-testid="form-credit-adjust-loading" className="h-4 w-4 mr-2 animate-spin" />
               {t('submitting')}
             </>
           ) : (

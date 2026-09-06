@@ -40,9 +40,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
   const { logout } = useAuth();
 
   return (
-    <aside className="hidden lg:flex fixed left-0 top-16 bottom-0 w-60 flex-col border-r border-border bg-card z-30">
+    <aside data-testid="sidebar" className="hidden lg:flex fixed left-0 top-16 bottom-0 w-60 flex-col border-r border-border bg-card z-30">
       {/* User info + Admin badge */}
-      <div className="p-4 border-b border-border">
+      <div data-testid="sidebar-user-section" className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
           <AvatarInitials name={user.name} size="md" />
           <div className="min-w-0">
@@ -58,13 +58,15 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <nav data-testid="sidebar-nav" aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
+          const slug = href.replace(/^\//, '').replace(/\//g, '-');
           return (
             <Link
               key={href}
               href={href}
+              data-testid={`sidebar-nav-item-${slug}`}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-[120ms]',
                 active
@@ -82,6 +84,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       {/* Logout */}
       <div className="p-3 border-t border-border">
         <button
+          data-testid="sidebar-logout-button"
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           onClick={() => logout()}
         >

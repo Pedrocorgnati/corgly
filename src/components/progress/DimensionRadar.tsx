@@ -12,6 +12,11 @@ import { BarChart3 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 
+/**
+ * Vocabulario canonico das notas por dimensao. Fonte da verdade:
+ * prisma/schema.prisma (listeningScore/speakingScore/writingScore/vocabularyScore),
+ * src/schemas/feedback.schema.ts e src/services/feedback.service.ts (mapFeedback).
+ */
 interface FeedbackScores {
   listening: number;
   speaking: number;
@@ -31,10 +36,20 @@ const DIMENSIONS: Array<{ key: keyof FeedbackScores; label: string; color: strin
   { key: 'vocabulary', label: 'Vocabulário', color: '#D97706' },
 ];
 
+/** Recharts abre lacuna em `null`; nota invalida nunca vira vertice no radar. */
+function toPoint(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** Nota ausente ou nao-finita vira travessao na legenda — nunca `NaN`. */
+function formatScore(value: unknown): string {
+  return typeof value === 'number' && Number.isFinite(value) ? `${value.toFixed(1)}/5` : '—';
+}
+
 export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
   if (isLoading) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+      <div data-testid="progress-dimension-radar-loading" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <Skeleton className="h-4 w-32 mb-4" />
         <Skeleton className="h-[360px] w-full rounded-xl" />
       </div>
@@ -43,12 +58,13 @@ export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
 
   if (!scores) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+      <div data-testid="progress-dimension-radar-empty-wrapper" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <h2 className="font-semibold text-foreground mb-4">Perfil por Dimensao</h2>
         <EmptyState
+          data-testid="progress-dimension-radar-empty"
           icon={BarChart3}
           title="Sem dados suficientes"
-          description="Faca ao menos 3 avaliacoes para ver seu perfil"
+          description="Faca ao menos uma avaliacao para ver seu perfil"
         />
       </div>
     );
@@ -56,11 +72,12 @@ export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
 
   const data = DIMENSIONS.map((d) => ({
     dimension: d.label,
-    value: scores[d.key],
+    value: toPoint(scores[d.key]),
   }));
 
   return (
     <div
+      data-testid="progress-dimension-radar"
       className="bg-card border border-border rounded-2xl p-6 shadow-sm"
       aria-label="Grafico radar de dimensoes"
     >
@@ -93,6 +110,7 @@ export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
         {DIMENSIONS.map((d) => (
           <div
             key={d.key}
+            data-testid={`progress-dimension-radar-legend-${d.key}`}
             className="flex items-center gap-2 text-sm"
             role="listitem"
           >
@@ -104,7 +122,7 @@ export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
             <span className="text-muted-foreground">
               {d.label}:{' '}
               <span className="font-medium text-foreground">
-                {scores[d.key].toFixed(1)}/5
+                {formatScore(scores[d.key])}
               </span>
             </span>
           </div>

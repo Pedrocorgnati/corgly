@@ -29,9 +29,9 @@ export default async function DataProcessingAddendumPage() {
   const doc = await getActiveLegalDoc('DPA', toLegalLocale(locale));
 
   return (
-    <div className="min-h-[calc(100vh-64px)] py-12 px-4">
+    <div data-testid="page-dpa" className="min-h-[calc(100vh-64px)] py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
+        <div data-testid="dpa-header" className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">{doc?.title ?? FALLBACK_TITLE}</h1>
           {doc ? (
             <p className="text-sm text-muted-foreground mt-2">
@@ -53,11 +53,12 @@ export default async function DataProcessingAddendumPage() {
         <div className="mt-8 pt-6 border-t border-border">
           <Link
             href={ROUTES.PRIVACY}
+            data-testid="dpa-privacy-link"
             className="text-primary text-sm font-medium hover:underline mr-4"
           >
             Política de Privacidade
           </Link>
-          <Link href={ROUTES.HOME} className="text-muted-foreground text-sm hover:underline">
+          <Link href={ROUTES.HOME} data-testid="dpa-back-link" className="text-muted-foreground text-sm hover:underline">
             &larr; Voltar ao início
           </Link>
         </div>

@@ -11,7 +11,7 @@ export function ContentPreviewSection() {
   const t = useTranslations('landing');
 
   return (
-    <section className="py-20 bg-surface" aria-labelledby="content-heading">
+    <section data-testid="landing-content-preview" className="py-20 bg-surface" aria-labelledby="content-heading">
       <div className="max-w-[1200px] mx-auto px-4 md:px-6 text-center">
         <Badge className="bg-accent text-accent-foreground hover:bg-accent mb-4">
           {t('content_preview.badge')}
@@ -27,7 +27,7 @@ export function ContentPreviewSection() {
             <PlayCircle className="h-5 w-5 text-primary" />
           </div>
           <Link href={ROUTES.CONTENT}>
-            <Button variant="outline">{t('content_preview.cta')}</Button>
+            <Button data-testid="landing-content-preview-cta-button" variant="outline">{t('content_preview.cta')}</Button>
           </Link>
         </div>
       </div>

@@ -49,14 +49,20 @@ export async function POST(request: NextRequest) {
       }),
       prisma.feedback.findMany({
         where: { session: { studentId: userId } },
+        // Dimensoes reais do model Feedback (schema.prisma): listening, speaking,
+        // writing e vocabulary — `comment` nao existe; o texto geral e overallFeedback.
         select: {
           id: true,
           sessionId: true,
-          clarityScore: true,
-          didacticsScore: true,
-          punctualityScore: true,
-          engagementScore: true,
-          comment: true,
+          listeningScore: true,
+          speakingScore: true,
+          writingScore: true,
+          vocabularyScore: true,
+          overallFeedback: true,
+          listeningFeedback: true,
+          speakingFeedback: true,
+          writingFeedback: true,
+          vocabularyFeedback: true,
           createdAt: true,
           // EXCLUÍDOS: privateNote (nota interna do admin)
         },

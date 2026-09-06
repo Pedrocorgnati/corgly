@@ -75,6 +75,7 @@ export function BookingConfirmModal({
 
   return (
     <div
+      data-testid="modal-booking-confirm"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
@@ -84,10 +85,10 @@ export function BookingConfirmModal({
         {/* State: idle */}
         {state === 'idle' && (
           <>
-            <h3 className="text-lg font-semibold text-foreground mb-4">
+            <h3 data-testid="modal-booking-confirm-header" className="text-lg font-semibold text-foreground mb-4">
               Confirmar agendamento
             </h3>
-            <div className="space-y-3 mb-6">
+            <div data-testid="modal-booking-confirm-summary" className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Data e horário:</span>
                 <TimezoneDisplay
@@ -106,11 +107,11 @@ export function BookingConfirmModal({
                 <span className="text-foreground">1 crédito</span>
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleClose} className="flex-1">
+            <div data-testid="modal-booking-confirm-actions" className="flex gap-3">
+              <Button data-testid="modal-booking-confirm-cancel-button" variant="outline" onClick={handleClose} className="flex-1">
                 Cancelar
               </Button>
-              <Button onClick={handleConfirm} className="flex-1">
+              <Button data-testid="modal-booking-confirm-submit-button" onClick={handleConfirm} className="flex-1">
                 Confirmar
               </Button>
             </div>
@@ -119,7 +120,7 @@ export function BookingConfirmModal({
 
         {/* State: confirming */}
         {state === 'confirming' && (
-          <div className="flex flex-col items-center py-8">
+          <div data-testid="modal-booking-confirm-loading" className="flex flex-col items-center py-8">
             <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
             <p className="text-foreground font-medium">Confirmando...</p>
             <p className="text-sm text-muted-foreground mt-1">Aguarde um momento</p>
@@ -128,13 +129,13 @@ export function BookingConfirmModal({
 
         {/* State: success */}
         {state === 'success' && (
-          <div className="flex flex-col items-center py-8">
+          <div data-testid="modal-booking-confirm-success" className="flex flex-col items-center py-8">
             <CheckCircle2 className="h-10 w-10 text-emerald-500 mb-4" />
             <p className="text-foreground font-medium">Aula agendada!</p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
               Sua aula foi confirmada com sucesso.
             </p>
-            <Button onClick={handleSuccessClose} className="mt-6 w-full">
+            <Button data-testid="modal-booking-confirm-history-button" onClick={handleSuccessClose} className="mt-6 w-full">
               Ver histórico
             </Button>
           </div>
@@ -142,17 +143,17 @@ export function BookingConfirmModal({
 
         {/* State: error */}
         {state === 'error' && (
-          <div className="flex flex-col items-center py-8">
+          <div data-testid="modal-booking-confirm-error" className="flex flex-col items-center py-8">
             <XCircle className="h-10 w-10 text-destructive mb-4" />
             <p className="text-foreground font-medium">Erro ao agendar</p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
               {errorMessage}
             </p>
-            <div className="flex gap-3 mt-6 w-full">
-              <Button variant="outline" onClick={handleClose} className="flex-1">
+            <div data-testid="modal-booking-confirm-error-actions" className="flex gap-3 mt-6 w-full">
+              <Button data-testid="modal-booking-confirm-error-close-button" variant="outline" onClick={handleClose} className="flex-1">
                 Fechar
               </Button>
-              <Button onClick={handleRetry} className="flex-1">
+              <Button data-testid="modal-booking-confirm-retry-button" onClick={handleRetry} className="flex-1">
                 Tentar novamente
               </Button>
             </div>
@@ -161,17 +162,17 @@ export function BookingConfirmModal({
 
         {/* State: insufficient_credits */}
         {state === 'insufficient_credits' && (
-          <div className="flex flex-col items-center py-8">
+          <div data-testid="modal-booking-confirm-insufficient-credits" className="flex flex-col items-center py-8">
             <AlertTriangle className="h-10 w-10 text-amber-500 mb-4" />
             <p className="text-foreground font-medium">Créditos insuficientes</p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
               Você não possui créditos suficientes para agendar esta aula.
             </p>
-            <div className="flex gap-3 mt-6 w-full">
-              <Button variant="outline" onClick={handleClose} className="flex-1">
+            <div data-testid="modal-booking-confirm-credits-actions" className="flex gap-3 mt-6 w-full">
+              <Button data-testid="modal-booking-confirm-credits-close-button" variant="outline" onClick={handleClose} className="flex-1">
                 Fechar
               </Button>
-              <Button asChild className="flex-1">
+              <Button data-testid="modal-booking-confirm-buy-credits-button" asChild className="flex-1">
                 <Link href={ROUTES.CREDITS}>Adquirir créditos</Link>
               </Button>
             </div>

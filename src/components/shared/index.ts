@@ -8,3 +8,5 @@ export { AdminSidebar } from './admin-sidebar';
 export { ThemeToggle } from './theme-toggle';
 export { ThemeProvider } from './theme-provider';
 export { LanguageSelector } from './language-selector';
+export { DashboardPageHeader, DashboardHeaderChip } from './dashboard-page-header';
+export { WidgetCard } from './widget-card';

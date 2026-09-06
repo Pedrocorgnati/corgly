@@ -44,18 +44,19 @@ export function AnalyticsFunnel() {
   const maxCount = data ? Math.max(...data.steps.map((s) => s.count), 1) : 1;
 
   return (
-    <section className="rounded-lg border bg-card p-6">
-      <header className="mb-4 flex items-center justify-between">
+    <section data-testid="admin-analytics-funnel" className="rounded-lg border bg-card p-6">
+      <header data-testid="admin-analytics-funnel-header" className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Funil de Conversao</h2>
           <p className="text-sm text-muted-foreground">
             Visitantes -&gt; Cadastros -&gt; Checkout -&gt; Compras
           </p>
         </div>
-        <div className="flex gap-1 rounded-md border p-1">
+        <div data-testid="admin-analytics-funnel-period-tabs" className="flex gap-1 rounded-md border p-1">
           {PERIODS.map((p) => (
             <button
               key={p}
+              data-testid={`admin-analytics-funnel-period-${p}-button`}
               type="button"
               onClick={() => setPeriod(p)}
               className={
@@ -70,24 +71,24 @@ export function AnalyticsFunnel() {
         </div>
       </header>
 
-      {loading && <div className="text-sm text-muted-foreground">Carregando...</div>}
+      {loading && <div data-testid="admin-analytics-funnel-loading" className="text-sm text-muted-foreground">Carregando...</div>}
       {error && (
-        <div className="text-sm text-destructive">
+        <div data-testid="admin-analytics-funnel-error" className="text-sm text-destructive">
           Erro ao carregar funil: {error}
         </div>
       )}
       {!loading && !error && data && data.steps.every((s) => s.count === 0) && (
-        <div className="text-sm text-muted-foreground">
+        <div data-testid="admin-analytics-funnel-empty" className="text-sm text-muted-foreground">
           Sem eventos no periodo. Instrumentacao pode estar pendente ou aguardando dados.
         </div>
       )}
 
       {!loading && !error && data && (
-        <ol className="space-y-3">
+        <ol data-testid="admin-analytics-funnel-steps" className="space-y-3">
           {data.steps.map((s) => {
             const widthPct = Math.max(4, Math.round((s.count / maxCount) * 100));
             return (
-              <li key={s.key}>
+              <li key={s.key} data-testid={`admin-analytics-funnel-step-${s.key}`}>
                 <div className="mb-1 flex items-baseline justify-between text-sm">
                   <span className="font-medium">{s.label}</span>
                   <span className="tabular-nums text-muted-foreground">

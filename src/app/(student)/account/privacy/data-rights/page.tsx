@@ -14,10 +14,10 @@ export const metadata: Metadata = {
 
 /** Os quatro direitos do titular cobertos pelo fluxo DSR (LGPD Art. 18). */
 const RIGHTS = [
-  { title: 'Exportação (acesso)', text: 'Uma cópia completa dos dados da sua conta.' },
-  { title: 'Correção', text: 'Atualização de dados incompletos ou inexatos.' },
-  { title: 'Portabilidade', text: 'Seus dados em formato estruturado e transferível.' },
-  { title: 'Exclusão', text: 'Remoção dos seus dados, com janela de arrependimento.' },
+  { slug: 'export', title: 'Exportação (acesso)', text: 'Uma cópia completa dos dados da sua conta.' },
+  { slug: 'correction', title: 'Correção', text: 'Atualização de dados incompletos ou inexatos.' },
+  { slug: 'portability', title: 'Portabilidade', text: 'Seus dados em formato estruturado e transferível.' },
+  { slug: 'deletion', title: 'Exclusão', text: 'Remoção dos seus dados, com janela de arrependimento.' },
 ] as const;
 
 export default async function StudentDataRightsPage() {
@@ -33,8 +33,8 @@ export default async function StudentDataRightsPage() {
   });
 
   return (
-    <PageWrapper className="max-w-2xl">
-      <div className="mb-6">
+    <PageWrapper data-testid="page-account-privacy-data-rights" className="max-w-2xl">
+      <div data-testid="account-data-rights-header" className="mb-6">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Direitos sobre os dados</h1>
@@ -45,9 +45,9 @@ export default async function StudentDataRightsPage() {
         </p>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 mb-8" aria-label="Direitos do titular">
+      <section data-testid="account-data-rights-list" className="grid gap-3 sm:grid-cols-2 mb-8" aria-label="Direitos do titular">
         {RIGHTS.map((right) => (
-          <div key={right.title} className="bg-card border border-border rounded-2xl p-4">
+          <div key={right.title} data-testid={`account-data-right-${right.slug}`} className="bg-card border border-border rounded-2xl p-4">
             <h2 className="text-sm font-semibold text-foreground">{right.title}</h2>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{right.text}</p>
           </div>
@@ -61,10 +61,12 @@ export default async function StudentDataRightsPage() {
         </p>
       </div>
 
-      <DataRightsRequestForm defaultEmail={user?.email ?? ''} emailLocked={Boolean(user?.email)} />
+      <div data-testid="account-data-rights-form-section">
+        <DataRightsRequestForm defaultEmail={user?.email ?? ''} emailLocked={Boolean(user?.email)} />
+      </div>
 
       <div className="mt-8 pt-6 border-t border-border">
-        <Link href={ROUTES.ACCOUNT} className="text-muted-foreground text-sm hover:underline">
+        <Link href={ROUTES.ACCOUNT} data-testid="account-data-rights-back-link" className="text-muted-foreground text-sm hover:underline">
           &larr; Voltar para Configurações
         </Link>
       </div>

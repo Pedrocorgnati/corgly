@@ -59,17 +59,18 @@ export default async function MagicLinkPage({ searchParams }: MagicLinkPageProps
     // Token inválido, expirado ou já utilizado — estado explícito, sem autenticar.
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-magic-link" className="w-full max-w-[384px]">
+          <div data-testid="auth-magic-link-error" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Link inválido</h1>
             <p className="text-sm text-muted-foreground">
               Link expirado ou já utilizado, solicite outro.
             </p>
-            <Link href={ROUTES.MAGIC_LINK} className={cn(buttonVariants(), 'w-full')}>
+            <Link data-testid="auth-magic-link-retry-link" href={ROUTES.MAGIC_LINK} className={cn(buttonVariants(), 'w-full')}>
               Solicitar novo link
             </Link>
             <Link
+              data-testid="auth-magic-link-back-login-link"
               href={ROUTES.LOGIN}
               className="block text-sm text-primary font-medium hover:underline"
             >
@@ -84,9 +85,9 @@ export default async function MagicLinkPage({ searchParams }: MagicLinkPageProps
   // ── Fluxo 1: solicitação do link ───────────────────────────────────────
   return (
     <AuthPageWrapper>
-      <div className="w-full max-w-[384px]">
+      <div data-testid="page-auth-magic-link" className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
-          <div className="mb-6">
+          <div data-testid="auth-magic-link-header" className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">Acesso por link</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Informe seu email e enviaremos um link de acesso. Sem senha.

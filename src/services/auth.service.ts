@@ -42,6 +42,7 @@ export class AuthService {
         country: data.country,
         termsAcceptedAt: new Date(),
         marketingOptIn: data.marketingOptIn ?? false,
+        preferredLanguage: data.preferredLanguage ?? 'EN_US',
         emailConfirmToken: confirmTokenHash,
         emailConfirmExpires: confirmExpires,
       },

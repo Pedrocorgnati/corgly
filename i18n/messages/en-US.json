@@ -25,7 +25,8 @@
       "buy": "Buy credits",
       "settings": "Settings",
       "creditsBalance": "Balance: {count} credits",
-      "library": "Library"
+      "library": "Library",
+      "exercises": "Exercises"
     },
     "admin": {
       "dashboard": "Dashboard",
@@ -50,15 +51,23 @@
     "home": "Home",
     "schedule": "Schedule",
     "progress": "Progress",
-    "account": "Account"
+    "account": "Account",
+    "buy": "Buy",
+    "exercises": "Exercises"
   },
   "footer": {
     "copyright": "© {year} Corgly. All rights reserved.",
     "privacy": "Privacy Policy",
+    "privacy_short": "Privacy",
     "terms": "Terms of Use",
+    "terms_short": "Terms",
     "cookies": "Cookies",
     "languageLabel": "Language",
-    "preferences": "Cookie preferences"
+    "preferences": "Cookie preferences",
+    "tagline": "Real conversations. Learning that connects.",
+    "method": "Method",
+    "pricing": "Pricing",
+    "faq": "FAQ"
   },
   "creditBadge": {
     "credits": "{count} credits",
@@ -198,194 +207,234 @@
   "landing": {
     "header": {
       "login": "Log in",
-      "register": "Sign up",
+      "cta": "First lesson — US$ 12.50",
       "nav": {
+        "how_it_works": "How it works",
         "method": "Method",
         "pricing": "Pricing",
-        "content": "Content",
-        "contact": "Contact"
+        "faq": "FAQ"
       },
       "nav_aria": "Main navigation",
       "menuOpen": "Open menu"
     },
     "hero": {
-      "title": "Learn Brazilian Portuguese with a native teacher",
-      "subtitle": "Live 1:1 lessons with the Corgly Method. Measurable progress, real support.",
-      "cta_primary": "Sign up for Free",
-      "cta_secondary": "See Pricing",
-      "cta_primary_aria": "Create a free Corgly account",
-      "cta_secondary_aria": "See Corgly plans and pricing",
-      "first_lesson_badge": "First lesson 50% OFF — only $12.50",
-      "professor_alt": "Pedro Corgnati, Brazilian Portuguese teacher, smiling in a home office",
-      "professor_name": "Pedro Corgnati"
+      "eyebrow": "1:1 live · native teacher",
+      "title": "Speak Brazilian Portuguese naturally",
+      "subtitle": "Private lessons with Pedro. Visible progress every cycle.",
+      "proof_countries": "20+ countries",
+      "proof_duration": "50 min lesson",
+      "proof_feedback": "feedback after each lesson",
+      "cta_primary": "Book first lesson",
+      "cta_secondary": "See plans",
+      "microcopy": "{price} first lesson · no monthly commitment",
+      "overlay_name": "Pedro · Native teacher · PT-BR",
+      "overlay_chip": "Next lesson · {minutes} min",
+      "languages": "Lessons in English, Spanish and Italian",
+      "brazil_vs_pt": "100% Brazilian Portuguese — not European",
+      "professor_alt": "Pedro, native Brazilian Portuguese teacher, teaching a live lesson",
+      "from": "from"
+    },
+    "goals": {
+      "eyebrow": "Your goal",
+      "title": "Bring the reason you need Portuguese. I will build the path.",
+      "chips": {
+        "zero": "start from zero",
+        "travel": "travel",
+        "move": "move to Brazil",
+        "work": "work and meetings",
+        "family": "family and daily life",
+        "confidence": "speak with confidence"
+      },
+      "authority": {
+        "rating": "4.8 / 15 reviews",
+        "countries": "Students from 20+ countries",
+        "postgrad": "Portuguese teacher, postgraduate in teaching methodology",
+        "background": "Business admin + software engineering"
+      }
+    },
+    "how_it_works": {
+      "eyebrow": "How it works",
+      "title": "From the first lesson to visible progress",
+      "steps": {
+        "01": {
+          "title": "Book",
+          "body": "You book the lesson at a time that works for you."
+        },
+        "02": {
+          "title": "Live 1:1 lesson",
+          "body": "A private live lesson with a specialist teacher, on Zoom."
+        },
+        "03": {
+          "title": "Structured feedback",
+          "body": "Get clear, personal and usable feedback."
+        },
+        "04": {
+          "title": "Next cycle",
+          "body": "Apply it, improve, and move to the next level."
+        }
+      }
     },
     "professor": {
-      "badge": "Native Teacher",
+      "badge": "Native teacher",
       "title": "Meet Pedro",
-      "subtitle": "Native Brazilian Portuguese teacher with his own methodology",
-      "bio": "I'm Pedro Corgnati, a native Brazilian Portuguese teacher with years of experience teaching international students of all levels. I developed the Corgly Method to ensure measurable progress in every lesson cycle.",
-      "image_alt": "Pedro Corgnati, Brazilian Portuguese teacher, smiling in a home office",
-      "credentials": {
-        "international": "Experience with students from 20+ countries",
-        "method": "Creator of the Corgly Method",
-        "live": "Available for live 1:1 lessons",
-        "feedback": "Structured feedback after every lesson"
+      "bio": "Native Brazilian Portuguese teacher with a passion for helping international students speak with confidence and naturalness. My lessons are personalized, practical and focused on real everyday communication.",
+      "positioning": "You study with me.",
+      "image_alt": "Pedro, native Brazilian Portuguese teacher",
+      "credentials_aria": "Teacher credentials",
+      "metrics": {
+        "years": {
+          "value": "8 years",
+          "label": "teaching Brazilian Portuguese"
+        },
+        "countries": {
+          "value": "20+ countries",
+          "label": "students from around the world who already learned with me."
+        },
+        "one_to_one": {
+          "value": "1:1 always",
+          "label": "private lessons, 100% personalized"
+        }
+      },
+      "checks": {
+        "adults": "Solid experience teaching adults and international professionals",
+        "fluency": "Specialized in conversation, pronunciation and natural fluency",
+        "certified": "Portuguese teacher, postgraduate in teaching methodology"
       }
     },
     "method": {
-      "badge": "Methodology",
-      "title": "The Corgly Method",
-      "subtitle": "A methodology designed to ensure real and measurable progress in Brazilian Portuguese.",
+      "title": "The Corgly method, without jargon",
+      "subtitle": "Four simple agreements so each private live lesson moves you forward.",
       "pillars": {
         "commitment": {
           "title": "Commitment",
-          "description": "Commitment to clear goals and mutual accountability between student and teacher."
+          "description": "We take the commitment and we deliver."
         },
-        "time_boxed": {
-          "title": "Time-Boxed",
-          "description": "Learning cycles with defined timeframes for focus and consistent progress."
+        "closed_cycle": {
+          "title": "Closed cycle",
+          "description": "We start together, we finish together."
         },
-        "cycle_based": {
-          "title": "Cycle-Based",
-          "description": "Cycle structure that integrates practice, feedback, and learning consolidation."
+        "continuous_context": {
+          "title": "Continuous context",
+          "description": "We hold the whole picture so we hit what matters."
         },
-        "shared_context": {
-          "title": "Shared Context",
-          "description": "Shared context between lessons for continuity and real evolution."
-        },
-        "feedback_loop": {
-          "title": "Feedback Loop",
-          "description": "Constant and structured feedback for correction and continuous improvement."
+        "real_feedback": {
+          "title": "Real feedback",
+          "description": "We speak clearly and we actually help."
         }
       }
     },
     "pricing": {
-      "badge": "Plans",
-      "title": "Invest in your Portuguese",
-      "subtitle": "Choose the plan that best fits your routine",
-      "discount_banner": "★ Your first lesson is 50% off — only $12.50!",
-      "most_popular": "MOST POPULAR",
+      "title": "Choose your rhythm",
+      "subtitle": "Three ways to study. Public prices in US dollars.",
+      "discount_banner": "First lesson 50% off — US$ 12.50 (from US$ 25)",
+      "most_chosen": "Most chosen",
+      "best_cost": "best cost per lesson",
       "per_lesson_suffix": "/lesson",
+      "per_lesson": "per lesson",
+      "per_month": "per month · {count} lessons included",
+      "monthly_options_aria": "Choose 10 or 20 lessons per month",
+      "monthly_option": "{count} lessons",
+      "first_lesson_label": "First lesson",
+      "following_lessons_label": "Following lessons",
+      "equivalent_to": "equivalent to",
       "lesson_suffix": "lesson",
       "lessons_suffix": "lessons",
+      "footnote": "Credits last 6 months · cancel monthly at the end of the cycle",
+      "footnote_credits": "Credits last 6 months",
+      "footnote_cancel": "cancel monthly at the end of the cycle",
       "packages": {
         "single": {
           "name": "Single",
-          "cta": "Get started",
+          "cta": "Start with the first lesson",
           "features": [
-            "1 lesson of 55 min",
-            "Structured feedback",
-            "Virtual room with collaborative doc",
-            "Email support"
-          ]
-        },
-        "pack5": {
-          "name": "Pack 5",
-          "cta": "Buy Pack 5",
-          "features": [
-            "5 lessons of 55 min",
-            "Structured feedback",
-            "Virtual room with collaborative doc",
-            "Progress & charts",
-            "Priority support"
+            "No commitment",
+            "Credits last 6 months"
           ]
         },
         "pack10": {
           "name": "Pack 10",
-          "cta": "Buy Pack 10",
+          "cta": "Choose Pack 10",
           "features": [
-            "10 lessons of 55 min",
-            "Structured feedback",
-            "Virtual room with collaborative doc",
-            "Progress & charts",
-            "Full history",
-            "Priority support",
-            "Access to P1 content"
+            "10 lessons included",
+            "Credits last 6 months"
           ]
         },
         "monthly": {
           "name": "Monthly",
-          "cta": "Subscribe Monthly",
+          "cta": "Choose Monthly",
           "features": [
-            "8 lessons per month",
-            "Structured feedback",
-            "Virtual room with collaborative doc",
-            "Progress & charts",
-            "Auto-renewal",
-            "Priority support"
+            "Best cost per lesson",
+            "Cancel monthly at the end of the cycle"
           ]
         }
       }
     },
-    "content_preview": {
-      "badge": "Free Content",
-      "title": "Coming soon: free lessons",
-      "subtitle": "We are preparing free grammar, vocabulary, and pronunciation content. Sign up to be notified when it launches.",
-      "cta": "View all content"
-    },
     "testimonials": {
       "title": "What students say",
-      "subtitle": "Real results from students around the world",
-      "items": {
-        "maria": {
-          "name": "Maria Chen",
-          "country": "United States",
-          "text": "In 3 months with Pedro, I was able to communicate with my Brazilian husband's family for the first time. The Corgly Method is incredible!"
-        },
-        "giulia": {
-          "name": "Giulia Rossi",
-          "country": "Italy",
-          "text": "The 1:1 lessons made all the difference. The structured feedback after each session helps me focus on what really needs improving."
-        },
-        "james": {
-          "name": "James O'Brien",
-          "country": "Ireland",
-          "text": "I tried several language apps before and none worked like live lessons with Pedro. I recommend without hesitation."
-        }
-      }
+      "subtitle": "Real reviews, no carousel",
+      "band": "4.8 / 5 · 15 reviews · Clarity 5.0 · Reliability 4.8 · Progress 4.7",
+      "show_translation": "Show translation",
+      "show_original": "Show original",
+      "all_15": "All 15 reviews"
     },
     "faq": {
-      "title": "Frequently Asked Questions",
+      "title": "FAQ",
       "items": {
-        "how_it_works": {
-          "q": "How do the lessons work?",
-          "a": "Lessons are 1:1 live via video conference, lasting 50 minutes. You schedule at your preferred time and receive the access link by email."
-        },
         "duration": {
-          "q": "How long is each lesson?",
-          "a": "50 minutes at the top of the hour."
+          "q": "How long is each live lesson?",
+          "a": "Every live lesson lasts 50 minutes, every time, so focus, pace and learning stay productive."
         },
         "cancel": {
-          "q": "Can I cancel?",
-          "a": "Yes, up to 24 hours in advance without losing your credit. Cancellations less than 24 hours in advance result in the credit being deducted."
+          "q": "Can I cancel or reschedule?",
+          "a": "Yes, up to 24h before. Later than that, the credit is used."
         },
-        "timezone": {
-          "q": "How does the time zone work?",
-          "a": "You can schedule in any time zone. The system automatically converts to your local time."
+        "credits": {
+          "q": "How long are pack credits valid?",
+          "a": "6 months from purchase. Monthly credits follow the billing cycle."
         },
-        "credits_expire": {
-          "q": "Do credits expire?",
-          "a": "Yes, credits expire 6 months after the purchase date."
+        "pack_vs_monthly": {
+          "q": "What is the difference between Pack 10 and Monthly?",
+          "a": "Pack 10 is 10 credits you use when you want (6-month expiry). Monthly is 10 lessons at US$ 17 or 20 lessons at US$ 15 per lesson, billed each cycle. Cancel at cycle end."
+        },
+        "beginner": {
+          "q": "Do I need to know Portuguese already?",
+          "a": "No. We start from zero. Lessons can run in English, Spanish or Italian until Portuguese takes over."
+        },
+        "intensive": {
+          "q": "I have a trip, a move or an interview soon. Can we go faster?",
+          "a": "Yes. Intensive plan: conversation, priority vocabulary, frequent mistakes, weekly goals."
+        },
+        "business": {
+          "q": "Do you teach Portuguese for work?",
+          "a": "Yes. Meetings, emails, presentations, interviews, negotiation and field vocabulary. Background in business admin and software."
+        },
+        "brazil_vs_pt": {
+          "q": "Brazilian or European Portuguese?",
+          "a": "Brazilian only. The Portuguese Brazilians actually speak."
         },
         "first_lesson": {
-          "q": "How does the first lesson discount work?",
-          "a": "$12.50 (50% OFF) — valid once per account for new students."
+          "q": "How does the first-lesson price work?",
+          "a": "US$ 12.50 once per new student (50% off US$ 25). In that lesson we map your level, goals and blockers and set a simple plan."
+        },
+        "timezone": {
+          "q": "How do time zones work?",
+          "a": "You book in your local time. The calendar converts."
+        },
+        "platform": {
+          "q": "Where does the lesson happen?",
+          "a": "Live on Zoom. You get the link by email."
+        },
+        "payment": {
+          "q": "How do I pay?",
+          "a": "USD, card via Stripe."
         }
       }
     },
     "cta": {
-      "title": "Ready to truly learn Portuguese?",
-      "subtitle": "First lesson at 50% off. No long-term commitment.",
-      "button": "Sign up Now",
-      "button_secondary": "See Plans"
-    },
-    "footer": {
-      "copyright": "© 2026 Corgly. All rights reserved.",
-      "links": {
-        "terms": "Terms of Use",
-        "privacy": "Privacy",
-        "contact": "Contact"
-      }
+      "title": "Ready for the first real conversation?",
+      "subtitle": "Private live lesson on Zoom. First lesson US$ 12.50.",
+      "button": "I want my lesson for {price}",
+      "button_secondary": "See plans"
     }
   },
   "content": {
@@ -467,12 +516,17 @@
       "pack10Desc": "10 credits",
       "pack10Badge": "Best value",
       "monthlyTitle": "Monthly",
-      "monthlyDesc": "8 credits/month",
+      "monthlyDesc": "10 or 20 credits/month",
       "buyBtn": "Buy",
       "subscribing": "Subscribing...",
       "buying": "Buying...",
       "perLesson": "/lesson",
-      "perMonth": "/month"
+      "perMonth": "/month",
+      "subscribeBtn": "Subscribe monthly",
+      "checkoutError": "We couldn't start the checkout. Please try again.",
+      "redirecting": "Redirecting to secure checkout...",
+      "firstPurchaseNote": "First-lesson discount applied automatically at checkout.",
+      "selectedPlan": "Plan selected on the home page"
     },
     "discount": {
       "title": "First purchase",
@@ -510,7 +564,67 @@
       "updateMsg": "Change frequency to {count}x per week?",
       "updateConfirm": "Confirm",
       "empty": "No active subscription",
-      "emptyDesc": "Subscribe to get credits automatically renewed every month."
+      "emptyDesc": "Subscribe to get credits automatically renewed every month.",
+      "lessonsPerMonth": "{count} lessons per month",
+      "perWeek": "{count}x per week",
+      "perMonth": "/month",
+      "planLabel": "Plan",
+      "periodLabel": "Current period",
+      "creditsLabel": "Monthly credits",
+      "creditsPerMonth": "{count} credits per month",
+      "priceNote": "Reference amount in US dollars. Billing follows the currency registered on the subscription.",
+      "trial": "Trial period",
+      "pastDue": "Payment past due",
+      "paused": "Paused",
+      "changePlan": "Change plan",
+      "emptyAction": "See plans",
+      "cancelKeep": "Keep subscription",
+      "cancelMsgDated": "Your subscription will be cancelled at the end of the current period ({date}). Credits already released stay valid until their expiry date.",
+      "cancelNotice": "Your subscription ends on {date}.",
+      "loadError": "We couldn’t load your subscription. Please try again.",
+      "cancelSuccess": "Subscription cancelled. It stays active until the end of the current period.",
+      "cancelError": "We couldn’t cancel the subscription. Please try again.",
+      "updateSuccess": "Plan changed successfully.",
+      "updateError": "We couldn’t change the plan. Please try again.",
+      "axisError": "Choose either a monthly plan or a weekly frequency, never both.",
+      "pageTitle": "Subscription",
+      "pageSubtitle": "See your current plan and manage payment and billing details in Stripe’s secure portal.",
+      "planSectionTitle": "Your plan",
+      "portalTitle": "Stripe secure portal",
+      "portalDesc": "Open an authenticated session to update your payment method, review subscription details or settle outstanding charges. When you finish, you return to this page.",
+      "portalCta": "Open portal",
+      "portalOpening": "Opening portal...",
+      "portalRedirecting": "Redirecting to the Stripe portal.",
+      "portalError": "We couldn’t open the billing portal. Please try again.",
+      "portalConnectionError": "Connection error while opening the billing portal. Please try again.",
+      "pastDueNotice": "If your subscription is past due, use the portal to update your payment method. The return to the app is restricted to Corgly’s configured domain.",
+      "supportTitle": "Billing support",
+      "supportCta": "Contact support",
+      "changeBack": "Back to subscription",
+      "changeSubtitle": "Preview the prorated charge, estimated taxes and effective date before confirming.",
+      "changeChooseTitle": "Choose the new plan",
+      "changeCurrentPlan": "Current plan: {plan}.",
+      "changeMonthlyGroup": "Monthly plans",
+      "changeLegacyGroup": "Weekly frequency",
+      "changeLegacyHint": "Available only for subscriptions signed up by weekly frequency.",
+      "changeCurrentBadge": "Current",
+      "changeEstimated": "per month (estimated)",
+      "changePreviewCta": "Preview change",
+      "changePreviewLoading": "Previewing...",
+      "changeConfirmCta": "Confirm change",
+      "changeConfirmLoading": "Confirming...",
+      "changeSelectedIsCurrent": "This is already your current plan. Pick another one to preview a change.",
+      "changePreviewTitle": "Preview summary",
+      "changePreviewHint": "Pick a plan and click Preview change to see the amounts before confirming.",
+      "changeSummaryLabel": "Change",
+      "changeSummaryValue": "{from} to {to}",
+      "changeNextMonthly": "New monthly amount",
+      "changeProration": "Proration",
+      "changeTax": "Estimated taxes",
+      "changeDueNow": "Due now",
+      "changeEffective": "Effective on {effectiveAt}. The current period ends on {periodEnd}.",
+      "changeCurrentPlanNotice": "The preview points to the plan you already have: nothing will be charged.",
+      "changePreviewError": "We couldn’t preview the plan change. Please try again."
     },
     "breakdown": {
       "title": "Credit Breakdown",
@@ -561,7 +675,19 @@
         "emptyFiltered": "No records for selected filters."
       }
     },
-    "checkoutSuccess": "Purchase completed! Your credits have been added."
+    "checkoutSuccess": "Purchase completed! Your credits have been added.",
+    "currency": {
+      "label": "Currency",
+      "groupAria": "Choose the currency used to display prices",
+      "optionAria": "Show prices in {currency}",
+      "loading": "Loading your currency preference...",
+      "saving": "Saving your currency preference...",
+      "loadError": "We couldn't load your saved currency preference. Showing prices in {currency}.",
+      "saveError": "We couldn't save your currency preference. The choice applies to this browser only.",
+      "retry": "Try again",
+      "note": "The charged currency is confirmed at checkout.",
+      "usdcNote": "USDC available subject to gateway support."
+    }
   },
   "errors": {
     "notFound": {
@@ -613,5 +739,41 @@
     "resourcesDownload": "Download",
     "resourcesDownloadAria": "Download resource {name}",
     "resourcesError": "Could not generate the download link. Please try again."
+  },
+  "skipNav": {
+    "label": "Skip to main content"
+  },
+  "exercises": {
+    "pageTitle": "Exercises",
+    "pageDescription": "Practice what you saw in class, at your own pace.",
+    "breadcrumbDashboard": "Dashboard",
+    "emptyTitle": "No exercises yet",
+    "emptyDescription": "As soon as a lesson with exercises is published, it shows up here.",
+    "emptyExercise": "This lesson has no multiple-choice questions yet.",
+    "lessonBadge": "Lesson {number}",
+    "levelBadge": "Level {level}",
+    "kindMultipleChoice": "Multiple choice",
+    "questionCount": "{count, plural, one {# question} other {# questions}}",
+    "instructions": "Pick one option and check your answer.",
+    "grammarToggle": "Grammar point of the lesson",
+    "progress": "Question {current} of {total}",
+    "progressDone": "{total, plural, one {# question answered} other {# questions answered}}",
+    "optionLabel": "Option {letter}",
+    "checkButton": "Check answer",
+    "nextButton": "Next question",
+    "finishButton": "See result",
+    "retryButton": "Redo the exercise",
+    "noSelectionWarning": "Pick an option before checking.",
+    "correctTitle": "You got it right",
+    "incorrectTitle": "You got it wrong",
+    "yourAnswer": "Your answer: {letter}) {text}",
+    "correctAnswer": "Correct answer: {letter}) {text}",
+    "summaryTitle": "Exercise finished",
+    "summaryScore": "You got {correct} out of {total} right.",
+    "summaryHint": "Redo it as many times as you want: the questions and the order of the options never change.",
+    "restarted": "Exercise restarted. You are back on the first question.",
+    "errorTitle": "Could not load the exercises",
+    "errorDescription": "We could not build this lesson's exercise. Please try again.",
+    "errorRetry": "Try again"
   }
 }

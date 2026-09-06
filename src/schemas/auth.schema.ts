@@ -19,6 +19,7 @@ export const RegisterSchema = z.object({
     message: 'Você precisa consentir com o tratamento de dados para continuar',
   }),
   marketingOptIn: z.boolean().optional(),
+  preferredLanguage: z.enum(['PT_BR', 'EN_US', 'ES_ES', 'IT_IT']).optional(),
 });
 
 /** Schema do formulário de registro (client-side, inclui confirmPassword) */

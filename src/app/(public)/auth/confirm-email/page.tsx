@@ -41,8 +41,8 @@ function ConfirmEmailContent() {
   if (state === 'loading') {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-confirm-email" className="w-full max-w-[384px]">
+          <div data-testid="auth-confirm-email-loading" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <Loader2 className="h-10 w-10 text-primary mx-auto animate-spin" />
             <h1 className="text-xl font-bold text-foreground">Confirmando seu email...</h1>
             <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
@@ -55,14 +55,14 @@ function ConfirmEmailContent() {
   if (state === 'success') {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-confirm-email" className="w-full max-w-[384px]">
+          <div data-testid="auth-confirm-email-success" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Email confirmado!</h1>
             <p className="text-sm text-muted-foreground">
               Sua conta foi ativada com sucesso. Agora você pode fazer login.
             </p>
-            <Link href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
+            <Link data-testid="auth-confirm-email-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
               Ir para o login
             </Link>
           </div>
@@ -74,18 +74,20 @@ function ConfirmEmailContent() {
   if (state === 'error') {
     return (
       <AuthPageWrapper>
-        <div className="w-full max-w-[384px]">
-          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
+        <div data-testid="page-auth-confirm-email" className="w-full max-w-[384px]">
+          <div data-testid="auth-confirm-email-error" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
             <h1 className="text-xl font-bold text-foreground">Erro na confirmação</h1>
             <p className="text-sm text-muted-foreground">{errorMessage}</p>
             <Link
+              data-testid="auth-confirm-email-resend-link"
               href={ROUTES.RESEND_CONFIRMATION}
               className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
             >
               Reenviar email de confirmação
             </Link>
             <Link
+              data-testid="auth-confirm-email-back-login-link"
               href={ROUTES.LOGIN}
               className="block text-sm text-primary font-medium hover:underline"
             >
@@ -99,9 +101,9 @@ function ConfirmEmailContent() {
 
   // state === 'instructions' — no token, show instructions
   return (
-    <div className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
+    <div data-testid="page-auth-confirm-email" className="min-h-[calc(100vh-64px)] flex flex-col items-center justify-center py-8 px-4">
       <div className="w-full max-w-[384px]">
-        <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center">
+        <div data-testid="auth-confirm-email-instructions" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center">
           <div className="flex justify-center mb-4">
             <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
               <Mail className="h-8 w-8 text-success" />
@@ -116,12 +118,14 @@ function ConfirmEmailContent() {
             <p>Não encontrou o email? Verifique sua pasta de spam ou solicite o reenvio abaixo.</p>
           </div>
           <Link
+            data-testid="auth-confirm-email-resend-link"
             href={ROUTES.RESEND_CONFIRMATION}
             className={cn(buttonVariants({ variant: 'outline' }), 'w-full mb-3')}
           >
             Reenviar email de confirmação
           </Link>
           <Link
+            data-testid="auth-confirm-email-back-login-link"
             href={ROUTES.LOGIN}
             className="text-sm text-primary font-medium hover:underline"
           >

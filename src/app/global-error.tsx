@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { ROUTES } from '@/lib/constants/routes';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -36,6 +37,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     <html lang="pt-BR">
       <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', background: '#09090b', color: '#fafafa' }}>
         <div
+          data-testid="app-global-error"
           style={{
             minHeight: '100dvh',
             display: 'flex',
@@ -60,6 +62,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             )}
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
+                data-testid="app-global-error-retry-button"
                 onClick={reset}
                 style={{
                   padding: '0.5rem 1.5rem',
@@ -75,6 +78,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 Tentar novamente
               </button>
               <Link
+                data-testid="app-global-error-home-link"
                 href={ROUTES.HOME}
                 style={{
                   padding: '0.5rem 1.5rem',

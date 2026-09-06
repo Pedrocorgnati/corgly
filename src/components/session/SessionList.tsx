@@ -43,7 +43,7 @@ export function SessionList({
 }: SessionListProps) {
   if (isLoading) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-6 animate-pulse">
+      <div data-testid="admin-sessions-loading" className="bg-card border border-border rounded-2xl p-6 animate-pulse">
         <div className="h-5 w-32 bg-muted rounded mb-4" />
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -55,11 +55,12 @@ export function SessionList({
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+    <div data-testid="admin-sessions-list" className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
       {/* Filters */}
-      <div className="p-4 border-b border-border flex items-center gap-2 flex-wrap">
+      <div data-testid="admin-sessions-filter-bar" className="p-4 border-b border-border flex items-center gap-2 flex-wrap">
         <span className="text-sm font-medium text-foreground mr-2">Filtrar:</span>
         <button
+          data-testid="admin-sessions-filter-all-button"
           onClick={() => onStatusFilter(null)}
           className={cn(
             'px-3 py-1 rounded-full text-xs border transition-colors',
@@ -75,6 +76,7 @@ export function SessionList({
           return (
             <button
               key={status}
+              data-testid={`admin-sessions-filter-${status.toLowerCase().replace(/_/g, "-")}-button`}
               onClick={() => onStatusFilter(status)}
               className={cn(
                 'px-3 py-1 rounded-full text-xs border transition-colors',
@@ -91,12 +93,12 @@ export function SessionList({
 
       {/* Table */}
       {sessions.data.length === 0 ? (
-        <div className="py-12 text-center text-muted-foreground">
+        <div data-testid="admin-sessions-empty" className="py-12 text-center text-muted-foreground">
           <p className="text-sm">Nenhuma sessão encontrada.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table data-testid="admin-sessions-table" className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Aluno</th>
@@ -115,7 +117,7 @@ export function SessionList({
                 };
 
                 return (
-                  <tr key={session.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                  <tr key={session.id} data-testid={`admin-sessions-row-${session.id}`} className="border-b border-border last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-3 text-foreground">{session.studentName}</td>
                     <td className="px-4 py-3 text-foreground">
                       {new Date(session.startAt).toLocaleDateString('pt-BR', {
@@ -143,6 +145,7 @@ export function SessionList({
                     </td>
                     <td className="px-4 py-3">
                       <Button
+                        data-testid={`admin-sessions-row-${session.id}-view-button`}
                         variant="ghost"
                         size="sm"
                         onClick={() => onSessionClick?.(session.id)}
@@ -160,12 +163,13 @@ export function SessionList({
 
       {/* Pagination */}
       {sessions.totalPages > 1 && (
-        <div className="flex items-center justify-between p-4 border-t border-border">
+        <div data-testid="admin-sessions-pagination" className="flex items-center justify-between p-4 border-t border-border">
           <p className="text-xs text-muted-foreground">
             Página {sessions.page} de {sessions.totalPages} ({sessions.total} sessões)
           </p>
           <div className="flex items-center gap-2">
             <Button
+              data-testid="admin-sessions-pagination-prev-button"
               variant="outline"
               size="sm"
               onClick={() => onPageChange(sessions.page - 1)}
@@ -175,6 +179,7 @@ export function SessionList({
             </Button>
             <span className="text-sm text-foreground">{sessions.page}</span>
             <Button
+              data-testid="admin-sessions-pagination-next-button"
               variant="outline"
               size="sm"
               onClick={() => onPageChange(sessions.page + 1)}
