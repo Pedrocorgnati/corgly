@@ -12,8 +12,10 @@ const VALID_ENV: Record<string, string> = {
   STRIPE_WEBHOOK_SECRET: 'whsec_test_fake',
   RESEND_API_KEY: 're_test_fake',
   EMAIL_FROM: 'noreply@corgly.test',
-  NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
-  NEXT_PUBLIC_SITE_URL: 'http://localhost:3000',
+  // URL publica (nao-loopback) de proposito: a maioria dos casos abaixo roda com
+  // NODE_ENV=production, e o guard de loopback reprovaria localhost ali.
+  NEXT_PUBLIC_APP_URL: 'https://app.corgly.test',
+  NEXT_PUBLIC_SITE_URL: 'https://app.corgly.test',
   NEXT_PUBLIC_HOCUSPOCUS_URL: 'ws://localhost:1234',
 };
 
@@ -103,5 +105,47 @@ describe('env: normalizacao de string vazia', () => {
     await expect(
       loadEnv({ NODE_ENV: 'production', NEXT_PUBLIC_APP_URL: '' }),
     ).rejects.toThrow(/NEXT_PUBLIC_APP_URL/);
+  });
+});
+
+describe('env: URL publica de loopback em producao', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  // Regressao 2026-09-07: o build de producao saiu com NEXT_PUBLIC_APP_URL em
+  // localhost (o `.env` de desenvolvimento). Como `NEXT_PUBLIC_*` e inlineado no
+  // bundle, o erro so apareceu em producao — e nenhuma troca de `.env` no
+  // servidor o desfazia. O boot precisa reprovar antes disso.
+  it.each([
+    ['NEXT_PUBLIC_APP_URL', 'http://localhost:3000'],
+    ['NEXT_PUBLIC_APP_URL', 'http://127.0.0.1:3000'],
+    ['NEXT_PUBLIC_SITE_URL', 'http://localhost:3000'],
+  ])('recusa %s em %s com NODE_ENV=production', async (key, value) => {
+    await expect(
+      loadEnv({ NODE_ENV: 'production', [key]: value }),
+    ).rejects.toThrow(new RegExp(key));
+  });
+
+  it('aceita loopback fora de producao (development)', async () => {
+    const mod = await loadEnv({
+      NODE_ENV: 'development',
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_SITE_URL: 'http://localhost:3000',
+    });
+    expect(mod.env.NEXT_PUBLIC_APP_URL).toBe('http://localhost:3000');
+  });
+
+  it('aceita URL publica em producao', async () => {
+    const mod = await loadEnv({
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_APP_URL: 'https://corgly.app',
+    });
+    expect(mod.env.NEXT_PUBLIC_APP_URL).toBe('https://corgly.app');
   });
 });

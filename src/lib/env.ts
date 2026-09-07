@@ -81,6 +81,42 @@ const envSchema = z.object({
         "ADMIN_MFA_DEV_BYPASS=true só é permitido com NODE_ENV=development (defina apenas em .env.development.local)",
     });
   }
+
+  // URL publica apontando para a propria maquina em producao: reprova.
+  //
+  // `NEXT_PUBLIC_*` e INLINEADO no bundle em tempo de build (tambem no codigo de
+  // servidor), entao um build feito com o `.env` de desenvolvimento carrega
+  // `http://localhost:3000` para dentro do artefato e nenhuma troca de `.env` no
+  // servidor desfaz isso. Foi assim que a producao de 2026-09-07 subiu com
+  // `internalApiOrigin()` compilado como `return "http://localhost:3000"`: todo
+  // Server Component que chama `getAuthUser()` falhava o fetch, concluia "sem
+  // sessao" e devolvia a area logada inteira para /auth/login — com o login
+  // respondendo 200 e o cookie valido. Stripe e os emails saiam com link de
+  // localhost pelo mesmo motivo.
+  //
+  // O valor certo do build de producao mora em `.env.production` (versionado).
+  // Este guard existe para o erro voltar como build quebrado, nao como deploy
+  // silenciosamente quebrado.
+  if (data.NODE_ENV === 'production') {
+    for (const key of ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'] as const) {
+      const value = data[key];
+      let hostname: string;
+      try {
+        hostname = new URL(value).hostname;
+      } catch {
+        continue; // formato invalido ja e acusado pelo `.url()` do schema
+      }
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message:
+            `${key} nao pode apontar para loopback (${value}) com NODE_ENV=production. ` +
+            'Defina a URL publica em .env.production — o valor e inlineado no bundle e nao ha como corrigi-lo depois do build.',
+        });
+      }
+    }
+  }
 });
 
 // dotenv sempre entrega string: uma chave declarada e vazia (`TURN_SERVER_URL=`)

@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 !.env.docker.example
+!.env.production
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -35,7 +36,9 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files: regras no topo do arquivo (.env e .env.* ignorados;
-# .env.example e .env.docker.example versionados como documentacao)
+# .env.example, .env.docker.example e .env.production versionados —
+# os dois primeiros como documentacao, o ultimo porque o build de
+# producao PRECISA dele e ele so carrega URL publica, nunca segredo)
 
 # vercel
 .vercel
