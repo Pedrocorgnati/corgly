@@ -57,6 +57,34 @@ function armarTx(options: {
   return tx;
 }
 
+/**
+ * Arma `prisma.$transaction` para REJEITAR com um erro de contencao do driver, o
+ * desfecho que nao passa por nenhum guard: quem perde a corrida fica esperando no
+ * `FOR UPDATE` e sai por timeout da transacao interativa (`P2028`), deadlock
+ * (`P2034`) ou errno cru do InnoDB (`1205`/`1213`) embrulhado em `P2010`.
+ */
+function armarTxContencao(err: unknown) {
+  mockPrisma.$transaction.mockImplementation(() => Promise.reject(err));
+}
+
+function erroPrisma(code: string, message: string, meta?: Record<string, unknown>) {
+  const err = new Error(message) as Error & { code: string; meta?: Record<string, unknown> };
+  err.code = code;
+  if (meta) err.meta = meta;
+  return err;
+}
+
+/**
+ * Erro no formato cru do `mysql2`, que expoe `errno` numerico e `code`
+ * simbolico. Chega assim quando o driver sobe sem o embrulho `P2010`.
+ */
+function erroDriver(errno: number, code: string, message: string) {
+  const err = new Error(message) as Error & { code: string; errno: number };
+  err.code = code;
+  err.errno = errno;
+  return err;
+}
+
 describe('AvailabilityService', () => {
   let service: AvailabilityService;
 
@@ -363,6 +391,68 @@ describe('AvailabilityService', () => {
         expect((err as AppError).status).toBe(409);
       }
     });
+
+    it.each([
+      ['P2028', erroPrisma('P2028', 'Transaction already closed: transaction timed out')],
+      ['P2034', erroPrisma('P2034', 'Transaction failed due to a write conflict or a deadlock')],
+      ['meta.code 1205 (P2010)', erroPrisma('P2010', 'Raw query failed', { code: '1205' })],
+      ['meta.errno 1213 (P2010)', erroPrisma('P2010', 'Raw query failed', { errno: 1213 })],
+      ['errno cru 1205', erroDriver(1205, 'ER_LOCK_WAIT_TIMEOUT', 'Lock wait timeout exceeded')],
+      ['errno cru 1213', erroDriver(1213, 'ER_LOCK_DEADLOCK', 'Deadlock found when trying to get lock')],
+      [
+        'P2010 sem meta, errno so no texto',
+        erroPrisma('P2010', 'Raw query failed. Error 1213: Deadlock found when trying to get lock'),
+      ],
+    ])(
+      'traduz contencao %s para AVAILABILITY_054 / 409 em vez de vazar erro cru',
+      async (_rotulo, err) => {
+        armarTxContencao(err);
+
+        try {
+          await service.blockSlot('slot-1');
+          throw new Error('deveria ter rejeitado');
+        } catch (caught) {
+          expect(caught).toBeInstanceOf(AppError);
+          expect((caught as AppError).code).toBe('AVAILABILITY_054');
+          expect((caught as AppError).status).toBe(409);
+        }
+      },
+    );
+
+    it('nao mascara falha real de banco como conflito', async () => {
+      const falhaReal = erroPrisma('P1001', "Can't reach database server");
+      armarTxContencao(falhaReal);
+
+      await expect(service.blockSlot('slot-1')).rejects.toBe(falhaReal);
+    });
+
+    // Contraprova da matriz acima: sem estes casos, um matcher que so olhasse o
+    // texto passaria nos sete positivos por acidente. Aqui os numeros 1205/1213
+    // aparecem na mensagem SEM serem errno de contencao, e o erro tem de subir
+    // cru em vez de virar AVAILABILITY_054.
+    it.each([
+      [
+        '1205 dentro de um identificador',
+        erroPrisma('P2010', 'Raw query failed: duplicate entry for slot-1205-abc'),
+      ],
+      [
+        '1213 numa contagem de linhas',
+        erroPrisma('P2010', 'Raw query failed. Error: unknown column at row 1213'),
+      ],
+      ['1213 em erro sem code nem errno', new Error('job 1213 falhou ao gerar slots')],
+      [
+        'errno de FK (1452), que nao e contencao',
+        erroPrisma('P2010', 'Raw query failed', { code: '1452' }),
+      ],
+      [
+        'timeout de rede com 1205 no texto',
+        erroPrisma('P1017', 'Server has closed the connection after 1205 ms'),
+      ],
+    ])('nao trata %s como contencao', async (_rotulo, err) => {
+      armarTxContencao(err);
+
+      await expect(service.blockSlot('slot-1')).rejects.toBe(err);
+    });
   });
 
   // ── unblockSlot ──
@@ -429,6 +519,21 @@ describe('AvailabilityService', () => {
       } catch (err) {
         expect((err as AppError).code).toBe('AVAILABILITY_053');
         expect((err as AppError).status).toBe(409);
+      }
+    });
+
+    it('traduz contencao para AVAILABILITY_054 / 409', async () => {
+      armarTxContencao(
+        erroPrisma('P2034', 'Transaction failed due to a write conflict or a deadlock'),
+      );
+
+      try {
+        await service.unblockSlot('slot-1');
+        throw new Error('deveria ter rejeitado');
+      } catch (caught) {
+        expect(caught).toBeInstanceOf(AppError);
+        expect((caught as AppError).code).toBe('AVAILABILITY_054');
+        expect((caught as AppError).status).toBe(409);
       }
     });
   });

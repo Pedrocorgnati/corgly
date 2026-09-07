@@ -15,16 +15,14 @@ import { distributeQuestion } from './answer-distribution';
 import { LESSON_1_PARROT } from './lesson-1-parrot';
 import {
   OPTIONS_PER_QUESTION,
-  type Exercise,
+  PLACEHOLDER_OPTIONS,
+  type StaticExercise,
   type LessonExerciseSource,
   type SourceQuestion,
 } from './types';
 
 /** Minimo de perguntas por exercicio (R-MC-01). */
 const MIN_QUESTIONS = 4;
-
-/** Textos que a fonte trata como alternativa nao preenchida (R-MC-01). */
-const PLACEHOLDER_OPTIONS = new Set(['', '-', '—']);
 
 /** Aulas ja trazidas para dentro do app, na ordem em que aparecem na tela. */
 const LESSON_SOURCES: readonly LessonExerciseSource[] = [LESSON_1_PARROT];
@@ -63,7 +61,7 @@ function assertValidQuestion(question: SourceQuestion, lessonSlug: string): void
   }
 }
 
-function buildExercise(source: LessonExerciseSource): Exercise {
+function buildExercise(source: LessonExerciseSource): StaticExercise {
   if (source.questions.length < MIN_QUESTIONS) {
     throw new Error(
       `Exercicio invalido em ${source.slug}: R-MC-01 exige no minimo ${MIN_QUESTIONS} perguntas, veio ${source.questions.length}.`
@@ -93,14 +91,14 @@ function buildExercise(source: LessonExerciseSource): Exercise {
  * Memoizacao simples: o dado e constante de modulo, entao validar e distribuir
  * uma vez por processo basta. Nao ha invalidacao porque nao ha origem viva.
  */
-let cache: readonly Exercise[] | null = null;
+let cache: readonly StaticExercise[] | null = null;
 
 /**
  * Exercicios disponiveis para o aluno.
  *
  * @throws {Error} quando a copia de uma aula viola o contrato de forma da fonte.
  */
-export function getExercises(): readonly Exercise[] {
+export function getExercises(): readonly StaticExercise[] {
   if (cache === null) {
     cache = LESSON_SOURCES.map(buildExercise);
   }
@@ -108,6 +106,6 @@ export function getExercises(): readonly Exercise[] {
 }
 
 /** Um exercicio pelo id, ou `undefined` quando o id nao existe no catalogo. */
-export function getExerciseById(id: string): Exercise | undefined {
+export function getExerciseById(id: string): StaticExercise | undefined {
   return getExercises().find((exercise) => exercise.id === id);
 }

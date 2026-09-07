@@ -31,6 +31,110 @@ export const SLOT_OCCUPYING_STATUSES: readonly SessionStatus[] = [
   SessionStatus.RESCHEDULE_PENDING,
 ];
 
+/**
+ * Erros de CONTENCAO do driver, distintos da perda de CAS.
+ *
+ * `blockSlot`/`unblockSlot` definiam apenas dois desfechos: sucesso e `cas === 0`
+ * (`AVAILABILITY_053`). Quem perde a corrida fica bloqueado no `FOR UPDATE` e pode
+ * sair da transacao por caminho nenhum desses dois: `P2028` (transacao interativa
+ * expirada no timeout default de 5s do Prisma), `P2034` (write conflict / deadlock
+ * detectado pelo Prisma) ou o errno cru do InnoDB via `$queryRaw`/`$executeRaw`
+ * (`1205` lock wait timeout, `1213` deadlock, normalmente embrulhados em `P2010`).
+ * Nenhum deles e `AppError`, entao as rotas `block`/`unblock` caiam no catch
+ * generico e devolviam `500` justamente no caminho que o item 012 existe para
+ * endurecer. Aqui eles viram `AVAILABILITY_054` / 409, o mesmo status da familia de
+ * conflito, com codigo proprio para que o log separe "perdi o CAS" de "nao consegui
+ * o lock a tempo".
+ */
+const CONTENTION_PRISMA_CODES = new Set(['P2028', 'P2034']);
+
+/** Errnos do InnoDB que significam contencao de lock, nao falha de dados. */
+const CONTENTION_MYSQL_ERRNOS = new Set([1205, 1213]);
+
+/**
+ * Mesmos dois errnos na forma simbolica. `mysql2` expoe `err.code` como simbolo
+ * (`ER_LOCK_WAIT_TIMEOUT`) e `err.errno` como numero; dependendo de por onde o
+ * erro sobe, so um dos dois chega ate aqui.
+ */
+const CONTENTION_MYSQL_SYMBOLS = new Set(['ER_LOCK_WAIT_TIMEOUT', 'ER_LOCK_DEADLOCK']);
+
+/** Codigo do Prisma que embrulha erro cru de `$queryRaw`/`$executeRaw`. */
+const RAW_QUERY_WRAPPER_CODE = 'P2010';
+
+/**
+ * Fallback textual DELIBERADAMENTE estreito, so aplicado quando o erro ja se
+ * identificou como `P2010`. Exige a palavra-chave (`errno`, `error code`,
+ * `error`) colada ao numero, para nao casar com "1205" que aparece por acidente
+ * num id, num timestamp ou no texto de outra falha.
+ */
+const RAW_ERRNO_IN_MESSAGE = /\b(?:errno|error\s+code|error)\s*[:=]?\s*(?:1205|1213)\b/i;
+
+/**
+ * Le os quatro lugares onde o errno do InnoDB pode aparecer. `code` e `errno` no
+ * topo cobrem o erro cru do driver; `meta.code` e `meta.errno` cobrem o erro ja
+ * embrulhado pelo Prisma em `P2010`.
+ */
+function contentionErrnoCandidates(err: unknown): unknown[] {
+  const e = err as
+    | { code?: unknown; errno?: unknown; meta?: { code?: unknown; errno?: unknown } | null }
+    | null
+    | undefined;
+  if (!e) return [];
+  return [e.code, e.errno, e.meta?.code, e.meta?.errno];
+}
+
+/**
+ * Deteccao ESTRUTURAL: olha campos tipados do erro, nunca a mensagem. Aceita o
+ * errno como numero (`1205`), como string numerica (`'1205'`, forma em que o
+ * Prisma entrega `meta.code`) e como simbolo do `mysql2`.
+ */
+function hasContentionErrno(err: unknown): boolean {
+  for (const candidate of contentionErrnoCandidates(err)) {
+    if (candidate === undefined || candidate === null) continue;
+    if (typeof candidate === 'number' && CONTENTION_MYSQL_ERRNOS.has(candidate)) return true;
+    if (typeof candidate === 'string') {
+      if (CONTENTION_MYSQL_SYMBOLS.has(candidate.toUpperCase())) return true;
+      const parsed = Number(candidate);
+      if (Number.isInteger(parsed) && CONTENTION_MYSQL_ERRNOS.has(parsed)) return true;
+    }
+  }
+  return false;
+}
+
+function isContentionError(err: unknown): boolean {
+  if (err instanceof AppError) return false;
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && CONTENTION_PRISMA_CODES.has(code)) return true;
+  if (hasContentionErrno(err)) return true;
+  // Ultimo recurso, so dentro de `P2010`: o Prisma nem sempre popula `meta.code`
+  // e nesse caso o errno so existe no texto que ele copiou do driver.
+  if (code === RAW_QUERY_WRAPPER_CODE) {
+    const message = err instanceof Error ? err.message : '';
+    return RAW_ERRNO_IN_MESSAGE.test(message);
+  }
+  return false;
+}
+
+/**
+ * Roda a transacao mapeando contencao para `AVAILABILITY_054`. `AppError` lancado
+ * pelos guards de dentro da transacao passa intacto; erro que nao e contencao
+ * tambem, para nao mascarar falha real de banco como conflito.
+ */
+async function withContentionMapping<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    if (isContentionError(err)) {
+      throw new AppError(
+        'AVAILABILITY_054',
+        'Slot em disputa no momento. Tente novamente.',
+        409,
+      );
+    }
+    throw err;
+  }
+}
+
 /** Converte "HH:mm" + Date (UTC midnight) + timezone offset → UTC Date */
 function localTimeToUtc(date: Date, timeHHmm: string, ianaTimezone: string): Date {
   const [hours, minutes] = timeHHmm.split(':').map(Number);
@@ -296,57 +400,64 @@ export class AvailabilityService {
    * linha entre a leitura e o `UPDATE`: quem faz o segundo escritor perder é o lock somado à
    * re-execução dos guards. O `cas === 0` é assert fail-closed, para o caso de um refactor
    * futuro tirar a leitura de dentro do lock.
+   *
+   * O terceiro desfecho é a CONTENÇÃO: quem espera no `FOR UPDATE` pode estourar o timeout
+   * da transação interativa ou tomar deadlock do InnoDB. `withContentionMapping` traduz esse
+   * caso para `AVAILABILITY_054` / 409, para que a rota não caia no catch genérico e devolva
+   * `500` no caminho que esta transação existe para endurecer.
    */
   async blockSlot(slotId: string): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<
-        Array<{ id: string; isBlocked: number; version: number }>
-      >`
-        SELECT id, isBlocked, version
-        FROM availability_slots
-        WHERE id = ${slotId}
-        FOR UPDATE
-      `;
+    await withContentionMapping(() =>
+      prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<
+          Array<{ id: string; isBlocked: number; version: number }>
+        >`
+          SELECT id, isBlocked, version
+          FROM availability_slots
+          WHERE id = ${slotId}
+          FOR UPDATE
+        `;
 
-      const slot = rows[0];
-      if (!slot) {
-        throw new AppError('AVAILABILITY_001', 'Slot não encontrado.', 404);
-      }
-      if (slot.isBlocked) {
-        throw new AppError('AVAILABILITY_050', 'Slot já está bloqueado.', 409);
-      }
+        const slot = rows[0];
+        if (!slot) {
+          throw new AppError('AVAILABILITY_001', 'Slot não encontrado.', 404);
+        }
+        if (slot.isBlocked) {
+          throw new AppError('AVAILABILITY_050', 'Slot já está bloqueado.', 409);
+        }
 
-      // Re-check de ocupação DENTRO da transação, sob o FOR UPDATE acima.
-      // Mantém os dois status literais do contrato atual da rota — alinhar com
-      // SLOT_OCCUPYING_STATUSES (7 status) mudaria a resposta HTTP e é decisão de produto.
-      const ocupante = await tx.session.findFirst({
-        where: {
-          availabilitySlotId: slotId,
-          status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
-        },
-        select: { id: true },
-      });
-      if (ocupante) {
-        throw new AppError(
-          'AVAILABILITY_051',
-          'Não é possível bloquear slot com sessão ativa.',
-          409,
-        );
-      }
+        // Re-check de ocupação DENTRO da transação, sob o FOR UPDATE acima.
+        // Mantém os dois status literais do contrato atual da rota — alinhar com
+        // SLOT_OCCUPYING_STATUSES (7 status) mudaria a resposta HTTP e é decisão de produto.
+        const ocupante = await tx.session.findFirst({
+          where: {
+            availabilitySlotId: slotId,
+            status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+          },
+          select: { id: true },
+        });
+        if (ocupante) {
+          throw new AppError(
+            'AVAILABILITY_051',
+            'Não é possível bloquear slot com sessão ativa.',
+            409,
+          );
+        }
 
-      const cas = await tx.$executeRaw`
-        UPDATE availability_slots
-        SET isBlocked = true, version = version + 1
-        WHERE id = ${slotId} AND version = ${slot.version}
-      `;
-      if (cas === 0) {
-        throw new AppError(
-          'AVAILABILITY_053',
-          'Conflito de concorrência no slot. Tente novamente.',
-          409,
-        );
-      }
-    });
+        const cas = await tx.$executeRaw`
+          UPDATE availability_slots
+          SET isBlocked = true, version = version + 1
+          WHERE id = ${slotId} AND version = ${slot.version}
+        `;
+        if (cas === 0) {
+          throw new AppError(
+            'AVAILABILITY_053',
+            'Conflito de concorrência no slot. Tente novamente.',
+            409,
+          );
+        }
+      }),
+    );
   }
 
   /**
@@ -354,40 +465,43 @@ export class AvailabilityService {
    *
    * Mesma estrutura de `blockSlot`: `SELECT ... FOR UPDATE`, guard sob o lock e escrita por
    * CAS que incrementa `version`. Não há guard de ocupante aqui — desbloquear slot com sessão
-   * viva não cria dupla reserva.
+   * viva não cria dupla reserva. O mesmo `withContentionMapping` cobre o
+   * desfecho de contenção (`AVAILABILITY_054` / 409).
    */
   async unblockSlot(slotId: string): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<
-        Array<{ id: string; isBlocked: number; version: number }>
-      >`
-        SELECT id, isBlocked, version
-        FROM availability_slots
-        WHERE id = ${slotId}
-        FOR UPDATE
-      `;
+    await withContentionMapping(() =>
+      prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<
+          Array<{ id: string; isBlocked: number; version: number }>
+        >`
+          SELECT id, isBlocked, version
+          FROM availability_slots
+          WHERE id = ${slotId}
+          FOR UPDATE
+        `;
 
-      const slot = rows[0];
-      if (!slot) {
-        throw new AppError('AVAILABILITY_001', 'Slot não encontrado.', 404);
-      }
-      if (!slot.isBlocked) {
-        throw new AppError('AVAILABILITY_052', 'Slot já está desbloqueado.', 409);
-      }
+        const slot = rows[0];
+        if (!slot) {
+          throw new AppError('AVAILABILITY_001', 'Slot não encontrado.', 404);
+        }
+        if (!slot.isBlocked) {
+          throw new AppError('AVAILABILITY_052', 'Slot já está desbloqueado.', 409);
+        }
 
-      const cas = await tx.$executeRaw`
-        UPDATE availability_slots
-        SET isBlocked = false, version = version + 1
-        WHERE id = ${slotId} AND version = ${slot.version}
-      `;
-      if (cas === 0) {
-        throw new AppError(
-          'AVAILABILITY_053',
-          'Conflito de concorrência no slot. Tente novamente.',
-          409,
-        );
-      }
-    });
+        const cas = await tx.$executeRaw`
+          UPDATE availability_slots
+          SET isBlocked = false, version = version + 1
+          WHERE id = ${slotId} AND version = ${slot.version}
+        `;
+        if (cas === 0) {
+          throw new AppError(
+            'AVAILABILITY_053',
+            'Conflito de concorrência no slot. Tente novamente.',
+            409,
+          );
+        }
+      }),
+    );
   }
 
   /**

@@ -8,10 +8,10 @@
  */
 
 import { ExerciseMultipleChoice } from './exercise-multiple-choice';
-import type { Exercise } from '@/lib/exercises';
+import type { StaticExercise } from '@/lib/exercises';
 
 interface ExercisesListProps {
-  exercises: readonly Exercise[];
+  exercises: readonly StaticExercise[];
 }
 
 export function ExercisesList({ exercises }: ExercisesListProps) {

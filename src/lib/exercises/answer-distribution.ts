@@ -42,8 +42,8 @@
 import {
   OPTION_LETTERS,
   OPTIONS_PER_QUESTION,
-  type ExerciseOption,
-  type ExerciseQuestion,
+  type StaticExerciseOption,
+  type StaticExerciseQuestion,
   type SourceQuestion,
 } from './types';
 
@@ -109,11 +109,11 @@ export function targetCorrectPosition(question: SourceQuestion): number {
  *
  * @param question questao verbatim da fonte
  */
-export function distributeQuestion(question: SourceQuestion): ExerciseQuestion {
+export function distributeQuestion(question: SourceQuestion): StaticExerciseQuestion {
   const targetPosition = targetCorrectPosition(question);
   const ordered = moveItem(question.options, question.correctSourceIndex, targetPosition);
 
-  const options: ExerciseOption[] = ordered.map((text, position) => ({
+  const options: StaticExerciseOption[] = ordered.map((text, position) => ({
     letter: OPTION_LETTERS[position],
     text,
   }));

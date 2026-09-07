@@ -42,10 +42,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { resolveLessonText } from '@/lib/exercises';
-import type { Exercise, OptionLetter } from '@/lib/exercises';
+import type { StaticExercise, OptionLetter } from '@/lib/exercises';
 
 interface ExerciseMultipleChoiceProps {
-  exercise: Exercise;
+  exercise: StaticExercise;
 }
 
 /**

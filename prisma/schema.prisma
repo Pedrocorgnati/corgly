@@ -306,6 +306,13 @@ model User {
   impersonationsEnded     AdminImpersonationSession[] @relation("AdminImpersonationEndedBy")
   magicLinkTokens         MagicLinkToken[]            @relation("MagicLinkTokenUser")
 
+  exercisesCreated           Exercise[]           @relation("ExerciseAuthor")
+  exerciseAssignments        ExerciseAssignment[] @relation("ExerciseAssignmentStudent")
+  exerciseAssignmentsGranted ExerciseAssignment[] @relation("ExerciseAssignmentGrantedBy")
+  exerciseAttempts           ExerciseAttempt[]    @relation("ExerciseAttemptStudent")
+
+  bookingIdempotencyRecords BookingIdempotencyRecord[] @relation("BookingIdempotencyStudent")
+
   @@index([role])
   @@index([emailConfirmToken])
   @@index([resetPasswordToken])
@@ -367,6 +374,8 @@ model AvailabilitySlot {
   updatedAt DateTime @updatedAt
 
   sessions Session[]
+
+  bookingSlotLocks BookingSlotLock[] @relation("BookingSlotLockSlot")
 
   @@index([startAt, isBlocked], name: "IDX_availability_startAt_isBlocked")
   @@map("availability_slots")
@@ -1233,6 +1242,11 @@ model Asset {
   transcripts Transcript[]
   captions    Caption[]
 
+  exerciseItemsPromptAudio ExerciseItem[]       @relation("ExerciseItemPromptAudio")
+  exerciseItemsAnswerAudio ExerciseItem[]       @relation("ExerciseItemAnswerAudio")
+  exerciseItemsImage       ExerciseItem[]       @relation("ExerciseItemImage")
+  exerciseAnswerRecordings ExerciseItemAnswer[] @relation("ExerciseAnswerRecording")
+
   @@index([ownerId, processingStatus])
   @@index([sessionId, processingStatus])
   @@index([contentId, processingStatus])
@@ -1470,4 +1484,281 @@ model LanguageGoal {
   @@index([profileId, priority])
   @@index([type])
   @@map("language_goals")
+}
+
+// ─── Exercicios (Fase 1) ────────────────────────────────────────────────────
+
+/// Ciclo de vida do exercicio. Omite SCHEDULED de proposito: exercicio nao
+/// tem publicacao agendada, ao contrario de Content.
+enum ExerciseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ExerciseAssignmentStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum ExerciseAttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+/// Motor visual de um item. Cada valor tem um schema Zod proprio.
+/// MULTIPLE_CHOICE corresponde ao unico tipo hoje implementado
+/// (`ExerciseKind = 'multiple-choice'` em src/lib/exercises/types.ts).
+///
+/// A ordem dos 14 valores e a ordem de armazenamento do ENUM(...) nativo do
+/// MySQL e reproduz `EXERCISE_ITEM_KINDS` de
+/// src/lib/exercises/exercise-item.schema.ts, que e a fonte. Reordenar aqui
+/// reinterpreta linha ja gravada. A paridade (valor e ordem) esta travada por
+/// src/lib/exercises/exercise-item-kind.prisma-parity.test.ts.
+enum ExerciseItemKind {
+  MULTIPLE_CHOICE
+  MATCH_CLICK
+  AUDIO_WORD
+  AUDIO_CLOZE
+  AUDIO_SENTENCE
+  AUDIO_CHOICE
+  AUDIO_ORDER
+  TEXT_CHOICE
+  VERB_CLOZE
+  IMAGE_WORD
+  IMAGE_CHOICE
+  IMAGE_SPEAK
+  AUDIO_SHADOW
+  L1_SPEAK_PT
+}
+
+/// Envelope de exercicio criado no painel admin.
+/// Sucede o catalogo estatico de `src/lib/exercises/`, que permanece como
+/// fallback ate a aula 1 ser importada para o banco.
+model Exercise {
+  id              String            @id @default(uuid())
+  /// Titulo visivel so para o admin na biblioteca. O titulo do aluno vive em ExerciseTranslation.
+  internalTitle   String            @db.VarChar(200)
+  /// Idioma de apoio do conteudo. IT_IT e recusado na validacao Zod: a fonte
+  /// nao publica italiano (ver `LessonContentLocale` em src/lib/exercises/types.ts).
+  supportLanguage SupportedLanguage
+  /// Nivel do curso, mesmo eixo numerico ja usado por `LessonExerciseSource.level`.
+  level           Int
+  subject         String?           @db.VarChar(80)
+  /// Conjunto de tags. Json porque MySQL + Prisma nao tem lista escalar.
+  tags            Json?
+  timeEstimateMin Int?
+  status          ExerciseStatus    @default(DRAFT)
+  /// As tres flags de comportamento do plano original (allow_retry,
+  /// show_key_in_summary, max_audio_replays) NAO entram aqui: as duas
+  /// primeiras foram descartadas e a terceira ficou para a Fase 2, junto
+  /// com o audio.
+  publishedAt     DateTime?
+  createdById     String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  createdBy    User                  @relation("ExerciseAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  translations ExerciseTranslation[]
+  items        ExerciseItem[]
+  assignments  ExerciseAssignment[]
+  attempts     ExerciseAttempt[]
+
+  @@index([status, supportLanguage])
+  @@index([createdById])
+  @@map("exercises")
+}
+
+/// Titulo e resumo do exercicio no idioma do aluno.
+/// Espelha exatamente o par Content/ContentTranslation.
+model ExerciseTranslation {
+  id         String            @id @default(uuid())
+  exerciseId String
+  locale     SupportedLanguage
+  title      String            @db.VarChar(200)
+  summary    String?           @db.Text
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([exerciseId, locale])
+  @@map("exercise_translations")
+}
+
+/// Uma questao concreta dentro do exercicio.
+/// `payload` e `answerKey` sao validados por um Zod discriminado em `kind`.
+model ExerciseItem {
+  id                  String           @id @default(uuid())
+  exerciseId          String
+  kind                ExerciseItemKind
+  /// Posicao 1..N dentro do exercicio. UNIQUE composto impede empate de ordem.
+  position            Int
+  /// Campos do template do tipo (enunciado, alternativas, tokens, lacunas).
+  payload             Json
+  /// Gabarito do tipo (indice, texto canonico, `accepted[]`, ordem esperada).
+  answerKey           Json
+  acceptWithoutAccent Boolean          @default(false)
+  /// Teto de gravacao em segundos, so para os tipos de fala.
+  maxSeconds          Int?
+  promptAudioAssetId  String?
+  answerAudioAssetId  String?
+  imageAssetId        String?
+  imageAlt            String?          @db.VarChar(300)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  exercise    Exercise             @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  promptAudio Asset?               @relation("ExerciseItemPromptAudio", fields: [promptAudioAssetId], references: [id], onDelete: SetNull)
+  answerAudio Asset?               @relation("ExerciseItemAnswerAudio", fields: [answerAudioAssetId], references: [id], onDelete: SetNull)
+  image       Asset?               @relation("ExerciseItemImage", fields: [imageAssetId], references: [id], onDelete: SetNull)
+  answers     ExerciseItemAnswer[]
+
+  @@unique([exerciseId, position])
+  @@map("exercise_items")
+}
+
+/// Liberacao de um exercicio para um aluno. Nunca e apagada: revogar muda o status.
+model ExerciseAssignment {
+  id          String                   @id @default(uuid())
+  exerciseId  String
+  studentId   String
+  grantedById String
+  status      ExerciseAssignmentStatus @default(ACTIVE)
+  grantedAt   DateTime                 @default(now())
+  revokedAt   DateTime?
+  /// Momento em que o aluno abriu o card pela primeira vez. Alimenta o selo "Novo".
+  firstSeenAt DateTime?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  exercise  Exercise          @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  student   User              @relation("ExerciseAssignmentStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  grantedBy User              @relation("ExerciseAssignmentGrantedBy", fields: [grantedById], references: [id], onDelete: Restrict)
+  attempts  ExerciseAttempt[]
+
+  @@unique([exerciseId, studentId])
+  @@index([studentId, status])
+  @@map("exercise_assignments")
+}
+
+/// Uma tentativa concreta do aluno. NAO chamar de "sessao": Session ja e a aula ao vivo.
+model ExerciseAttempt {
+  id            String                @id @default(uuid())
+  exerciseId    String
+  studentId     String
+  assignmentId  String?
+  status        ExerciseAttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime              @default(now())
+  finishedAt    DateTime?
+  /// Score e derivado destes dois contadores; nao ha coluna de percentual,
+  /// para nao existirem duas formulas divergentes.
+  answeredCount Int                   @default(0)
+  correctCount  Int                   @default(0)
+  /// Numero de itens do exercicio no momento da tentativa (o exercicio pode mudar depois).
+  itemCount     Int
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  exercise   Exercise            @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  student    User                @relation("ExerciseAttemptStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  assignment ExerciseAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  answers    ExerciseItemAnswer[]
+
+  @@index([studentId, status])
+  @@index([exerciseId, finishedAt])
+  @@map("exercise_attempts")
+}
+
+/// Resposta de um item dentro de uma tentativa.
+model ExerciseItemAnswer {
+  id               String   @id @default(uuid())
+  attemptId        String
+  itemId           String
+  /// Resposta crua do aluno (texto digitado, indice escolhido, ordem montada).
+  payload          Json
+  isCorrect        Boolean
+  /// Transcricao da fala, quando o tipo grava audio. Null enquanto STT nao existir.
+  transcript       String?  @db.Text
+  recordingAssetId String?
+  answeredAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  attempt   ExerciseAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  item      ExerciseItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  recording Asset?          @relation("ExerciseAnswerRecording", fields: [recordingAssetId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, itemId])
+  @@map("exercise_item_answers")
+}
+
+// ---------------------------------------------------------------------------
+// Tabelas de idempotencia e lock operadas por SQL cru
+// ---------------------------------------------------------------------------
+// Estas tres tabelas nascem da migration baseline e sao lidas/escritas
+// exclusivamente por SQL cru em `src/lib/billing/idempotency.service.ts` e
+// `src/lib/bookings/booking-idempotency.service.ts`. Nenhum codigo TypeScript
+// as acessa pelo Prisma Client.
+//
+// Elas estao declaradas aqui APENAS para que o schema declarativo enxergue o
+// que ja existe no banco. Sem estes models o Prisma as trata como orfas e
+// `prisma migrate dev` gera `DROP TABLE` para as tres em toda execucao - foi
+// exatamente o que aconteceu em 2026-09-07 (ver `_LOOP-LOG.md` do loop
+// 09-07-corgly-saas-exercicios).
+//
+// Os campos replicam o DDL da baseline byte-a-byte, incluindo nomes de indice
+// e as duas foreign keys. `updatedAt` usa `@default(now())` e NAO `@updatedAt`
+// porque a coluna real e `DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)`,
+// sem `ON UPDATE`; a atualizacao e feita pelo SQL cru dos services.
+//
+// Ao alterar qualquer coluna aqui, alterar tambem o SQL cru correspondente.
+
+model BillingIdempotencyRecord {
+  idempotencyKey String   @id @db.VarChar(255)
+  scope          String   @db.VarChar(64)
+  ownerId        String
+  fingerprint    String   @db.VarChar(64)
+  attemptId      String
+  status         String   @db.VarChar(20)
+  resultJson     Json?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  @@index([scope, ownerId], name: "IDX_billing_idempotency_scope_owner")
+  @@index([expiresAt], name: "IDX_billing_idempotency_expiresAt")
+  @@map("billing_idempotency_records")
+}
+
+model BookingIdempotencyRecord {
+  idempotencyKey String   @id @db.VarChar(255)
+  studentId      String
+  fingerprint    String   @db.VarChar(255)
+  attemptId      String
+  status         String   @db.VarChar(20)
+  resultJson     Json?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  student User @relation("BookingIdempotencyStudent", fields: [studentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([studentId], name: "IDX_booking_idempotency_student")
+  @@index([expiresAt], name: "IDX_booking_idempotency_expiresAt")
+  @@map("booking_idempotency_records")
+}
+
+model BookingSlotLock {
+  slotId    String   @id
+  owner     String   @db.VarChar(255)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  slot AvailabilitySlot @relation("BookingSlotLockSlot", fields: [slotId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([expiresAt], name: "IDX_booking_slot_locks_expiresAt")
+  @@map("booking_slot_locks")
 }
