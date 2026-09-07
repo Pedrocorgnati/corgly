@@ -7,7 +7,7 @@ import {
   displayFxPreview,
   resolveFxSource,
   getRoundingPolicy,
-  isFxRateStale,
+  seedFxRate,
   FX_RATE_MAX_AGE_MS,
   type FxRateCandidate,
 } from '@/lib/billing/currency-policy';
@@ -18,14 +18,6 @@ const PreviewQuerySchema = z.object({
   to: z.string().toUpperCase().refine(isSupportedCurrency, { message: 'Moeda de destino nao suportada.' }),
   amount: z.coerce.number().int().nonnegative().default(10000),
 });
-
-/** Taxas SEED hardcoded (base USD) usadas como fallback quando nao ha FxRate no DB. */
-const SEED_RATES: Record<Currency, number> = {
-  USD: 1,
-  USDC: 1,
-  EUR: 0.92,
-  BRL: 5.0,
-};
 
 /**
  * GET /api/v1/fx/preview
@@ -106,16 +98,14 @@ export async function GET(request: NextRequest) {
     collectedAt: r.collectedAt,
   }));
 
-  // Injeta SEED hardcoded como candidato final de fallback (sempre fresco).
-  const seedRate = fromCurrency === 'USD'
-    ? SEED_RATES[toCurrency]
-    : toCurrency === 'USD'
-      ? 1 / SEED_RATES[fromCurrency]
-      : SEED_RATES[toCurrency] / SEED_RATES[fromCurrency];
-
+  // Injeta o elo SEED como candidato final de fallback (sempre fresco). A taxa
+  // vem de `seedFxRate`, que le a UNICA tabela de cambio do produto
+  // (`FX_FROM_USD` em `src/lib/pricing/config.ts`). Esta rota mantinha uma copia
+  // local com os mesmos numeros: preview e catalogo passavam a divergir no dia
+  // em que so uma das duas fosse atualizada.
   candidates = [
     ...candidates,
-    { source: 'SEED', rate: seedRate, collectedAt: now },
+    { source: 'SEED', rate: seedFxRate(fromCurrency, toCurrency), collectedAt: now },
   ];
 
   let resolved: FxRateCandidate;

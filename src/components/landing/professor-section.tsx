@@ -4,75 +4,71 @@ import Image from 'next/image';
 import { CheckCircle2, Clock, Globe, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+/**
+ * A propriedade se chama `metricKey`, e nao `key`, de proposito: `CHECK_KEYS`
+ * logo acima tambem e iterado com uma variavel chamada `key`, e a guarda
+ * estatica de i18n (`src/__tests__/i18n/_message-scan.ts`) casava o primeiro
+ * pool que encontrasse — classificando `metrics.${key}.value` e
+ * `metrics.${key}.label` como NAO VERIFICAVEIS. Nome de propriedade proprio
+ * amarra cada template ao seu pool e devolve os dois consumos a verificacao.
+ */
 const CHECK_KEYS = ['adults', 'fluency', 'certified'] as const;
 const METRICS = [
-  { key: 'years' as const, icon: Clock },
-  { key: 'countries' as const, icon: Globe },
-  { key: 'one_to_one' as const, icon: User },
+  { metricKey: 'years' as const, icon: Clock },
+  { metricKey: 'countries' as const, icon: Globe },
+  { metricKey: 'one_to_one' as const, icon: User },
 ];
 
 export function ProfessorSection() {
   const t = useTranslations('landing.professor');
 
   return (
-    <section data-testid="landing-professor" className="py-[4.5rem] md:py-24 bg-white" aria-labelledby="professor-heading">
-      <div className="max-w-[1120px] mx-auto px-5 md:px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,360px)_1fr] gap-12 lg:gap-20 items-center">
-          <div className="flex justify-center lg:justify-start">
-            <div
-              data-testid="landing-professor-photo"
-              className="relative w-[260px] h-[260px] md:w-[320px] md:h-[320px] rounded-full overflow-hidden bg-[#eee9e4]"
-            >
+    <section data-testid="landing-professor" className="lp-prof" aria-labelledby="professor-heading">
+      <div className="lp-container">
+        <div className="lp-prof__grid">
+          <div className="lp-prof__photo-col">
+            <div data-testid="landing-professor-photo" className="lp-prof__photo">
               <Image
                 src="/images/professor-pedro.png"
                 alt={t('image_alt')}
                 fill
                 sizes="320px"
-                className="object-cover object-[center_10%]"
               />
             </div>
           </div>
-          <div className="max-w-[640px]">
-            <p className="inline-flex items-center gap-2 rounded-[10px] bg-[#efe7fb] px-3.5 py-1.5 text-[13px] font-medium text-[#7c5cbf]">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#7c5cbf] text-white">
-                <Globe className="h-3.5 w-3.5" />
+          <div className="lp-prof__content">
+            <p className="lp-prof__badge">
+              <span className="lp-prof__badge-icon">
+                <Globe />
               </span>
               {t('badge')}
             </p>
-            <h2
-              id="professor-heading"
-              className="mt-4 text-[2.35rem] md:text-[3.15rem] font-semibold tracking-tight text-[#1B2140] leading-[1.12]"
-            >
+            <h2 id="professor-heading" className="lp-prof__title">
               {t('title')}
             </h2>
-            <span className="mt-3 block h-[3px] w-[4.5rem] rounded-full bg-[#c9b6ea]" />
-            <p className="mt-5 text-[1.02rem] text-slate-600 leading-[1.7]">{t('bio')}</p>
-            <ul
-              data-testid="landing-professor-metrics"
-              className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6"
-            >
-              {METRICS.map(({ key, icon: Icon }, idx) => (
+            <span className="lp-rule lp-prof__rule" />
+            <p className="lp-prof__bio">{t('bio')}</p>
+            <ul data-testid="landing-professor-metrics" className="lp-prof__metrics">
+              {METRICS.map(({ metricKey, icon: Icon }, idx) => (
                 <li
-                  key={key}
-                  className={idx === 0 ? '' : 'sm:border-l sm:border-slate-200 sm:pl-6'}
+                  key={metricKey}
+                  className={idx === 0 ? undefined : 'lp-prof__metric--divided'}
                 >
-                  <p className="flex items-center gap-2.5 text-[1.35rem] font-semibold text-[#1B2140] leading-none">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d9c8f3] text-[#7c5cbf]">
-                      <Icon className="h-[18px] w-[18px]" />
+                  <p className="lp-prof__metric-value">
+                    <span className="lp-prof__metric-icon">
+                      <Icon />
                     </span>
-                    {t(`metrics.${key}.value`)}
+                    {t(`metrics.${metricKey}.value`)}
                   </p>
-                  <p className="mt-2 text-[13px] text-slate-500 leading-snug pl-[3.25rem] sm:pl-0">
-                    {t(`metrics.${key}.label`)}
-                  </p>
+                  <p className="lp-prof__metric-label">{t(`metrics.${metricKey}.label`)}</p>
                 </li>
               ))}
             </ul>
-            <ul className="mt-8 space-y-3.5" aria-label={t('credentials_aria')}>
+            <ul className="lp-prof__checks" aria-label={t('credentials_aria')}>
               {CHECK_KEYS.map((key) => (
-                <li key={key} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-[#22a06b] flex-shrink-0 mt-0.5" />
-                  <span className="text-[15px] text-slate-700 leading-snug">{t(`checks.${key}`)}</span>
+                <li key={key} className="lp-check">
+                  <CheckCircle2 className="lp-check__icon" />
+                  <span className="lp-check__text">{t(`checks.${key}`)}</span>
                 </li>
               ))}
             </ul>

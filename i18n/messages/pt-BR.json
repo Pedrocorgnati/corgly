@@ -75,18 +75,15 @@
     "buy": "Comprar"
   },
   "sessionCard": {
-    "status": {
-      "upcoming": "Agendada",
-      "inProgress": "Em andamento",
-      "completed": "Concluída",
-      "cancelled": "Cancelada"
-    },
     "actions": {
       "enter": "Entrar",
       "cancel": "Cancelar",
       "reschedule": "Reagendar"
     },
-    "enterAvailableIn": "Disponível em {minutes} min"
+    "enterAvailableIn": "Disponível em {minutes} min",
+    "fallbackTitle": "Aula",
+    "startLabel": "Início:",
+    "endLabel": "Fim:"
   },
   "modal": {
     "confirm": {
@@ -148,7 +145,9 @@
     "marketing_label": "Marketing",
     "marketing_description": "Permitem personalizar conteúdo",
     "save_preferences": "Salvar preferências",
-    "manage_preferences": "Gerenciar preferências"
+    "manage_preferences": "Gerenciar preferências",
+    "sync_failed_title": "Escolha salva neste dispositivo",
+    "sync_failed_description": "Não conseguimos registrar sua preferência no servidor agora. Ela continua valendo neste navegador."
   },
   "privacy": {
     "title": "Política de Privacidade",
@@ -367,7 +366,8 @@
             "Cancele a mensal no fim do ciclo"
           ]
         }
-      }
+      },
+      "cta_checking_session": "Verificando sua sessão..."
     },
     "testimonials": {
       "title": "O que dizem os alunos",
@@ -435,6 +435,12 @@
       "subtitle": "Aula particular ao vivo no Zoom. Primeira aula US$ 12,50.",
       "button": "Quero minha aula por {price}",
       "button_secondary": "Ver planos"
+    },
+    "content_preview": {
+      "badge": "Conteúdo gratuito",
+      "title": "Comece a estudar antes da primeira aula",
+      "subtitle": "Vídeos e materiais de português brasileiro para praticar no seu ritmo, sem pagar nada.",
+      "cta": "Ver conteúdo gratuito"
     }
   },
   "content": {
@@ -490,7 +496,36 @@
     "next": "Próximo",
     "prev": "Anterior",
     "progress": "Slide {current} de {total}",
-    "completing": "Finalizando..."
+    "completing": "Finalizando...",
+    "later": "Depois",
+    "complete_error": "Não foi possível concluir seu onboarding. Verifique sua conexão e tente novamente.",
+    "equipment": {
+      "fail_title": "Não conseguimos validar seu equipamento",
+      "fail_description": "Câmera, microfone ou conexão não passaram no teste. Se a permissão foi negada, clique no cadeado ao lado do endereço do site, autorize câmera e microfone e refaça o teste. Se você não tem webcam agora, pode seguir mesmo assim: dá para refazer o teste no lobby antes de cada aula.",
+      "retry": "Refazer teste",
+      "acknowledge_fail": "Entendo que câmera, microfone ou conexão não passaram no teste e quero seguir mesmo assim.",
+      "skip": "Pular por agora e ir para o Painel",
+      "eyebrow": "Onboarding",
+      "page_title": "Teste seu equipamento",
+      "page_description": "Antes da sua primeira aula, vamos conferir câmera, microfone e conexão. Assim você evita surpresas na hora da aula ao vivo.",
+      "storage_blocked": "Resultado salvo apenas nesta sessão. O navegador bloqueou o armazenamento local.",
+      "audit_sync_failed": "Resultado local salvo. Não conseguimos sincronizar a auditoria agora.",
+      "guides_intro": "Encontramos pontos a ajustar antes de seguir:",
+      "guides_loading": "Carregando guias de correção...",
+      "guides_error": "Não conseguimos carregar os guias agora. Tente novamente ou siga as orientações do navegador.",
+      "acknowledge_warning": "Entendo que a conexão pode instabilizar (sem TURN/relay ou microfone silencioso) e quero seguir mesmo assim.",
+      "saving": "Salvando resultado...",
+      "status": "Status: {status}",
+      "idle": "Inicie o teste para verificar seu equipamento.",
+      "continue": "Continuar",
+      "retest_note": "Você poderá refazer este teste a qualquer momento no lobby da sala, antes de cada aula.",
+      "failure": {
+        "camera": "Câmera",
+        "microphone": "Microfone",
+        "permission": "Permissões",
+        "bandwidth": "Conexão"
+      }
+    }
   },
   "credits": {
     "page": {
@@ -624,7 +659,11 @@
       "changeDueNow": "Total a pagar agora",
       "changeEffective": "Efetiva em {effectiveAt}. O período atual termina em {periodEnd}.",
       "changeCurrentPlanNotice": "A simulação aponta o mesmo plano que você já tem: nada será cobrado.",
-      "changePreviewError": "Não foi possível simular a mudança de plano. Tente novamente."
+      "changePreviewError": "Não foi possível simular a mudança de plano. Tente novamente.",
+      "currencyLoading": "Carregando a moeda da sua cobrança...",
+      "currencyUnavailable": "Não foi possível confirmar a moeda da sua cobrança. O valor fica oculto até a confirmação.",
+      "currencyRetry": "Tentar de novo",
+      "priceNoteCharged": "Valor na moeda registrada na sua assinatura."
     },
     "breakdown": {
       "title": "Detalhamento de Créditos",
@@ -687,6 +726,10 @@
       "retry": "Tentar novamente",
       "note": "A moeda cobrada é confirmada no pagamento.",
       "usdcNote": "USDC disponível conforme suporte do gateway."
+    },
+    "paymentCanceled": {
+      "title": "Pagamento cancelado.",
+      "message": "Você pode tentar novamente quando quiser."
     }
   },
   "errors": {
@@ -699,7 +742,11 @@
     "serverError": {
       "title": "Algo deu errado",
       "description": "Ocorreu um erro inesperado. Nossa equipe foi notificada.",
-      "retry": "Tentar novamente"
+      "retry": "Tentar novamente",
+      "backToSessions": "Ver todas as sessões",
+      "backToContent": "Ver todos os conteúdos",
+      "goDashboard": "Voltar ao dashboard",
+      "reconnect": "Tentar reconectar"
     }
   },
   "unsubscribe": {
@@ -740,6 +787,19 @@
     "resourcesDownloadAria": "Baixar recurso {name}",
     "resourcesError": "Nao foi possivel gerar o link de download. Tente novamente."
   },
+  "history": {
+    "metaTitle": "Histórico de aulas",
+    "title": "Histórico de aulas",
+    "subtitle": "Todas as suas aulas agendadas, concluídas, canceladas e com remarcação pendente.",
+    "filterAll": "Todas",
+    "emptyTitle": "Nenhuma aula no histórico ainda",
+    "emptyDescription": "Assim que você agendar sua primeira aula, ela aparece aqui.",
+    "emptyAction": "Agendar aula",
+    "pageStatus": "Página {page} de {totalPages}",
+    "errorTitle": "Erro ao carregar o histórico",
+    "errorDescription": "Não foi possível carregar suas aulas agora. Tente novamente.",
+    "errorRetry": "Tentar novamente"
+  },
   "skipNav": {
     "label": "Pular para o conteúdo principal"
   },
@@ -775,5 +835,94 @@
     "errorTitle": "Erro ao carregar os exercícios",
     "errorDescription": "Não foi possível montar o exercício desta aula. Tente novamente.",
     "errorRetry": "Tentar novamente"
+  },
+  "auth": {
+    "register": {
+      "planNoticeTitle": "Plano escolhido: {plan}",
+      "planNoticeDesc": "Guardamos sua escolha neste navegador. Depois de confirmar seu e-mail e entrar, ela já estará selecionada na página de créditos."
+    }
+  },
+  "dashboard": {
+    "nextSession": {
+      "error": {
+        "title": "Não conseguimos carregar sua próxima aula",
+        "description": "Isso não quer dizer que você está sem aulas marcadas: só não conseguimos ler sua agenda agora.",
+        "retry": "Tentar de novo",
+        "retrying": "Carregando...",
+        "viewHistory": "Ver histórico"
+      },
+      "ended": {
+        "clock": "Aula encerrada",
+        "hint": "Esta aula terminou. Atualize para ver a próxima.",
+        "refresh": "Atualizar",
+        "refreshing": "Atualizando...",
+        "viewHistory": "Ver histórico"
+      }
+    }
+  },
+  "documentSearch": {
+    "placeholder": "Buscar nos cadernos das suas aulas",
+    "ariaLabel": "Buscar nos cadernos das suas aulas",
+    "minChars": "Digite pelo menos {min} caracteres para buscar.",
+    "searching": "Buscando...",
+    "empty": "Nenhum caderno menciona \"{query}\".",
+    "error": "A busca falhou: {message}",
+    "errorUnknown": "erro inesperado. Tente de novo em instantes.",
+    "pageStatus": "Página {page} de {totalPages} · {total} resultado(s)"
+  },
+  "support": {
+    "newTicket": {
+      "attachmentsMax": "Máximo de {max} anexos por chamado.",
+      "attachmentTypeRejected": "\"{filename}\": tipo de arquivo não suportado.",
+      "attachmentTooLarge": "\"{filename}\" excede o limite de {limit}.",
+      "createSuccess": "Chamado aberto! Nossa equipe vai responder por aqui.",
+      "rateLimited": "Muitas solicitações. Tente novamente em alguns minutos.",
+      "createFailed": "Não foi possível abrir o chamado. Tente novamente."
+    }
+  },
+  "sessionLobby": {
+    "title": "Lobby da aula",
+    "subtitle": "Confirme que seu equipamento está pronto antes de entrar na sala.",
+    "lastCheckTitle": "Último teste",
+    "lastCheckAt": "Realizado em {when}.",
+    "pendingPoints": "Pontos pendentes: {items}. Recomendamos refazer o teste.",
+    "approved": "Equipamento aprovado no último teste.",
+    "emptyTitle": "Nenhum teste recente",
+    "emptyDescription": "Você ainda não testou seu equipamento. Rode o teste antes de entrar.",
+    "retest": "Refazer teste",
+    "runTest": "Testar equipamento",
+    "warningConfirm": "Entendo que a conexão pode instabilizar e quero entrar na sala mesmo assim.",
+    "finishTest": "Concluir teste",
+    "back": "Voltar",
+    "enter": "Entrar na sala",
+    "storageBlocked": "Resultado válido nesta sessão. O navegador bloqueou o armazenamento local.",
+    "currentStatus": "Status atual:",
+    "status": {
+      "ok": "Aprovado",
+      "warning": "Atenção",
+      "fail": "Falha",
+      "checking": "Testando",
+      "idle": "Aguardando"
+    }
+  },
+  "sessionStatus": {
+    "SCHEDULED": "Agendada",
+    "IN_PROGRESS": "Em andamento",
+    "COMPLETED": "Concluída",
+    "CANCELLED_BY_STUDENT": "Cancelada pelo aluno",
+    "CANCELLED_BY_ADMIN": "Cancelada pelo professor",
+    "NO_SHOW_STUDENT": "Não compareceu",
+    "NO_SHOW_ADMIN": "Professor ausente",
+    "INTERRUPTED": "Interrompida",
+    "RESCHEDULE_PENDING": "Reagendamento pendente"
+  },
+  "creditType": {
+    "SINGLE": "Aula avulsa",
+    "PACK_5": "Pack 5 aulas",
+    "PACK_10": "Pack 10 aulas",
+    "MONTHLY": "Mensal",
+    "PROMO": "Promoção",
+    "MANUAL": "Manual",
+    "REFUND": "Reembolso"
   }
 }

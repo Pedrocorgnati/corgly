@@ -7,14 +7,18 @@ import { PACKAGE_CREDITS, PACKAGE_LABELS } from '@/lib/constants/stripe-prices';
 import type { CreateCheckoutInput, CreateSubscriptionCheckoutInput } from '@/schemas/checkout.schema';
 import { SubscriptionStatus } from '@/lib/constants/enums';
 import { resolvePrice, toStripeCurrency } from '@/lib/pricing/config';
+import type { PricePoint } from '@/lib/pricing/config';
 import type { Currency } from '@/lib/currency';
 import {
+  buildPlanAxisMetadata,
   calculateMonthlyLessonsAmountCents,
   calculateSubscriptionMonthlyAmountCents,
   legacyWeeklyEquivalent,
   resolveMonthlyCredits,
+  resolveMonthlyPricePoint,
   stripeCurrencyToCurrency,
 } from '@/lib/billing/subscription-pricing';
+import { buildGuardedLineItem } from '@/lib/billing/checkout.service';
 import type { MonthlyLessonsPlan } from '@/schemas/checkout.schema';
 
 const CREDIT_EXPIRY_6M_MS = 6 * 30 * 24 * 60 * 60 * 1000;
@@ -76,23 +80,21 @@ export class StripeService {
     const price = resolvePrice(resolvedType, currency);
     const creditQty = PACKAGE_CREDITS[resolvedType];
 
-    // Prioriza priceId pre-cadastrado no Stripe (recibo + contabilidade corretos);
-    // cai em price_data quando priceId nao foi configurado para o par moeda/pack.
-    const lineItem = price.priceId
-      ? { price: price.priceId, quantity: 1 }
-      : {
-          price_data: {
-            currency: toStripeCurrency(currency),
-            unit_amount: price.amountCents,
-            product_data: { name: `Corgly — ${PACKAGE_LABELS[resolvedType]}` },
-          },
-          quantity: 1,
-        };
+    // O Price pre-cadastrado no Stripe (recibo + contabilidade corretos) so vira
+    // line item DEPOIS de conferido contra o preco do catalogo — o mesmo numero
+    // que a vitrine exibiu. Sem esse confronto, uma env `STRIPE_PRICE_*`
+    // apontando para outro valor fazia a tela mostrar X e o cartao ser debitado
+    // em Y, sem alarme nenhum. Ver `buildGuardedLineItem`.
+    const lineItem = await buildGuardedLineItem({
+      price,
+      currency,
+      productName: `Corgly — ${PACKAGE_LABELS[resolvedType]}`,
+    });
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ['card'],
-      line_items: [lineItem as Stripe.Checkout.SessionCreateParams.LineItem],
+      line_items: [lineItem],
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/credits?canceled=true`,
@@ -148,25 +150,29 @@ export class StripeService {
       await prisma.user.update({ where: { id: userId }, data: { stripeCustomerId } });
     }
 
-    // O priceId pre-cadastrado nao e usado aqui porque o valor da assinatura
-    // varia por eixo; o preco sai sempre da tabela unica (PRICING) ou da regra
-    // legada, nunca de conversao local.
+    // O preco sai sempre da tabela unica (PRICING) ou da regra legada, nunca de
+    // conversao local. O `PricePoint` inteiro (valor + priceId) e carregado para
+    // o guard poder confrontar o Price do Stripe com o valor do catalogo.
     const currency: Currency = data.currency ?? 'USD';
 
-    let amountCents: number;
+    let pricePoint: PricePoint;
     let productName: string;
     let planMetadata: Record<string, string>;
 
     if (data.monthlyLessons !== undefined) {
       const lessons = data.monthlyLessons;
-      amountCents = calculateMonthlyLessonsAmountCents(lessons, currency);
+      pricePoint = resolveMonthlyPricePoint(lessons, currency);
       productName = `Corgly Assinatura — ${lessons} aulas por mês`;
-      planMetadata = { monthlyLessons: String(lessons) };
+      planMetadata = buildPlanAxisMetadata({ monthlyLessons: lessons });
     } else if (data.weeklyFrequency !== undefined) {
       const weeklyFrequency = data.weeklyFrequency;
-      amountCents = calculateSubscriptionMonthlyAmountCents(weeklyFrequency, currency);
+      // Eixo legado nao tem Price no catalogo (valor calculado pela regra
+      // antiga), entao o guard cai em price_data com este mesmo numero.
+      pricePoint = {
+        amountCents: calculateSubscriptionMonthlyAmountCents(weeklyFrequency, currency),
+      };
       productName = `Corgly Assinatura — ${weeklyFrequency}× por semana`;
-      planMetadata = { weeklyFrequency: String(weeklyFrequency) };
+      planMetadata = buildPlanAxisMetadata({ weeklyFrequency });
     } else {
       throw new AppError(
         'VAL_003',
@@ -175,24 +181,22 @@ export class StripeService {
       );
     }
 
+    // `planMetadata` traz SEMPRE os dois eixos, com o inativo em string vazia
+    // (a metadata do Stripe e MERGE): assim nenhum eixo antigo sobrevive na
+    // Subscription e o webhook nunca precisa escolher entre dois planos.
     const sessionMetadata = { userId, ...planMetadata, currency };
+
+    const lineItem = await buildGuardedLineItem({
+      price: pricePoint,
+      currency,
+      productName,
+      recurring: { interval: 'month' },
+    });
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: toStripeCurrency(currency),
-            unit_amount: amountCents,
-            recurring: { interval: 'month' },
-            product_data: {
-              name: productName,
-            },
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: [lineItem],
       mode: 'subscription',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?checkout=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/credits?canceled=true`,
@@ -286,12 +290,13 @@ export class StripeService {
             },
           },
         ],
-        // Mantem o eixo vigente na metadata do Stripe: o webhook de
-        // customer.subscription.updated le dali para reconciliar o banco.
-        metadata:
-          'monthlyLessons' in normalizedPlan
-            ? { monthlyLessons: String(normalizedPlan.monthlyLessons) }
-            : { weeklyFrequency: String(normalizedPlan.weeklyFrequency) },
+        // Metadata do Stripe e MERGE, nao replace: mandar so o eixo vigente
+        // deixava o eixo anterior vivo no objeto Subscription. Uma assinatura
+        // legada `weeklyFrequency=2` migrada para `monthlyLessons=20` ficava com
+        // os dois valores e o webhook reconciliava pelo eixo errado (8 creditos
+        // em vez de 20). `buildPlanAxisMetadata` manda SEMPRE as duas chaves,
+        // apagando a inativa com string vazia.
+        metadata: buildPlanAxisMetadata(normalizedPlan),
       },
       idempotencyKey ? { idempotencyKey } : undefined,
     );
@@ -422,6 +427,12 @@ export class StripeService {
           event.id,
         );
         return true;
+      // Os DOIS eventos continuam roteados de proposito: o Stripe emite
+      // `invoice.payment_succeeded` e `invoice.paid` para a MESMA fatura com
+      // ids de evento diferentes, e nenhum dos dois cobre sozinho todos os
+      // casos (fatura quitada por saldo de credito emite `invoice.paid` sem
+      // `invoice.payment_succeeded`). Quem impede o credito dobrado nao e o
+      // roteamento: e a chave de idempotencia por FATURA em `onInvoicePaid`.
       case 'invoice.payment_succeeded':
       case 'invoice.paid':
         await this.onInvoicePaid(event.data.object as Stripe.Invoice, event.id);
@@ -522,58 +533,184 @@ export class StripeService {
   }
 
   private async onInvoicePaid(invoice: Stripe.Invoice, stripeEventId: string): Promise<void> {
-    // Idempotência
-    const existing = await prisma.payment.findUnique({ where: { stripeEventId } });
+    // Idempotencia por FATURA, nao por evento. Guardar por `stripeEventId`
+    // deixava passar o par `invoice.payment_succeeded` + `invoice.paid`, que o
+    // Stripe emite para a MESMA fatura com ids de evento diferentes: os dois
+    // passavam pela guarda e o assinante recebia o dobro dos creditos do mes.
+    // `resolveInvoiceMoneyKey` devolve um identificador estavel POR FATURA e a
+    // constraint `Payment.stripePaymentIntentId @unique` (prisma/schema.prisma
+    // linha 550) fecha a corrida entre dois webhooks simultaneos: esta leitura
+    // e apenas o caminho rapido, quem decide de verdade e o banco no `create`.
+    const moneyKey = await this.resolveInvoiceMoneyKey(invoice);
+    const existing = await prisma.payment.findUnique({
+      where: { stripePaymentIntentId: moneyKey },
+    });
     if (existing) return;
 
-    const invoiceWithLegacyFields = invoice as Stripe.Invoice & {
-      payment_intent?: string | null;
-      subscription?: string | null;
-    };
-    const subscriptionId = invoiceWithLegacyFields.subscription as string;
+    const amountPaid = invoice.amount_paid;
+    const subscriptionId = resolveInvoiceSubscriptionId(invoice);
+
+    if (!subscriptionId) {
+      // Sem id de assinatura NAO da para consultar o banco: `findFirst` com
+      // `stripeSubscriptionId: undefined` faz o Prisma IGNORAR o filtro e
+      // devolver uma assinatura qualquer — creditaria o aluno errado.
+      if (amountPaid > 0) {
+        console.error('[Webhook] fatura paga sem assinatura de origem - credito nao concedido', {
+          invoiceId: invoice.id,
+          stripeEventId,
+          amountPaid,
+          currency: invoice.currency,
+        });
+        throw new AppError(
+          'PAYMENT_092',
+          `Fatura paga (${invoice.id}) sem assinatura de origem: crédito não concedido.`,
+          500,
+        );
+      }
+      console.warn(
+        `[Webhook] fatura sem assinatura de origem e sem valor pago, ignorada: ${invoice.id}`,
+      );
+      return;
+    }
+
     const sub = await prisma.subscription.findFirst({
       where: { stripeSubscriptionId: subscriptionId },
     });
 
     if (!sub) {
-      // Pode ser invoice de checkout subscription antes do record existir
-      console.warn(`[Webhook] Subscription não encontrada: ${subscriptionId}`);
-      return;
+      if (amountPaid <= 0) {
+        // Fatura de valor zero (trial, proracao credora): nao ha credito a
+        // conceder, entao a ausencia do registro local nao esconde dinheiro.
+        console.warn(
+          `[Webhook] fatura de valor zero sem Subscription local, ignorada: ${subscriptionId}`,
+        );
+        return;
+      }
+
+      // DINHEIRO ENTROU E NINGUEM FOI CREDITADO. Antes isto era `console.warn` +
+      // `return`: o pagamento sumia sem rastro operacional nenhum. Lancar aqui
+      // faz `processWebhookEvent` gravar o evento com status FAILED e
+      // `errorMessage` (linha visivel na lista de webhooks do admin e
+      // reprocessavel por replay) e faz a rota devolver 500, entao o Stripe
+      // reentrega o evento. O caso legitimo citado no comentario antigo — a
+      // fatura chegar antes de `checkout.session.completed` materializar o
+      // registro local — se resolve sozinho nessa reentrega.
+      console.error('[Webhook] fatura paga sem Subscription local - credito pendente', {
+        stripeSubscriptionId: subscriptionId,
+        invoiceId: invoice.id,
+        stripeEventId,
+        amountPaid,
+        currency: invoice.currency,
+      });
+      throw new AppError(
+        'PAYMENT_093',
+        `Fatura paga sem assinatura local correspondente (${subscriptionId}): crédito pendente de reconciliação.`,
+        500,
+      );
     }
 
     // Creditos mensais: `monthlyLessons` quando a assinatura foi contratada no
     // eixo canonico; senao a regra legada (weeklyFrequency × 4 semanas).
     const totalCredits = resolveMonthlyCredits(sub);
 
-    await prisma.$transaction(async (tx) => {
-      const batch = await tx.creditBatch.create({
-        data: {
-          userId: sub.userId,
-          type: 'MONTHLY',
-          totalCredits,
-          usedCredits: 0,
-          expiresAt: null, // RESOLVED: MONTHLY credits never expire (P048)
-        },
-      });
+    try {
+      await prisma.$transaction(async (tx) => {
+        const batch = await tx.creditBatch.create({
+          data: {
+            userId: sub.userId,
+            type: 'MONTHLY',
+            totalCredits,
+            usedCredits: 0,
+            expiresAt: null, // RESOLVED: MONTHLY credits never expire (P048)
+          },
+        });
 
-      await tx.payment.create({
-        data: {
-          userId: sub.userId,
-          stripePaymentIntentId: invoiceWithLegacyFields.payment_intent ?? `pi_${invoice.id}`,
-          stripeEventId,
-          amount: invoice.amount_paid,
-          currency: invoice.currency,
-          status: 'SUCCEEDED',
-          creditBatchId: batch.id,
-        },
+        await tx.payment.create({
+          data: {
+            userId: sub.userId,
+            stripePaymentIntentId: moneyKey,
+            stripeEventId,
+            amount: invoice.amount_paid,
+            currency: invoice.currency,
+            status: 'SUCCEEDED',
+            creditBatchId: batch.id,
+          },
+        });
       });
-    });
+    } catch (error) {
+      if (!isUniqueConstraintViolation(error)) throw error;
+
+      // O outro evento da mesma fatura ganhou a corrida entre o `findUnique`
+      // acima e este `create`. A transacao inteira reverteu (o CreditBatch nao
+      // sobrevive ao rollback), entao o credito ja concedido continua unico e
+      // este evento termina PROCESSED sem creditar de novo.
+      console.warn('[Webhook] fatura ja creditada por evento concorrente, ignorada', {
+        invoiceId: invoice.id,
+        stripeEventId,
+        moneyKey,
+      });
+    }
+  }
+
+  /**
+   * Identificador estavel do dinheiro de UMA fatura, usado como chave de
+   * idempotencia em `Payment.stripePaymentIntentId` (unique no schema).
+   *
+   * Ordem de resolucao, toda ela deterministica para a mesma fatura:
+   *  1. `invoice.payments[]` do proprio payload, quando o webhook o traz;
+   *  2. `stripe.invoicePayments.list` (endpoint documentado em
+   *     `node_modules/stripe/types/InvoicePaymentsResource.d.ts`), porque a
+   *     lista `payments` e EXPANSIVEL e nem sempre acompanha o evento — sem
+   *     esta consulta o mesmo dinheiro geraria chaves diferentes em cada um
+   *     dos dois eventos da fatura;
+   *  3. `pi_<invoice.id>`, para a fatura quitada por saldo de credito, que
+   *     nao tem PaymentIntent nenhum associado.
+   *
+   * Entre varios pagamentos da mesma fatura vence o mais antigo (empate pelo
+   * id), para que os dois eventos escolham sempre o mesmo. Falha de rede na
+   * consulta NAO cai para o passo 3: chave divergente creditaria duas vezes,
+   * entao o erro sobe, o evento fica FAILED e o Stripe reentrega.
+   */
+  private async resolveInvoiceMoneyKey(invoice: Stripe.Invoice): Promise<string> {
+    const fromPayload = pickEarliestPaymentIntentId(invoice.payments?.data ?? []);
+    if (fromPayload) return fromPayload;
+
+    const legacy = resolveStripeId(
+      (invoice as Stripe.Invoice & { payment_intent?: string | { id?: string } | null })
+        .payment_intent,
+    );
+    if (legacy) return legacy;
+
+    let remote: Stripe.InvoicePayment[];
+    try {
+      const page = await getStripe().invoicePayments.list({
+        invoice: invoice.id,
+        status: 'paid',
+        limit: 100,
+      });
+      remote = page.data;
+    } catch (error) {
+      console.error('[Webhook] falha ao resolver o pagamento da fatura', {
+        invoiceId: invoice.id,
+        error: errorToMessage(error),
+      });
+      throw new AppError(
+        'PAYMENT_094',
+        `Não foi possível resolver o pagamento da fatura ${invoice.id}: crédito adiado para a reentrega do webhook.`,
+        500,
+      );
+    }
+
+    return pickEarliestPaymentIntentId(remote) ?? `pi_${invoice.id}`;
   }
 
   private async onSubscriptionUpdated(stripeSub: Stripe.Subscription): Promise<void> {
-    // O eixo so e reconciliado quando a metadata do Stripe realmente carrega
-    // `monthlyLessons`; metadata ausente NAO apaga o eixo ja gravado.
-    const monthlyLessons = readMonthlyLessons(stripeSub.metadata);
+    // Reconciliacao por eixo COMPLETO: `readPlanAxis` decide qual eixo manda e
+    // devolve o par coerente (mensal grava `monthlyLessons` + cadencia legada
+    // equivalente; legado zera `monthlyLessons`). Antes so `monthlyLessons` era
+    // lido, entao uma volta para o plano legado deixava o valor mensal antigo no
+    // banco. Metadata sem eixo nenhum NAO apaga o que ja esta gravado.
+    const planAxis = readPlanAxis(stripeSub.metadata);
 
     await prisma.subscription.updateMany({
       where: { stripeSubscriptionId: stripeSub.id },
@@ -581,7 +718,12 @@ export class StripeService {
         status: this.mapSubscriptionStatus(stripeSub.status),
         currentPeriodStart: new Date((stripeSub as Stripe.Subscription & { current_period_start: number }).current_period_start * 1000),
         currentPeriodEnd: new Date((stripeSub as Stripe.Subscription & { current_period_end: number }).current_period_end * 1000),
-        ...(monthlyLessons !== null ? { monthlyLessons } : {}),
+        ...(planAxis
+          ? {
+              monthlyLessons: planAxis.monthlyLessons,
+              weeklyFrequency: planAxis.weeklyFrequency,
+            }
+          : {}),
       },
     });
   }
@@ -607,13 +749,9 @@ export class StripeService {
       return;
     }
 
-    const monthlyLessons = readMonthlyLessons(session.metadata);
-    const weeklyFrequency =
-      monthlyLessons !== null
-        ? legacyWeeklyEquivalent(monthlyLessons)
-        : readWeeklyFrequency(session.metadata);
+    const planAxis = readPlanAxis(session.metadata);
 
-    if (monthlyLessons === null && weeklyFrequency === null) {
+    if (!planAxis) {
       console.error(
         '[Webhook] checkout.session.completed (subscription): nenhum eixo de plano na metadata',
         session.id,
@@ -639,8 +777,10 @@ export class StripeService {
       status: this.mapSubscriptionStatus(stripeSub.status),
       currentPeriodStart: new Date(periodItem.current_period_start * 1000),
       currentPeriodEnd: new Date(periodItem.current_period_end * 1000),
-      weeklyFrequency: weeklyFrequency ?? LEGACY_WEEKLY_FALLBACK,
-      monthlyLessons,
+      // `readPlanAxis` sempre entrega a cadencia semanal preenchida (coluna
+      // NOT NULL), inclusive quando o plano vendido foi o mensal.
+      weeklyFrequency: planAxis.weeklyFrequency,
+      monthlyLessons: planAxis.monthlyLessons,
     };
 
     await prisma.subscription.upsert({
@@ -661,7 +801,10 @@ export class StripeService {
   }
 
   private async onPaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    const subscriptionId = (invoice as Stripe.Invoice & { subscription?: string | null }).subscription;
+    // Mesmo resolvedor da fatura paga: na API pinada o vinculo da assinatura
+    // mora em `invoice.parent.subscription_details`, e ler o campo antigo
+    // deixava PAST_DUE nunca ser aplicado.
+    const subscriptionId = resolveInvoiceSubscriptionId(invoice);
     if (!subscriptionId) return;
 
     await prisma.subscription.updateMany({
@@ -719,12 +862,6 @@ export type SubscriptionPlanUpdate =
   | { weeklyFrequency: number };
 
 /**
- * Cadencia semanal minima usada quando o plano mensal nao permite derivar nada
- * melhor. Existe so porque `weeklyFrequency` e NOT NULL no banco (coluna legada).
- */
-const LEGACY_WEEKLY_FALLBACK = 1;
-
-/**
  * Le `monthlyLessons` de uma metadata Stripe. So aceita os volumes do catalogo
  * (10 ou 20): valor fora disso nao tem preco e NAO e arredondado em silencio —
  * vira null e o chamador trata como eixo ausente.
@@ -755,6 +892,119 @@ function readWeeklyFrequency(metadata: Stripe.Metadata | null | undefined): numb
     return null;
   }
   return parsed;
+}
+
+/**
+ * Eixo de plano resolvido a partir de uma metadata do Stripe.
+ * Sempre coerente: os dois campos descrevem a MESMA assinatura.
+ */
+interface ResolvedPlanAxis {
+  /** Volume mensal contratado; `null` quando a assinatura e do eixo legado. */
+  monthlyLessons: MonthlyLessonsPlan | null;
+  /** Cadencia semanal — sempre preenchida (a coluna e NOT NULL no banco). */
+  weeklyFrequency: number;
+}
+
+/**
+ * Le o eixo do plano da metadata do Stripe de forma DETERMINISTICA.
+ *
+ * REGRA (documentada e unica): se os DOIS eixos vierem preenchidos,
+ * `monthlyLessons` vence. Ele e o eixo canonico do produto — precifica pela
+ * tabela unica e concede credito 1:1 com o volume contratado — enquanto
+ * `weeklyFrequency` so sobrevive para assinaturas antigas. A cadencia semanal
+ * devolvida junto e a equivalente do volume mensal, nao o valor bruto lido, para
+ * a coluna legada nunca contradizer o eixo vigente.
+ *
+ * POR QUE OS DOIS PODEM VIR PREENCHIDOS: a metadata do Stripe e MERGE, nao
+ * replace. Enquanto os escritores mandavam so o eixo vigente, o eixo anterior
+ * ficava vivo no objeto Subscription. Hoje `buildPlanAxisMetadata` apaga o
+ * inativo (string vazia), mas assinaturas ja corrompidas continuam existindo —
+ * este leitor e o que garante que elas reconciliem pelo eixo certo.
+ *
+ * Ambiguidade nunca passa calada: os dois valores vao para o log de erro.
+ */
+function readPlanAxis(metadata: Stripe.Metadata | null | undefined): ResolvedPlanAxis | null {
+  const monthlyLessons = readMonthlyLessons(metadata);
+  const weeklyFrequency = readWeeklyFrequency(metadata);
+
+  if (monthlyLessons !== null) {
+    if (weeklyFrequency !== null) {
+      console.error(
+        '[Webhook] metadata com os DOIS eixos preenchidos - aplicando monthlyLessons (eixo canonico)',
+        { monthlyLessons, weeklyFrequency },
+      );
+    }
+    return {
+      monthlyLessons,
+      // Cadencia legada aproximada, so para a coluna NOT NULL seguir coerente.
+      // NAO precifica e NAO concede credito.
+      weeklyFrequency: legacyWeeklyEquivalent(monthlyLessons),
+    };
+  }
+
+  if (weeklyFrequency !== null) {
+    return { monthlyLessons: null, weeklyFrequency };
+  }
+
+  return null;
+}
+
+/**
+ * Id da assinatura que gerou a fatura.
+ *
+ * Na API pinada (2026-02-25.clover) `invoice.subscription` NAO existe mais: o
+ * vinculo mora em `invoice.parent.subscription_details.subscription`
+ * (`node_modules/stripe/types/Invoices.d.ts`, `Invoice.Parent`). Ler so o campo
+ * antigo devolvia `undefined` em toda fatura real — e `undefined` num filtro
+ * Prisma e IGNORADO, o que fazia `findFirst` retornar uma assinatura qualquer.
+ * O campo legado segue lido depois do canonico apenas por causa de payloads
+ * gravados por versoes anteriores (replay pelo admin).
+ */
+function resolveInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const details = invoice.parent?.subscription_details;
+  const canonical = resolveStripeId(details?.subscription);
+  if (canonical) return canonical;
+
+  const legacy = (
+    invoice as Stripe.Invoice & { subscription?: string | { id?: string } | null }
+  ).subscription;
+  return resolveStripeId(legacy);
+}
+
+/**
+ * PaymentIntent mais antigo de uma lista de InvoicePayment, ignorando o que
+ * ainda nao foi pago e o que aponta para charge/payment_record (tipos que a
+ * coluna `stripePaymentIntentId` nao sabe casar em reembolso e disputa).
+ * Determinismo importa: os dois eventos da mesma fatura precisam escolher
+ * exatamente o mesmo id, entao a ordem e por `created` e, no empate, pelo id.
+ */
+function pickEarliestPaymentIntentId(payments: Stripe.InvoicePayment[]): string | null {
+  const candidates = payments
+    .filter((entry) => entry.status === 'paid')
+    .map((entry) => ({
+      created: entry.created,
+      id: resolveStripeId(entry.payment.payment_intent),
+    }))
+    .filter((entry): entry is { created: number; id: string } => entry.id !== null);
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
+  return candidates[0].id;
+}
+
+/**
+ * Violacao de constraint unica do Prisma. `Prisma` entra neste arquivo como
+ * import de TIPO, entao nao existe classe em runtime para `instanceof`: a
+ * deteccao e estrutural, pelo campo `code` que o
+ * `PrismaClientKnownRequestError` carrega.
+ */
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: unknown }).code === 'P2002'
+  );
 }
 
 function resolveStripeId(value: string | { id?: string } | null | undefined): string | null {

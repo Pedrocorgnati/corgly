@@ -4,6 +4,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 
 import { API } from '@/lib/constants/routes';
+import { timeoutSignal } from '@/lib/timeout-signal';
 import {
   getConsentCookie,
   setConsentCookie,
@@ -76,7 +77,7 @@ export function CookiePreferencesForm() {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analytics: state.analytics, marketing: state.marketing }),
-        signal: AbortSignal.timeout(10_000),
+        signal: timeoutSignal(10_000),
       });
 
       if (!res.ok) {

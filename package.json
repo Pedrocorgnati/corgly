@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
+    "type-check:tests": "tsc --noEmit -p tsconfig.test.json",
     "validate": "npm run lint && npm run type-check && npm run test",
     "test": "vitest",
     "test:ui": "vitest --ui",

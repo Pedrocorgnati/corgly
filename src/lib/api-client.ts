@@ -4,9 +4,30 @@
  *
  * CONTRATO: Usar apiClient em vez de fetch() diretamente nos componentes.
  * Suporta cookies httpOnly (credentials: 'include') e tipagem genérica.
+ *
+ * COPY DE ERRO: toda mensagem que este módulo inventa (401 mudo, 429, abort,
+ * falha de rede) sai do catálogo `@/lib/errors/copy` no locale ativo. Antes
+ * havia string fixa aqui — uma delas em inglês ("Request aborted"), as outras
+ * em pt-BR —, o que entregava o idioma errado para 3 dos 4 públicos do app.
+ * A mensagem autoral do servidor continua vencendo o catálogo quando existe.
  */
 
+import { activeLocale, getErrorCopy } from '@/lib/errors/copy';
+
 const API_TIMEOUT_MS = 30_000;
+
+/**
+ * Descrição traduzida de um error code, para quando não há texto do servidor.
+ *
+ * O locale ativo vem de `@/lib/errors/copy`, dono da copy de erro. Este módulo
+ * mantinha uma cópia privada da mesma heurística (`<html lang>` → locale
+ * suportado → `defaultLocale`): duas implementações da mesma regra divergem no
+ * dia em que uma delas muda, e a que ficar para trás volta a entregar idioma
+ * errado — que é exatamente o defeito que o catálogo existe para eliminar.
+ */
+function localizedMessage(code: string): string {
+  return getErrorCopy(code, activeLocale()).description;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -74,13 +95,30 @@ async function request<T>(
         window.dispatchEvent(new CustomEvent('auth:expired'));
       }
       const body = await response.json().catch(() => ({}));
-      throw new ApiError(body?.error ?? 'Não autorizado', 401, 'AUTH_001');
+      // 401 tem dois motivos distintos: credencial errada agora (AUTH_001) e
+      // sessao que morreu (AUTH_002). Carimbar AUTH_001 em todo 401 apagava a
+      // diferenca e deixava o consumidor sem como ramificar — por isso o `code`
+      // do servidor vence, e AUTH_001 fica so como default de rota que nao
+      // declara nenhum.
+      const authCode: string =
+        typeof (body as { code?: unknown })?.code === 'string'
+          ? (body as { code: string }).code
+          : 'AUTH_001';
+      throw new ApiError(body?.error ?? localizedMessage(authCode), 401, authCode);
     }
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      const code = response.status === 429 ? 'RATE_LIMITED' : body?.code;
-      throw new ApiError(body?.error ?? `HTTP ${response.status}`, response.status, code, body?.details);
+      const isRateLimited = response.status === 429;
+      const code: string | undefined = isRateLimited ? 'RATE_LIMITED' : body?.code;
+      // 429 é a única resposta cujo corpo pode não ser nosso: o proxy responde
+      // "Too many requests" em inglês. Nesse caso a copy curada vence o corpo.
+      // Nos demais, a mensagem do servidor é a mais específica; sem ela, o
+      // catálogo traduz o code (e code ausente cai em INTERNAL_ERROR).
+      const message: string = isRateLimited
+        ? localizedMessage('RATE_LIMITED')
+        : (body?.error ?? localizedMessage(code ?? 'INTERNAL_ERROR'));
+      throw new ApiError(message, response.status, code, body?.details);
     }
 
     // 204 No Content
@@ -91,9 +129,9 @@ async function request<T>(
     clearTimeout(timeoutId);
     if (err instanceof ApiError) throw err;
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiError('Request aborted', 0, 'ABORTED');
+      throw new ApiError(localizedMessage('ABORTED'), 0, 'ABORTED');
     }
-    throw new ApiError('Erro de rede. Verifique sua conexão.', 0, 'NETWORK_ERROR');
+    throw new ApiError(localizedMessage('NETWORK_ERROR'), 0, 'NETWORK_ERROR');
   }
 }
 

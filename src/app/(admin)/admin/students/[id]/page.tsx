@@ -12,6 +12,7 @@ import {
   StickyNote,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import { getAdminStudentDetail } from '@/actions/admin-students';
 import { ROUTES } from '@/lib/constants/routes';
 import { formatDatePtBR, formatDateTimePtBR } from '@/lib/format-datetime';
@@ -190,10 +191,24 @@ export default async function AdminStudentDetailPage({ params }: Props) {
         <StatCard icon={XCircle} label="Canceladas" value={stats.cancelledSessions} color="var(--destructive)" />
       </section>
 
-      {/* 3. Credit batches */}
-      {creditBatches.length > 0 && (
-        <section data-testid="admin-student-detail-credit-batches">
-          <h2 className="text-base font-semibold text-foreground mb-3">Lotes de Créditos</h2>
+      {/* 3. Credit batches — lista PAGINADA (últimos lotes). O saldo total do
+          aluno é stats.creditBalance, agregado no banco sobre todos os lotes
+          válidos: a soma da coluna "Restantes" desta tabela pode ser menor. */}
+      <section data-testid="admin-student-detail-credit-batches">
+        <h2 className="text-base font-semibold text-foreground mb-1">Lotes de Créditos</h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          Últimos lotes do aluno. Saldo válido total: {stats.creditBalance} crédito(s).
+        </p>
+        {creditBatches.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl shadow-sm">
+            <EmptyState
+              data-testid="admin-student-detail-credit-batches-empty"
+              icon={CreditCard}
+              title="Nenhum lote de créditos"
+              description="Este aluno ainda não comprou créditos. Os lotes aparecerão aqui após a primeira compra."
+            />
+          </div>
+        ) : (
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -212,9 +227,23 @@ export default async function AdminStudentDetailPage({ params }: Props) {
                       <td className="px-4 py-3 text-sm text-foreground capitalize">{batch.type}</td>
                       <td className="px-4 py-3 text-sm text-foreground">{batch.total}</td>
                       <td className="px-4 py-3 text-sm text-foreground">{batch.used}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-foreground">{batch.remaining}</td>
+                      <td
+                        className={`px-4 py-3 text-sm font-medium ${
+                          batch.expired ? 'text-muted-foreground line-through' : 'text-foreground'
+                        }`}
+                        title={batch.expired ? 'Lote expirado — não soma no saldo válido' : undefined}
+                      >
+                        {batch.remaining}
+                      </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
-                        {formatDatePtBR(batch.expiresAt)}
+                        <span className="inline-flex items-center gap-2">
+                          {batch.expiresAt ? formatDatePtBR(batch.expiresAt) : 'Sem validade'}
+                          {batch.expired && (
+                            <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50">
+                              Expirado
+                            </Badge>
+                          )}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -222,13 +251,22 @@ export default async function AdminStudentDetailPage({ params }: Props) {
               </table>
             </div>
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* 4. Recent sessions */}
-      {recentSessions.length > 0 && (
-        <section data-testid="admin-student-detail-sessions">
-          <h2 className="text-base font-semibold text-foreground mb-3">Sessões Recentes</h2>
+      <section data-testid="admin-student-detail-sessions">
+        <h2 className="text-base font-semibold text-foreground mb-3">Sessões Recentes</h2>
+        {recentSessions.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl shadow-sm">
+            <EmptyState
+              data-testid="admin-student-detail-sessions-empty"
+              icon={Calendar}
+              title="Nenhuma sessão registrada"
+              description="As aulas agendadas por este aluno aparecerão aqui."
+            />
+          </div>
+        ) : (
           <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -268,13 +306,22 @@ export default async function AdminStudentDetailPage({ params }: Props) {
               </table>
             </div>
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* 5. Recent feedbacks */}
-      {recentFeedbacks.length > 0 && (
-        <section data-testid="admin-student-detail-feedbacks">
-          <h2 className="text-base font-semibold text-foreground mb-3">Feedbacks Recentes</h2>
+      <section data-testid="admin-student-detail-feedbacks">
+        <h2 className="text-base font-semibold text-foreground mb-3">Feedbacks Recentes</h2>
+        {recentFeedbacks.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl shadow-sm">
+            <EmptyState
+              data-testid="admin-student-detail-feedbacks-empty"
+              icon={MessageSquare}
+              title="Nenhum feedback registrado"
+              description="Os feedbacks enviados após as aulas concluídas aparecerão aqui."
+            />
+          </div>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {recentFeedbacks.map((fb) => (
               <div
@@ -314,8 +361,8 @@ export default async function AdminStudentDetailPage({ params }: Props) {
               </div>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </PageWrapper>
   );
 }

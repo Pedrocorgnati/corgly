@@ -1,3 +1,8 @@
+// A moldura publica (barra fixa, wrapper e rodape) tambem e CSS puro. Ver o
+// cabecalho de `public-chrome.css`: nao adianta a home sobreviver sem o chunk
+// de utilitarios do Tailwind se o header e o rodape caem junto com ele.
+import './public-chrome.css';
+
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { PublicHeader } from '@/components/shared/public-header';
@@ -15,9 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" forcedTheme="light" enableSystem={false}>
-      <div className="min-h-dvh flex flex-col bg-background text-foreground">
+      <div className="pc-shell">
         <PublicHeader />
-        <main id="main-content" data-testid="main-content" className="flex-1 pt-[52px]">
+        <main id="main-content" data-testid="main-content" className="pc-main">
           {children}
         </main>
         <PublicFooter />

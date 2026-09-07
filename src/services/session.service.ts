@@ -9,6 +9,7 @@ import {
 import { EmailType, SupportedLanguage } from '@/types/enums';
 import { logger } from '@/lib/logger';
 import { SessionStatus } from '@/lib/constants/enums';
+import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
 import type {
   BookSessionInput,
   CancelSessionInput,
@@ -20,6 +21,7 @@ import type {
   PaginatedSessions,
   ListSessionsParams,
   BulkCancelResult,
+  BulkCancelPreview,
   ReminderSentAt,
 } from '@/types/session.types';
 
@@ -82,6 +84,49 @@ export function parseSessionSort(raw: string | null | undefined): SessionSort | 
  */
 export type ListSessionsParamsWithSort = ListSessionsParams & { sort?: SessionSort };
 
+/**
+ * Filtros exclusivos do console admin (`GET /api/v1/admin/sessions`).
+ * `hasFeedback` fica fora de `ListSessionsParamsWithSort` porque nem
+ * `listByStudent` nem `listAll` expoem esse filtro; so `listAllForAdmin`.
+ */
+export type ListAdminSessionsParams = ListSessionsParamsWithSort & { hasFeedback?: boolean };
+
+/**
+ * Linha da LISTAGEM DO CONSOLE ADMIN (`GET /api/v1/admin/sessions`).
+ *
+ * E `SessionWithMeta` mais os dois campos que a tabela do admin promete nas
+ * colunas "Aluno" e "Score". Eles NAO entram em `SessionWithMeta` (contrato de
+ * `GET /api/v1/sessions`, consumido tambem pelo aluno) porque o aluno nao
+ * precisa do proprio nome repetido em cada linha nem da nota agregada aqui — ele
+ * tem /progress. Quem produz: `listAllForAdmin`, unico ponto que pede as
+ * relacoes `student` e `feedback` ao Prisma.
+ */
+export interface AdminSessionRow extends SessionWithMeta {
+  /**
+   * Nome do aluno. Nunca vazio: `Session.student` e relacao OBRIGATORIA no
+   * schema (prisma/schema.prisma) e a consulta sempre pede `select: { name }`.
+   */
+  studentName: string;
+  /**
+   * Media das 4 dimensoes canonicas do model Feedback (listening, speaking,
+   * writing, vocabulary), escala 0-5 com 1 casa decimal — mesma convencao de
+   * `averageScore` em `GET /api/v1/admin/users/[id]`.
+   *
+   * `null` significa UMA coisa so: a aula ainda nao tem feedback registrado.
+   * Nao e "dado indisponivel" — o filtro `hasFeedback=false` lista exatamente
+   * essas aulas.
+   */
+  score: number | null;
+}
+
+export interface PaginatedAdminSessions {
+  data: AdminSessionRow[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 function orderByFromSort(sort: SessionSort): { startAt: 'asc' | 'desc' } {
   return { startAt: sort === 'startAt:asc' ? 'asc' : 'desc' };
 }
@@ -142,6 +187,107 @@ function sessionToMeta(s: {
   };
 }
 
+/** Linha do Prisma aceita por `sessionToMeta` (base da serializacao). */
+type SessionRecord = Parameters<typeof sessionToMeta>[0];
+
+/** As 4 dimensoes canonicas do model Feedback, como o Prisma as devolve. */
+type FeedbackScoresRecord = {
+  listeningScore: number;
+  speakingScore: number;
+  writingScore: number;
+  vocabularyScore: number;
+};
+
+/**
+ * Media das 4 dimensoes canonicas, 1 casa decimal.
+ *
+ * `null` quando a aula ainda nao tem feedback — e o unico motivo de ausencia,
+ * porque as 4 notas sao colunas NOT NULL do model Feedback (schema.prisma) e o
+ * schema de submissao (src/schemas/feedback.schema.ts) exige inteiro 1-5 nas
+ * quatro. Convencao de arredondamento identica a de `GET /api/v1/admin/users/[id]`.
+ */
+function averageFeedbackScore(feedback: FeedbackScoresRecord | null): number | null {
+  if (!feedback) return null;
+  const soma =
+    feedback.listeningScore +
+    feedback.speakingScore +
+    feedback.writingScore +
+    feedback.vocabularyScore;
+  return Math.round((soma / 4) * 10) / 10;
+}
+
+/**
+ * Serializa a linha do console admin. Exige as relacoes `student` e `feedback`
+ * na consulta: sem elas o TypeScript recusa a chamada, que e o que impede a
+ * tabela do admin de voltar a mostrar traco em toda a coluna "Aluno".
+ */
+function sessionToAdminRow(
+  s: SessionRecord & {
+    student: { name: string };
+    feedback: FeedbackScoresRecord | null;
+  },
+): AdminSessionRow {
+  return {
+    ...sessionToMeta(s),
+    studentName: s.student.name,
+    score: averageFeedbackScore(s.feedback),
+  };
+}
+
+/**
+ * Monta o `where` compartilhado pelas tres listagens (aluno, generica e admin).
+ * `studentId` chega so na do aluno; `hasFeedback`, so na do admin.
+ */
+function buildSessionWhere(params: {
+  studentId?: string;
+  status?: ListSessionsParams['status'];
+  from?: string;
+  to?: string;
+  hasFeedback?: boolean;
+}): SessionWhereInput {
+  const where: SessionWhereInput = {};
+  if (params.studentId) where.studentId = params.studentId;
+  if (params.status) where.status = params.status as typeof SessionStatus[keyof typeof SessionStatus];
+  // `feedback` e relacao 1-1 opcional: `isNot: null` traz so as sessoes ja
+  // avaliadas e `is: null` so as pendentes de avaliacao.
+  if (params.hasFeedback !== undefined) {
+    where.feedback = params.hasFeedback ? { isNot: null } : { is: null };
+  }
+  const gte = toRangeDate(params.from, 'from');
+  const lte = toRangeDate(params.to, 'to');
+  if (gte || lte) {
+    const range: { gte?: Date; lte?: Date } = {};
+    if (gte) range.gte = gte;
+    if (lte) range.lte = lte;
+    where.startAt = range;
+  }
+  return where;
+}
+
+/**
+ * Janela inclusiva em UTC do bulk cancel. `new Date('2026-04-30')` resolve para
+ * 2026-04-30T00:00:00.000Z, entao um `lte` cru cortaria o ultimo dia inteiro.
+ * Referencia UTC igual a de AvailabilityService.getAvailable (linhas 101-102);
+ * escolher o fuso do produto e o item 018.
+ *
+ * Helper de modulo de proposito: `bulkCancel` e `bulkCancelPreview` precisam da
+ * MESMA janela. Duas copias da regra divergem no dia em que uma muda, e a previa
+ * volta a mentir sem ninguem perceber.
+ */
+export function bulkCancelWindow(
+  startDate: string,
+  endDate: string,
+): { windowStart: Date; windowEnd: Date } {
+  const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+  const windowStart = DATE_ONLY.test(startDate)
+    ? new Date(`${startDate}T00:00:00.000Z`)
+    : new Date(startDate);
+  const windowEnd = DATE_ONLY.test(endDate)
+    ? new Date(`${endDate}T23:59:59.999Z`)
+    : new Date(endDate);
+  return { windowStart, windowEnd };
+}
+
 export class SessionService {
   /**
    * Cria uma sessão com transação atômica de 8 passos:
@@ -196,8 +342,14 @@ export class SessionService {
           throw new Error('SLOT_UNAVAILABLE');
         }
 
-        const existingSession = await tx.session.findUnique({
-          where: { availabilitySlotId: data.availabilitySlotId },
+        // `findFirst` e nao `findUnique`: `availabilitySlotId` deixou de ser unico
+        // quando o slot passou a ser devolvido no cancelamento. Um slot pode
+        // carregar N sessoes canceladas (historico) e no maximo uma ocupante.
+        const existingSession = await tx.session.findFirst({
+          where: {
+            availabilitySlotId: data.availabilitySlotId,
+            status: { in: [...SLOT_OCCUPYING_STATUSES] },
+          },
           select: { id: true },
         });
         if (existingSession) {
@@ -421,8 +573,11 @@ export class SessionService {
       if (!newSlot) throw new Error('SLOT_NOT_FOUND');
       if (newSlot.isBlocked) throw new Error('SLOT_UNAVAILABLE');
 
-      const existingOnNewSlot = await tx.session.findUnique({
-        where: { availabilitySlotId: data.newAvailabilitySlotId },
+      const existingOnNewSlot = await tx.session.findFirst({
+        where: {
+          availabilitySlotId: data.newAvailabilitySlotId,
+          status: { in: [...SLOT_OCCUPYING_STATUSES] },
+        },
         select: { id: true },
       });
       if (existingOnNewSlot) throw new Error('SLOT_UNAVAILABLE');
@@ -481,8 +636,11 @@ export class SessionService {
       if (!newSlot) throw new AppError('SESSION_033', 'Slot de destino não encontrado.', 404);
       if (newSlot.isBlocked) throw new AppError('SESSION_034', 'Slot de destino está bloqueado.', 409);
 
-      const existingOnNewSlot = await tx.session.findUnique({
-        where: { availabilitySlotId: session.rescheduleRequestSlotId! },
+      const existingOnNewSlot = await tx.session.findFirst({
+        where: {
+          availabilitySlotId: session.rescheduleRequestSlotId!,
+          status: { in: [...SLOT_OCCUPYING_STATUSES] },
+        },
         select: { id: true },
       });
       if (existingOnNewSlot) throw new AppError('SESSION_035', 'Slot de destino já ocupado.', 409);
@@ -533,12 +691,14 @@ export class SessionService {
    * Reembolsa créditos e envia BULK_CANCEL_NOTIFICATION.
    */
   async bulkCancel(data: BulkCancelInput): Promise<BulkCancelResult> {
+    const { windowStart, windowEnd } = bulkCancelWindow(data.startDate, data.endDate);
+
     const sessions = await prisma.session.findMany({
       where: {
         status: SessionStatus.SCHEDULED,
         startAt: {
-          gte: new Date(data.startDate),
-          lte: new Date(data.endDate),
+          gte: windowStart,
+          lte: windowEnd,
         },
       },
       include: {
@@ -588,7 +748,60 @@ export class SessionService {
       }
     }
 
-    return { cancelled, refunded, errors };
+    // Efeito real do bloqueio em massa: apos cancelar, os slots livres da janela
+    // ficam bloqueados numa unica escrita agregada. `sessions: { none: ... }` preserva
+    // o invariante que AvailabilityService.blockSlot defende com AVAILABILITY_051
+    // (slot ocupado nunca vira bloqueado). O bump de `version` e obrigatorio: o
+    // CronService decide por CAS nesse campo. Fica fora do $transaction por sessao
+    // de proposito — cancelar e bloquear sao unidades de falha distintas.
+    const blockedResult = await prisma.availabilitySlot.updateMany({
+      where: {
+        startAt: { gte: windowStart, lte: windowEnd },
+        isBlocked: false,
+        sessions: { none: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } },
+      },
+      data: { isBlocked: true, version: { increment: 1 } },
+    });
+
+    return { cancelled, refunded, blocked: blockedResult.count, errors };
+  }
+
+  /**
+   * Admin: previa do bulk cancel. Conta, sem escrever nada, quantas sessoes
+   * seriam canceladas e quantos slots seriam bloqueados na mesma janela.
+   *
+   * Os predicados sao os MESMOS da execucao: `status: SCHEDULED` + janela para
+   * sessoes (igual ao `findMany` de `bulkCancel`), `isBlocked: false` +
+   * `sessions: { none: ... }` para slots (igual ao `updateMany`). E o limite
+   * superior de `cancelled`: a execucao pode cancelar menos se alguma sessao
+   * cair em `errors`.
+   */
+  async bulkCancelPreview(data: {
+    startDate: string;
+    endDate: string;
+  }): Promise<BulkCancelPreview> {
+    const { windowStart, windowEnd } = bulkCancelWindow(data.startDate, data.endDate);
+
+    const [sessionsToCancel, slotsToBlock] = await prisma.$transaction([
+      prisma.session.count({
+        where: {
+          status: SessionStatus.SCHEDULED,
+          startAt: {
+            gte: windowStart,
+            lte: windowEnd,
+          },
+        },
+      }),
+      prisma.availabilitySlot.count({
+        where: {
+          startAt: { gte: windowStart, lte: windowEnd },
+          isBlocked: false,
+          sessions: { none: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } },
+        },
+      }),
+    ]);
+
+    return { sessionsToCancel, slotsToBlock };
   }
 
   /**
@@ -605,16 +818,7 @@ export class SessionService {
     const { page = 1, limit = 20, status, from, to, sort = DEFAULT_SESSION_SORT } = params;
     const skip = (page - 1) * limit;
 
-    const where: SessionWhereInput = { studentId };
-    if (status) where.status = status as typeof SessionStatus[keyof typeof SessionStatus];
-    const gte = toRangeDate(from, 'from');
-    const lte = toRangeDate(to, 'to');
-    if (gte || lte) {
-      const range: { gte?: Date; lte?: Date } = {};
-      if (gte) range.gte = gte;
-      if (lte) range.lte = lte;
-      where.startAt = range;
-    }
+    const where = buildSessionWhere({ studentId, status, from, to });
 
     const [data, total] = await prisma.$transaction([
       prisma.session.findMany({ where, skip, take: limit, orderBy: orderByFromSort(sort) }),
@@ -631,23 +835,19 @@ export class SessionService {
   }
 
   /**
-   * Admin: lista todas as sessões com filtros avançados.
+   * Lista todas as sessões da plataforma no contrato `SessionWithMeta`.
+   *
+   * Consumidor: o ramo ADMIN de `GET /api/v1/sessions` — a listagem GENERICA,
+   * que responde o mesmo shape para aluno e admin. Quem precisa das colunas do
+   * console (nome do aluno, nota) chama `listAllForAdmin`, nao esta.
+   *
    * Mesmo contrato de `from`/`to`/`sort` do `listByStudent` (default `startAt:desc`).
    */
   async listAll(params: ListSessionsParamsWithSort = {}): Promise<PaginatedSessions> {
     const { page = 1, limit = 20, status, from, to, sort = DEFAULT_SESSION_SORT } = params;
     const skip = (page - 1) * limit;
 
-    const where: SessionWhereInput = {};
-    if (status) where.status = status as typeof SessionStatus[keyof typeof SessionStatus];
-    const gte = toRangeDate(from, 'from');
-    const lte = toRangeDate(to, 'to');
-    if (gte || lte) {
-      const range: { gte?: Date; lte?: Date } = {};
-      if (gte) range.gte = gte;
-      if (lte) range.lte = lte;
-      where.startAt = range;
-    }
+    const where = buildSessionWhere({ status, from, to });
 
     const [data, total] = await prisma.$transaction([
       prisma.session.findMany({ where, skip, take: limit, orderBy: orderByFromSort(sort) }),
@@ -656,6 +856,68 @@ export class SessionService {
 
     return {
       data: data.map((s) => sessionToMeta(s as Parameters<typeof sessionToMeta>[0])),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Console admin: lista todas as sessões com o que a TABELA do admin mostra.
+   *
+   * Diferenca em relacao a `listAll` — e a razao de existir:
+   *  - pede as relacoes `student` (nome) e `feedback` (as 4 notas) ao Prisma e
+   *    devolve `studentName` + `score` por linha. Sem isso as colunas "Aluno" e
+   *    "Score" caiam no placeholder em TODAS as linhas, e o admin abria a tela
+   *    sem saber de quem era a aula;
+   *  - aceita o filtro `hasFeedback` (aulas ja avaliadas / pendentes de
+   *    avaliacao), que a listagem generica nao expoe.
+   *
+   * Consumidor unico: `GET /api/v1/admin/sessions`.
+   */
+  async listAllForAdmin(params: ListAdminSessionsParams = {}): Promise<PaginatedAdminSessions> {
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      from,
+      to,
+      hasFeedback,
+      sort = DEFAULT_SESSION_SORT,
+    } = params;
+    const skip = (page - 1) * limit;
+
+    const where = buildSessionWhere({ status, from, to, hasFeedback });
+
+    const [data, total] = await prisma.$transaction([
+      prisma.session.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: orderByFromSort(sort),
+        include: {
+          student: { select: { name: true } },
+          // So as 4 dimensoes canonicas: o resto do Feedback (notas
+          // qualitativas, privateNote) e detalhe, nao coluna de listagem.
+          feedback: {
+            select: {
+              listeningScore: true,
+              speakingScore: true,
+              writingScore: true,
+              vocabularyScore: true,
+            },
+          },
+        },
+      }),
+      prisma.session.count({ where }),
+    ]);
+
+    return {
+      // Sem cast de propósito: e o `include` acima que satisfaz o parametro de
+      // `sessionToAdminRow`. Remover a relacao `student` da consulta vira erro
+      // de compilacao, nao coluna vazia em producao.
+      data: data.map((s) => sessionToAdminRow(s)),
       total,
       page,
       limit,

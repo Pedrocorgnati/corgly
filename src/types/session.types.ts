@@ -90,7 +90,18 @@ export interface RescheduleSessionInput {
 export interface BulkCancelResult {
   cancelled: number;
   refunded: number;
+  blocked: number;
   errors: Array<{ sessionId: string; error: string }>;
+}
+
+// ---------------------------------------------------------------------------
+// Previa do bulk cancel (admin) — contagem sem efeito, mesmos predicados da
+// execucao. Consumida por `GET /api/v1/sessions/bulk-cancel` e pelo
+// BulkBlockModal antes de liberar o botao destrutivo.
+// ---------------------------------------------------------------------------
+export interface BulkCancelPreview {
+  sessionsToCancel: number;
+  slotsToBlock: number;
 }
 
 // ---------------------------------------------------------------------------

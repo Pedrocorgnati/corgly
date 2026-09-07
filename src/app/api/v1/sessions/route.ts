@@ -7,6 +7,7 @@ import {
   sessionService,
 } from '@/services/session.service';
 import { apiResponse } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth-guard';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { AppError } from '@/lib/errors';
 import {
@@ -46,8 +47,13 @@ function isBrokenDate(raw: string | null): boolean {
  * comportamento historico consumido pelas telas de historico/admin.)
  */
 export async function GET(request: NextRequest) {
-  const userId = request.headers.get('x-user-id')!;
-  const role = request.headers.get('x-user-role')!;
+  // Sem este guard a rota lia `x-user-id` com `!` e seguia com `undefined`:
+  // requisicao nao autenticada chegava ao servico e o Prisma respondia
+  // "Argument `studentId` must not be null" (500) no lugar do 401 do contrato.
+  const auth = await requireAuth(request);
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth.id;
+  const role = auth.role;
   const { searchParams } = request.nextUrl;
   const rawStatus = searchParams.get('status');
   const status =
@@ -101,7 +107,11 @@ export async function GET(request: NextRequest) {
 
 /** POST /api/v1/sessions — book a session */
 export async function POST(request: NextRequest) {
-  const userId = request.headers.get('x-user-id')!;
+  // Mesmo motivo do GET: sem autenticacao resolvida, o agendamento seguia com
+  // `studentId` indefinido ate estourar no banco. O guard responde 401 antes.
+  const auth = await requireAuth(request);
+  if (auth instanceof NextResponse) return auth;
+  const userId = auth.id;
   const rl = await checkRateLimit(`sessions:${userId}`, RATE_LIMITS.SESSIONS_CREATE);
   if (!rl.allowed) {
     return NextResponse.json(

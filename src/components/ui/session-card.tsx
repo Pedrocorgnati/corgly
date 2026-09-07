@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 import { CalendarIcon, PlayIcon, XIcon, RefreshCwIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -14,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TimezoneDisplay } from "@/components/ui/timezone-display"
-import { SessionStatus, SESSION_STATUS_MAP } from "@/lib/constants/enums"
+import { SessionStatus, SESSION_STATUS_LABEL_KEY } from "@/lib/constants/enums"
 
 interface SessionData {
   id: string
@@ -35,20 +36,25 @@ interface SessionCardProps {
   className?: string
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
-> = {
-  [SessionStatus.SCHEDULED]: { label: SESSION_STATUS_MAP.SCHEDULED.label, variant: "outline" },
-  [SessionStatus.IN_PROGRESS]: { label: SESSION_STATUS_MAP.IN_PROGRESS.label, variant: "default" },
-  [SessionStatus.COMPLETED]: { label: SESSION_STATUS_MAP.COMPLETED.label, variant: "secondary" },
-  [SessionStatus.CANCELLED_BY_STUDENT]: { label: SESSION_STATUS_MAP.CANCELLED_BY_STUDENT.label, variant: "destructive" },
-  [SessionStatus.CANCELLED_BY_ADMIN]: { label: SESSION_STATUS_MAP.CANCELLED_BY_ADMIN.label, variant: "destructive" },
-  [SessionStatus.NO_SHOW_STUDENT]: { label: SESSION_STATUS_MAP.NO_SHOW_STUDENT.label, variant: "destructive" },
-  [SessionStatus.NO_SHOW_ADMIN]: { label: SESSION_STATUS_MAP.NO_SHOW_ADMIN.label, variant: "destructive" },
-  [SessionStatus.INTERRUPTED]: { label: SESSION_STATUS_MAP.INTERRUPTED.label, variant: "destructive" },
-  [SessionStatus.RESCHEDULE_PENDING]: { label: SESSION_STATUS_MAP.RESCHEDULE_PENDING.label, variant: "outline" },
+/**
+ * Variante visual do badge por status. O ROTULO nao mora aqui: ele vem do
+ * catalogo (`sessionStatus.*`) via `SESSION_STATUS_LABEL_KEY`, porque este
+ * mapa e avaliado no modulo, fora de qualquer provider de i18n.
+ */
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  [SessionStatus.SCHEDULED]: "outline",
+  [SessionStatus.IN_PROGRESS]: "default",
+  [SessionStatus.COMPLETED]: "secondary",
+  [SessionStatus.CANCELLED_BY_STUDENT]: "destructive",
+  [SessionStatus.CANCELLED_BY_ADMIN]: "destructive",
+  [SessionStatus.NO_SHOW_STUDENT]: "destructive",
+  [SessionStatus.NO_SHOW_ADMIN]: "destructive",
+  [SessionStatus.INTERRUPTED]: "destructive",
+  [SessionStatus.RESCHEDULE_PENDING]: "outline",
 }
+
+/** Minutos antes do inicio em que o botao "Entrar" destrava. */
+const ENTER_WINDOW_MINUTES = 5
 
 function SessionCard({
   session,
@@ -59,15 +65,15 @@ function SessionCard({
   onReschedule,
   className,
 }: SessionCardProps) {
-  const statusConfig = STATUS_CONFIG[session.status] ?? {
-    label: session.status,
-    variant: "outline" as const,
-  }
+  const t = useTranslations("sessionCard")
+  const tStatus = useTranslations("sessionStatus")
+
+  const statusVariant = STATUS_VARIANT[session.status] ?? "outline"
 
   const startDate = new Date(session.startAt)
   const now = new Date()
   const minutesBefore = (startDate.getTime() - now.getTime()) / 1000 / 60
-  const canEnter = minutesBefore <= 5
+  const canEnter = minutesBefore <= ENTER_WINDOW_MINUTES
 
   const showEnter =
     onEnter && (session.status === SessionStatus.SCHEDULED || session.status === SessionStatus.IN_PROGRESS)
@@ -80,16 +86,20 @@ function SessionCard({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2">
             <CalendarIcon className="size-4 text-muted-foreground" />
-            {session.studentName ?? session.adminName ?? "Sessão"}
+            {session.studentName ?? session.adminName ?? t("fallbackTitle")}
           </CardTitle>
-          <Badge data-testid={`session-card-${session.id}-status`} variant={statusConfig.variant}>{statusConfig.label}</Badge>
+          <Badge data-testid={`session-card-${session.id}-status`} variant={statusVariant}>
+            {SESSION_STATUS_LABEL_KEY[session.status as SessionStatus]
+              ? tStatus(SESSION_STATUS_LABEL_KEY[session.status as SessionStatus])
+              : session.status}
+          </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-2">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-sm">
-            <span className="font-medium text-foreground">Início:</span>
+            <span className="font-medium text-foreground">{t("startLabel")}</span>
             <TimezoneDisplay
               time={session.startAt}
               studentTz={studentTimezone}
@@ -98,7 +108,7 @@ function SessionCard({
             />
           </div>
           <div className="flex items-center gap-1.5 text-sm">
-            <span className="font-medium text-foreground">Fim:</span>
+            <span className="font-medium text-foreground">{t("endLabel")}</span>
             <TimezoneDisplay
               time={session.endAt}
               studentTz={studentTimezone}
@@ -114,26 +124,37 @@ function SessionCard({
           {showReschedule && (
             <Button data-testid={`session-card-${session.id}-reschedule-button`} variant="outline" size="sm" onClick={onReschedule}>
               <RefreshCwIcon className="size-3.5" />
-              Reagendar
+              {t("actions.reschedule")}
             </Button>
           )}
           {showCancel && (
             <Button data-testid={`session-card-${session.id}-cancel-button`} variant="destructive" size="sm" onClick={onCancel}>
               <XIcon className="size-3.5" />
-              Cancelar
+              {t("actions.cancel")}
             </Button>
           )}
           {showEnter && (
-            <Button
-              data-testid={`session-card-${session.id}-enter-button`}
-              size="sm"
-              onClick={onEnter}
-              disabled={!canEnter}
-              className="ml-auto"
-            >
-              <PlayIcon className="size-3.5" />
-              Entrar
-            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              {/* Zero Silencio: o botao desabilitado dizia apenas "Entrar" e nao
+                  explicava por que nao clicava. */}
+              {!canEnter && (
+                <span
+                  data-testid={`session-card-${session.id}-enter-hint`}
+                  className="text-xs text-muted-foreground"
+                >
+                  {t("enterAvailableIn", { minutes: Math.ceil(minutesBefore - ENTER_WINDOW_MINUTES) })}
+                </span>
+              )}
+              <Button
+                data-testid={`session-card-${session.id}-enter-button`}
+                size="sm"
+                onClick={onEnter}
+                disabled={!canEnter}
+              >
+                <PlayIcon className="size-3.5" />
+                {t("actions.enter")}
+              </Button>
+            </div>
           )}
         </CardFooter>
       )}

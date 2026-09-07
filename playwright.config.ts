@@ -13,6 +13,12 @@ export default defineConfig({
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     headless: true,
+    // Câmera/microfone falsos para os testes de WebRTC (E2E-005, E2E-007).
+    // São flags de launch do Chromium; ficavam (inertes) em `newContext()` em
+    // `e2e/helpers/contexts.ts`, onde o Playwright não as lê.
+    launchOptions: {
+      args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    },
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'on-first-retry',

@@ -10,6 +10,9 @@ const mockPrisma = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   session: {
     findUnique: vi.fn(),
+    // `findFirst` desde a devolucao de slot cancelado: a checagem de ocupacao
+    // passou a filtrar por SLOT_OCCUPYING_STATUSES em vez de casar o unique.
+    findFirst: vi.fn(),
     count: vi.fn(),
     create: vi.fn(),
   },
@@ -39,7 +42,7 @@ function session() {
     availabilitySlotId: 'slot-1',
     startAt: START,
     endAt: END,
-    status: 'SCHEDULED',
+    status: 'SCHEDULED' as const,
     creditBatchId: 'batch-1',
     isRecurring: false,
     recurringPatternId: null,
@@ -117,7 +120,7 @@ describe('BookingIdempotencyService', () => {
       preferredLanguage: 'PT_BR',
       email: 'student@test.com',
     });
-    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: 1n }]);
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: BigInt(1) }]);
     mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
       const txQueryRaw = vi
         .fn()
@@ -140,7 +143,13 @@ describe('BookingIdempotencyService', () => {
       service.lockAndBook('student-1', { availabilitySlotId: 'slot-1' }, null),
     ).rejects.toMatchObject({
       code: 'BOOKING_012',
-      alternatives: [{ id: 'slot-2' }],
+      alternatives: [
+        {
+          id: 'slot-2',
+          startAt: '2026-06-20T15:00:00.000Z',
+          endAt: '2026-06-20T15:50:00.000Z',
+        },
+      ],
     } satisfies Partial<BookingConflictError>);
   });
 
@@ -150,7 +159,7 @@ describe('BookingIdempotencyService', () => {
       preferredLanguage: 'PT_BR',
       email: 'student@test.com',
     });
-    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: 0n }]);
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: BigInt(0) }]);
 
     await expect(
       service.lockAndBook('student-1', { availabilitySlotId: 'slot-1' }, null),

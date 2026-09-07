@@ -11,13 +11,18 @@
  * compras e lotes de crédito já existentes.
  */
 
-/** Preços dos pacotes de crédito em centavos USD (Stripe usa inteiros). */
-export const PACKAGE_PRICES: Record<string, number> = {
-  SINGLE: 2500,  // $25.00
-  PACK_5: 11000, // $110.00 (5 × $22)
-  PACK_10: 19000, // $190.00 (10 × $19)
-  PROMO: 1250,   // $12.50 (50% OFF — isFirstPurchase + SINGLE)
-};
+/**
+ * AQUI NÃO MORA PREÇO. Este arquivo guarda só crédito e rótulo.
+ *
+ * Existia aqui um `PACKAGE_PRICES` em centavos USD — uma TERCEIRA tabela de
+ * preço, sem nenhum consumidor no código, ao lado de `PRICING`
+ * (`src/lib/pricing/config.ts`, a única fonte multi-moeda do produto) e da
+ * vitrine pública (`src/lib/constants/landing.ts`). Tabela órfã de preço não
+ * fica desatualizada em silêncio: ela é adotada por engano meses depois e passa
+ * a cobrar um valor que ninguém mais mantém. Preço se resolve por
+ * `resolvePrice(pacote, moeda)`; a paridade com a landing é travada em
+ * `src/lib/pricing/__tests__/pricing-parity.test.ts`.
+ */
 
 /** Quantidade de créditos por pacote. */
 export const PACKAGE_CREDITS: Record<string, number> = {

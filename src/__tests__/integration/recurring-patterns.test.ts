@@ -19,6 +19,7 @@ vi.mock('@/lib/prisma', () => ({
 
 vi.mock('@/lib/auth-guard', () => ({
   requireAuth: vi.fn(),
+  requireAdmin: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -26,6 +27,8 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 const USER_ID = 'user-abc';
+// Alvo do padrao: aluno explicito, distinto do admin autenticado.
+const STUDENT_ID = '00000000-0000-4000-8000-000000000001';
 
 function makeRequest(body?: object, method = 'GET'): NextRequest {
   return new NextRequest('http://localhost/api/v1/recurring-patterns', {
@@ -44,12 +47,12 @@ function makeDeleteRequest(id: string): NextRequest {
 describe('GET /api/v1/recurring-patterns', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('lista padrões ativos do usuário autenticado', async () => {
-    const { requireAuth } = await import('@/lib/auth-guard');
+  it('lista padrões ativos para admin autenticado', async () => {
+    const { requireAdmin } = await import('@/lib/auth-guard');
     const { prisma } = await import('@/lib/prisma');
-    vi.mocked(requireAuth).mockResolvedValueOnce({ id: USER_ID, role: 'STUDENT', tokenVersion: 0 });
+    vi.mocked(requireAdmin).mockResolvedValueOnce({ id: USER_ID, role: 'ADMIN', tokenVersion: 0 });
     vi.mocked(prisma.recurringPattern.findMany).mockResolvedValueOnce([
-      { id: 'p1', studentId: USER_ID, dayOfWeek: 1, startTime: '09:00', isActive: true } as never,
+      { id: 'p1', studentId: STUDENT_ID, dayOfWeek: 1, startTime: '09:00', isActive: true } as never,
     ]);
 
     const { GET } = await import('@/app/api/v1/recurring-patterns/route');
@@ -61,9 +64,9 @@ describe('GET /api/v1/recurring-patterns', () => {
   });
 
   it('retorna array vazio se nenhum padrão existe', async () => {
-    const { requireAuth } = await import('@/lib/auth-guard');
+    const { requireAdmin } = await import('@/lib/auth-guard');
     const { prisma } = await import('@/lib/prisma');
-    vi.mocked(requireAuth).mockResolvedValueOnce({ id: USER_ID, role: 'STUDENT', tokenVersion: 0 });
+    vi.mocked(requireAdmin).mockResolvedValueOnce({ id: USER_ID, role: 'ADMIN', tokenVersion: 0 });
     vi.mocked(prisma.recurringPattern.findMany).mockResolvedValueOnce([]);
 
     const { GET } = await import('@/app/api/v1/recurring-patterns/route');
@@ -73,9 +76,9 @@ describe('GET /api/v1/recurring-patterns', () => {
   });
 
   it('retorna 401 sem autenticação', async () => {
-    const { requireAuth } = await import('@/lib/auth-guard');
+    const { requireAdmin } = await import('@/lib/auth-guard');
     const { NextResponse } = await import('next/server');
-    vi.mocked(requireAuth).mockResolvedValueOnce(
+    vi.mocked(requireAdmin).mockResolvedValueOnce(
       NextResponse.json({ data: null, error: 'Não autorizado.' }, { status: 401 }),
     );
 
@@ -83,46 +86,80 @@ describe('GET /api/v1/recurring-patterns', () => {
     const res = await GET(makeRequest());
     expect(res.status).toBe(401);
   });
+
+  it('aluno autenticado recebe 403 e nao lista padroes', async () => {
+    const { requireAdmin } = await import('@/lib/auth-guard');
+    const { prisma } = await import('@/lib/prisma');
+    const { NextResponse } = await import('next/server');
+    vi.mocked(requireAdmin).mockResolvedValueOnce(
+      NextResponse.json({ data: null, error: 'Acesso restrito a administradores.' }, { status: 403 }),
+    );
+
+    const { GET } = await import('@/app/api/v1/recurring-patterns/route');
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(403);
+    // O 403 tem que nascer ANTES de qualquer leitura: guarda, nao filtro.
+    expect(prisma.recurringPattern.findMany).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/v1/recurring-patterns', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('cria padrão com dados válidos → 201', async () => {
-    const { requireAuth } = await import('@/lib/auth-guard');
+    const { requireAdmin } = await import('@/lib/auth-guard');
     const { prisma } = await import('@/lib/prisma');
-    vi.mocked(requireAuth).mockResolvedValueOnce({ id: USER_ID, role: 'STUDENT', tokenVersion: 0 });
+    vi.mocked(requireAdmin).mockResolvedValueOnce({ id: USER_ID, role: 'ADMIN', tokenVersion: 0 });
+    vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({ id: STUDENT_ID, role: 'STUDENT' } as never);
     vi.mocked(prisma.recurringPattern.count).mockResolvedValueOnce(0);
     vi.mocked(prisma.recurringPattern.findFirst).mockResolvedValueOnce(null);
     vi.mocked(prisma.recurringPattern.create).mockResolvedValueOnce({
-      id: 'p2', studentId: USER_ID, dayOfWeek: 2, startTime: '10:00', isActive: true,
+      id: 'p2', studentId: STUDENT_ID, dayOfWeek: 2, startTime: '10:00', isActive: true,
     } as never);
 
     const { POST } = await import('@/app/api/v1/recurring-patterns/route');
-    const res = await POST(makeRequest({ dayOfWeek: 2, startTime: '10:00' }, 'POST'));
+    const res = await POST(makeRequest({ studentId: STUDENT_ID, dayOfWeek: 2, startTime: '10:00' }, 'POST'));
     expect(res.status).toBe(201);
     const json = await res.json();
     expect(json.data.dayOfWeek).toBe(2);
+    // Dono do padrao e o aluno alvo, nunca o admin autenticado.
+    expect(json.data.studentId).toBe(STUDENT_ID);
   });
 
   it('rejeita dayOfWeek inválido (> 6) → 400', async () => {
-    const { requireAuth } = await import('@/lib/auth-guard');
-    vi.mocked(requireAuth).mockResolvedValueOnce({ id: USER_ID, role: 'STUDENT', tokenVersion: 0 });
+    const { requireAdmin } = await import('@/lib/auth-guard');
+    vi.mocked(requireAdmin).mockResolvedValueOnce({ id: USER_ID, role: 'ADMIN', tokenVersion: 0 });
 
     const { POST } = await import('@/app/api/v1/recurring-patterns/route');
-    const res = await POST(makeRequest({ dayOfWeek: 7, startTime: '10:00' }, 'POST'));
+    const res = await POST(makeRequest({ studentId: STUDENT_ID, dayOfWeek: 7, startTime: '10:00' }, 'POST'));
     expect(res.status).toBe(400);
   });
 
-  it('rejeita quando usuário já tem 3 padrões → 400', async () => {
-    const { requireAuth } = await import('@/lib/auth-guard');
+  it('rejeita quando aluno alvo já tem 3 padrões → 400', async () => {
+    const { requireAdmin } = await import('@/lib/auth-guard');
     const { prisma } = await import('@/lib/prisma');
-    vi.mocked(requireAuth).mockResolvedValueOnce({ id: USER_ID, role: 'STUDENT', tokenVersion: 0 });
+    vi.mocked(requireAdmin).mockResolvedValueOnce({ id: USER_ID, role: 'ADMIN', tokenVersion: 0 });
+    vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({ id: STUDENT_ID, role: 'STUDENT' } as never);
     vi.mocked(prisma.recurringPattern.count).mockResolvedValueOnce(3);
 
     const { POST } = await import('@/app/api/v1/recurring-patterns/route');
-    const res = await POST(makeRequest({ dayOfWeek: 3, startTime: '11:00' }, 'POST'));
+    const res = await POST(makeRequest({ studentId: STUDENT_ID, dayOfWeek: 3, startTime: '11:00' }, 'POST'));
     expect(res.status).toBe(400);
+  });
+
+  it('aluno autenticado recebe 403 e nao cria padrão', async () => {
+    const { requireAdmin } = await import('@/lib/auth-guard');
+    const { prisma } = await import('@/lib/prisma');
+    const { NextResponse } = await import('next/server');
+    vi.mocked(requireAdmin).mockResolvedValueOnce(
+      NextResponse.json({ data: null, error: 'Acesso restrito a administradores.' }, { status: 403 }),
+    );
+
+    const { POST } = await import('@/app/api/v1/recurring-patterns/route');
+    const res = await POST(makeRequest({ studentId: STUDENT_ID, dayOfWeek: 2, startTime: '10:00' }, 'POST'));
+    expect(res.status).toBe(403);
+    // Sem escrita: o 403 tem que preceder o create, nao apenas mudar o dono.
+    expect(prisma.recurringPattern.create).not.toHaveBeenCalled();
   });
 });
 

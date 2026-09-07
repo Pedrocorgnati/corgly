@@ -3,10 +3,44 @@
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 
+import { BOOKING_RULES } from '@/lib/constants';
 import { SessionStatus } from '@/lib/constants/enums';
 import { getAuthUser, type AuthUser } from '@/lib/data/auth';
 import { internalApiOrigin } from '@/lib/internal-api';
 import type { SessionWithMeta } from '@/types/session.types';
+
+/**
+ * Status em que a aula ainda esta viva na agenda do aluno.
+ *
+ * `SCHEDULED` = marcada e ninguem entrou; `IN_PROGRESS` = alguem entrou na sala
+ * (PATCH /api/v1/sessions/[id]). Mesmo vocabulario de `ACTIVE_SESSION_STATUSES`
+ * em src/services/session.service.ts, que e quem decide se a aula pode ser
+ * cancelada/iniciada.
+ */
+const ACTIVE_SESSION_STATUSES = [SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS] as const;
+
+/**
+ * Quanto olhar para TRAS ao procurar a aula corrente.
+ *
+ * A rota filtra `startAt >= from`, nunca `endAt`. Para a aula em andamento
+ * continuar aparecendo, `from` precisa recuar pelo maximo que uma aula pode
+ * durar: os 55 min de `BOOKING_RULES.SESSION_DURATION_MINUTES` mais os 60 min de
+ * extensao que `SessionService.extendSession` pode somar ao `endAt` (teto
+ * validado em src/app/api/v1/sessions/[id]/route.ts). Quem de fato descarta a
+ * aula ja encerrada e o filtro por `endAt`; esta janela so garante que ela
+ * chegue ate la.
+ */
+const MAX_SESSION_EXTENSION_MINUTES = 60;
+const ONGOING_LOOKBACK_MS =
+  (BOOKING_RULES.SESSION_DURATION_MINUTES + MAX_SESSION_EXTENSION_MINUTES) * 60 * 1000;
+
+/**
+ * Quantas aulas pedir por status. `limit: 1` nao serve: a primeira da janela
+ * pode ser uma aula que ja terminou e continuou `SCHEDULED` (ninguem entrou),
+ * e ela roubaria a vaga da aula real. Em 115 minutos nao cabem mais do que tres
+ * aulas de 55 min sem sobreposicao — 5 e folga.
+ */
+const ONGOING_CANDIDATE_LIMIT = 5;
 
 
 // ── Fronteira API/UI ─────────────────────────────────────────────────────────
@@ -144,6 +178,19 @@ export interface DashboardSessionsPage {
   total: number;
 }
 
+/**
+ * Resultado do card "Proxima aula".
+ *
+ * Embrulhado num objeto de proposito: `ActionResult.data === null` significa
+ * FALHA. Se o fetcher devolvesse a sessao nua, "nao ha aula" e "nao consegui
+ * saber" colapsariam no mesmo `null` e o card voltaria a mentir "voce nao tem
+ * aulas agendadas" quando a API caiu.
+ */
+export interface DashboardNextSessionResult {
+  /** Aula em andamento ou a proxima agendada. `null` = agenda vazia (fato). */
+  session: DashboardNextSession | null;
+}
+
 const dashboardSessionsPageSchema = z.object({
   data: z.array(
     z.object({
@@ -220,21 +267,63 @@ export async function getDashboardCredits(): Promise<ActionResult<DashboardCredi
   return apiFetch('/api/v1/credits', dashboardCreditsSchema);
 }
 
-export async function getDashboardNextSession(): Promise<ActionResult<DashboardSessionsPage>> {
-  // Produtor destes parametros: src/app/api/v1/sessions/route.ts (GET).
-  //   - `from` (ISO): a rota ja repassa para SessionService.listByStudent, que filtra
-  //     startAt >= from. Manda o agora para nunca trazer aula que ja passou.
-  //   - `sort=startAt:asc`: honrado pela rota (parseSessionSort/SESSION_SORTS em
-  //     src/services/session.service.ts). Sem ele o default e startAt desc e o
-  //     `limit=1` devolveria a aula futura MAIS DISTANTE, nao a proxima.
-  const query = new URLSearchParams({
-    status: SessionStatus.SCHEDULED,
-    limit: '1',
-    sort: 'startAt:asc',
-    from: new Date().toISOString(),
-  });
+/**
+ * Proxima aula do aluno — INCLUINDO a que ja comecou e ainda nao terminou.
+ *
+ * Por que nao basta `status=SCHEDULED&from=<agora>`: a rota filtra
+ * `startAt >= from` (src/services/session.service.ts, `listByStudent`), entao no
+ * minuto em que a aula COMECA ela sai do filtro e o card esvazia — some com o
+ * botao "Entrar" exatamente quando o aluno precisa dele. Alem disso o status
+ * vira `IN_PROGRESS` assim que alguem entra na sala
+ * (PATCH /api/v1/sessions/[id]), e um filtro so de `SCHEDULED` perderia a aula
+ * de novo.
+ *
+ * Estrategia:
+ *   1. Olha para tras `ONGOING_LOOKBACK_MS` (duracao maxima possivel de uma
+ *      aula), para que a aula em andamento ainda entre no `startAt >= from`.
+ *   2. Pergunta uma vez por status vivo — a rota aceita UM `status` por
+ *      requisicao, e listar sem status traria canceladas/concluidas ocupando o
+ *      `limit` (aluno que remarca o mesmo horario acumula CANCELLED_BY_STUDENT).
+ *   3. Descarta o que ja acabou por `endAt <= agora` (a aula que passou nao pode
+ *      reaparecer) e fica com o menor `startAt`.
+ */
+export async function getDashboardNextSession(): Promise<
+  ActionResult<DashboardNextSessionResult>
+> {
+  const agoraMs = Date.now();
+  const from = new Date(agoraMs - ONGOING_LOOKBACK_MS).toISOString();
 
-  return apiFetch(`/api/v1/sessions?${query.toString()}`, dashboardSessionsPageSchema);
+  // `sort=startAt:asc` e honrado pela rota (parseSessionSort/SESSION_SORTS).
+  // Sem ele o default e `startAt:desc` e o recorte traria as aulas mais
+  // distantes da janela em vez das mais proximas.
+  const respostas = await Promise.all(
+    ACTIVE_SESSION_STATUSES.map((status) => {
+      const query = new URLSearchParams({
+        status,
+        limit: String(ONGOING_CANDIDATE_LIMIT),
+        sort: 'startAt:asc',
+        from,
+      });
+      return apiFetch(`/api/v1/sessions?${query.toString()}`, dashboardSessionsPageSchema);
+    }),
+  );
+
+  // Zero Silencio: uma perna que falhou pode ser justamente a que tinha a aula.
+  // Reportar erro e melhor do que devolver "sem aula agendada" por omissao.
+  const falha = respostas.find((resposta) => resposta.error !== null);
+  if (falha?.error) {
+    return { data: null, error: falha.error };
+  }
+
+  const candidatas = respostas
+    .flatMap((resposta) => resposta.data?.data ?? [])
+    .filter((sessao) => {
+      const fimMs = Date.parse(sessao.endAt);
+      return Number.isFinite(fimMs) && fimMs > agoraMs;
+    })
+    .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+
+  return { data: { session: candidatas[0] ?? null }, error: null };
 }
 
 export async function getDashboardProgress(): Promise<ActionResult<DashboardProgress>> {

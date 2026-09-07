@@ -12,15 +12,19 @@ export const RescheduleSessionSchema = z.object({
   newAvailabilitySlotId: z.string().uuid(),
 });
 
+// Aceita `YYYY-MM-DD` (forma date-only enviada por BulkBlockModal, linhas 106 e 120)
+// e tambem ISO-8601 completo, para nao quebrar chamador que ja manda data com hora.
+export const DateOrDateTimeString = z.union([z.string().date(), z.string().datetime()]);
+
 export const BulkCancelSchema = z.object({
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  startDate: DateOrDateTimeString,
+  endDate: DateOrDateTimeString,
   reason: z.string().max(500).optional(),
 });
 
 export const SignalSchema = z.object({
   type: z.enum(['offer', 'answer', 'candidate']),
-  payload: z.record(z.unknown()),  // RTCSdpInit | RTCIceCandidateInit
+  payload: z.record(z.string(), z.unknown()),  // RTCSdpInit | RTCIceCandidateInit
   from: z.string().optional(),     // preenchido pelo servidor
 });
 

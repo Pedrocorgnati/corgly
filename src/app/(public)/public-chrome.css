@@ -1,0 +1,434 @@
+/* ==========================================================================
+   Corgly — Moldura das paginas publicas (CSS puro, ZERO Tailwind)
+   --------------------------------------------------------------------------
+   Mesma razao de `landing.css` (leia o cabecalho de la): a barra fixa, o rodape
+   e o wrapper de `(public)/layout.tsx` emolduram a home, e nao adianta a home
+   sobreviver sem o chunk de utilitarios do Tailwind se o header e o rodape
+   caem junto com ele. Todo valor aqui e literal — nada de `var(--token)` de
+   `globals.css`.
+
+   Escopo deliberado: o painel do `<Sheet>` do menu mobile continua em Tailwind.
+   E uma sobreposicao de interacao (so existe depois de um clique, ja com JS e
+   CSS carregados). O `<LanguageFlags>` e compartilhado com a area logada e nao
+   e reescrito: recebe a classe `pc-flags` e e redesenhado aqui por descendencia,
+   como o `BrandLogo`. Tudo que aparece no primeiro paint esta coberto.
+   ========================================================================== */
+
+.pc-shell {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background-color: #faf7fd;
+  color: #1b2140;
+}
+
+.pc-main {
+  flex: 1;
+  padding-top: 52px;
+}
+
+/* ── Barra fixa ────────────────────────────────────────────────────────────
+   Sobre o hero da home ela e transparente; ao rolar (ou fora da home) vira
+   branca com fio inferior. `.pc-header--solid` e a alternancia.
+   ------------------------------------------------------------------------ */
+
+.pc-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: 52px;
+  border-bottom: 1px solid transparent;
+  background-color: transparent;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+.pc-header--solid {
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+}
+
+.pc-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .pc-header__inner {
+    padding-inline: 1.5rem;
+  }
+}
+
+.pc-header__logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.pc-header__nav {
+  display: none;
+  align-items: center;
+  gap: 2.25rem;
+}
+
+@media (min-width: 768px) {
+  .pc-header__nav {
+    display: flex;
+  }
+}
+
+.pc-header__nav-link {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: #64748b;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+
+.pc-header__nav-link:hover {
+  color: #1e293b;
+}
+
+.pc-header--hero .pc-header__nav-link {
+  color: #ffffff;
+}
+
+.pc-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+@media (min-width: 640px) {
+  .pc-header__actions {
+    gap: 0.75rem;
+  }
+}
+
+.pc-header__login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  min-height: 32px;
+  padding-inline: 1rem;
+  border-radius: 10px;
+  background-color: #7c5cbf;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 140ms ease;
+}
+
+.pc-header__login:hover {
+  background-color: #6d4fb0;
+}
+
+.pc-header--hero .pc-header__login {
+  background-color: #ffffff;
+  color: #5b4a9a;
+}
+
+.pc-header--hero .pc-header__login:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Gatilho do menu mobile. O painel que ele abre segue em Tailwind (so existe
+   depois do clique), mas o botao em si aparece no primeiro paint da barra em
+   telas pequenas, entao ele nao pode depender do chunk de utilitarios. */
+.pc-header__menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background-color: transparent;
+  color: #1B2140;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.pc-header__menu:hover {
+  background-color: rgba(27, 33, 64, 0.06);
+}
+
+.pc-header__menu svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.pc-header--hero .pc-header__menu {
+  color: #ffffff;
+}
+
+.pc-header--hero .pc-header__menu:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+@media (min-width: 768px) {
+  .pc-header__menu {
+    display: none;
+  }
+}
+
+/* Bandeiras de idioma. O componente e compartilhado com a area logada e fica
+   como esta; a moldura publica o redesenha por descendencia (dois niveis de
+   classe ganham das utilitarias de classe unica sem `!important`). */
+.pc-header .pc-flags {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pc-header .pc-flags button {
+  width: 2.25rem;
+  min-width: 36px;
+  height: 1.75rem;
+  min-height: 28px;
+  padding: 1px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background-color: #ffffff;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.pc-header .pc-flags button[aria-checked='true'] {
+  box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #7c5cbf;
+}
+
+.pc-header .pc-flags img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Marca ─────────────────────────────────────────────────────────────────
+   `BrandLogo` e compartilhado com as areas logadas e continua com as classes
+   dele; aqui a moldura publica redesenha o que precisa por descendencia, que
+   ganha das utilitarias de classe unica sem precisar de `!important`.
+   ------------------------------------------------------------------------ */
+
+.pc-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pc-brand img {
+  width: auto;
+  height: 1.75rem;
+}
+
+.pc-brand > span {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: #1b2140;
+}
+
+.pc-brand--light > span {
+  color: #ffffff;
+}
+
+.pc-footer .pc-brand img {
+  height: 2rem;
+}
+
+.pc-footer .pc-brand > span {
+  font-size: 1.45rem;
+}
+
+/* ── Rodape ────────────────────────────────────────────────────────────────── */
+
+.pc-footer {
+  padding-block: 2.25rem;
+  background-color: #1b2140;
+  color: #f4f4f5;
+}
+
+.pc-footer__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .pc-footer__inner {
+    padding-inline: 1.5rem;
+  }
+}
+
+.pc-footer__top {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .pc-footer__top {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+}
+
+.pc-footer__tagline {
+  max-width: 24rem;
+  margin: 0.625rem 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.pc-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1.75rem;
+  row-gap: 0.5rem;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.pc-footer__nav a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.pc-footer__nav a:hover {
+  color: #ffffff;
+}
+
+.pc-footer__divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.pc-footer__bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .pc-footer__bottom {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.pc-footer__copyright {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pc-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1.25rem;
+  row-gap: 0.5rem;
+}
+
+.pc-footer__email {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+}
+
+.pc-footer__email:hover {
+  color: #ffffff;
+}
+
+.pc-footer__email svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+.pc-footer__minor {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: none;
+}
+
+.pc-footer__minor:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.pc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Rede de seguranca fora da moldura ─────────────────────────────────────
+   `globals.css` e compilado no MESMO chunk das utilitarias do Tailwind. Quando
+   esse chunk chega vazio, a moldura acima sobrevive, mas duas coisas de fora
+   dela nao: o `<html>`/`<body>` perdem `bg-background` e o navegador cai no
+   `color-scheme` do sistema (em dark mode a tela do lado de fora do shell fica
+   preta), e o `.skip-nav` do layout raiz perde o posicionamento fora da tela,
+   aparecendo por cima do header e empurrando o shell para baixo.
+
+   `:has(.pc-shell)` limita tudo isso as rotas publicas: na area logada o
+   seletor nao casa e nada aqui tem efeito, mesmo que o chunk siga carregado
+   depois de uma navegacao client-side.
+   ------------------------------------------------------------------------ */
+html:has(.pc-shell) {
+  color-scheme: light;
+  background-color: #ffffff;
+}
+
+html:has(.pc-shell) body {
+  margin: 0;
+  background-color: #ffffff;
+  color: #1b2140;
+}
+
+body:has(.pc-shell) .skip-nav {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 100;
+  padding: 8px 16px;
+  border-radius: 0 0 4px 0;
+  background-color: #7c5cbf;
+  color: #ffffff;
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 120ms;
+}
+
+body:has(.pc-shell) .skip-nav:focus {
+  top: 0;
+}

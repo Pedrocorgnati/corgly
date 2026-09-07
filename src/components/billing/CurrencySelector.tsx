@@ -3,6 +3,7 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { missingMessage } from '@/lib/i18n/message-fallback';
 import { SUPPORTED_CURRENCIES, type Currency } from '@/lib/currency';
 import type { CurrencyErrorKind } from '@/lib/hooks/use-user-currency';
 
@@ -34,21 +35,6 @@ interface CurrencySelectorProps {
 }
 
 /**
- * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
- * Em desenvolvimento estoura no primeiro render; em producao devolve string
- * vazia — a chave crua NUNCA aparece para o usuario final.
- *
- * DUPLICADO em `src/components/student/pricing-cards.tsx`: extrair para um
- * modulo compartilhado sairia da lista de arquivos deste work package.
- */
-function missingMessage(fullKey: string): string {
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
-  }
-  return '';
-}
-
-/**
  * Seletor de moeda de exibicao/cobranca (ADR-0006 §2).
  *
  * - Apresentacional e controlado: nao le nem grava preferencia por conta
@@ -70,7 +56,7 @@ export function CurrencySelector({
 }: CurrencySelectorProps) {
   const t = useTranslations('credits.currency');
   const text = (key: string, values?: Record<string, string | number>): string =>
-    t.has(key) ? t(key, values) : missingMessage(`credits.currency.${key}`);
+    t.has(key) ? t(key, values) : missingMessage(`credits.currency.${key}`, 'CurrencySelector');
 
   const busy = isLoading || isSaving;
 

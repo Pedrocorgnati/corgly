@@ -11,7 +11,7 @@ const MAX_PAYLOAD_BYTES = 10 * 1024 // 10 KB
 
 const SignalBodySchema = z.object({
   type: z.enum(['offer', 'answer', 'candidate']),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.string(), z.unknown()),
 })
 
 async function isSessionParticipant(
@@ -111,7 +111,11 @@ export async function POST(
   }
 
   // Verificar status da sessão
-  if (![SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS].includes(session.status)) {
+  // O array literal inferia `("SCHEDULED" | "IN_PROGRESS")[]` e `.includes` passava a
+  // recusar qualquer outro `SessionStatus`. A anotacao explicita mantem o teste de
+  // pertinencia sobre o enum inteiro.
+  const ACTIVE_STATUSES: SessionStatus[] = [SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS]
+  if (!ACTIVE_STATUSES.includes(session.status)) {
     return NextResponse.json(
       apiResponse(null, 'Sessão não está ativa para sinalização.'),
       { status: 409 },

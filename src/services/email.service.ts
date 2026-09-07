@@ -14,6 +14,7 @@ import { EmailType, SupportedLanguage } from '@/types/enums';
 import { getCircuitBreaker } from '@/lib/circuit-breaker';
 import { prisma } from '@/lib/prisma';
 import { signUnsubscribeToken } from '@/lib/email/unsubscribe-token';
+import { timeoutSignal } from '@/lib/timeout-signal';
 
 // ── Email categories: 'marketing' exige opt-in + footer de unsubscribe (LGPD/CAN-SPAM).
 // Atualmente todos os 17 templates sao transacionais; quando adicionar marketing, registrar aqui.
@@ -335,11 +336,23 @@ const TEMPLATES: Record<EmailType, TemplateRenderer> = {
       ES_ES: 'Error al crear sesión recurrente',
       IT_IT: 'Creazione sessione ricorrente fallita',
     };
+    // O produtor real deste e-mail e o cron de recorrencia, que manda
+    // `{ dayOfWeek, startTime }` e, no caminho de credito, `reason`. Ler
+    // `data.date`/`data.bookLink` (que ninguem envia) rendia "para undefined"
+    // e `href="undefined"` no corpo entregue ao aluno.
+    const dow = typeof data.dayOfWeek === 'number' ? data.dayOfWeek : null;
+    const weekday = dow !== null && dow >= 0 && dow <= 6 ? WEEKDAY_LABELS[locale][dow] : null;
+    const startTime = typeof data.startTime === 'string' ? data.startTime : null;
+    const reasonKey = typeof data.reason === 'string' ? data.reason : null;
+    const reasonText = reasonKey ? (RECURRING_FAILURE_REASONS[reasonKey]?.[locale] ?? null) : null;
+    const bookLink = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://corgly.app'}/schedule`;
+    const slot = weekday && startTime ? `${weekday}, ${startTime}` : (weekday ?? startTime ?? FALLBACK_SLOT[locale]);
+
     const bodies: Record<SupportedLanguage, string> = {
-      PT_BR: `<p>Não foi possível criar a aula recorrente para ${data.date}.</p>${data.reason ? `<p><strong>Motivo:</strong> ${data.reason}</p>` : ''}<p><a href="${data.bookLink}">Agendar manualmente</a></p>`,
-      EN_US: `<p>Could not create the recurring session for ${data.date}.</p>${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}<p><a href="${data.bookLink}">Book manually</a></p>`,
-      ES_ES: `<p>No se pudo crear la sesión recurrente para ${data.date}.</p>${data.reason ? `<p><strong>Motivo:</strong> ${data.reason}</p>` : ''}<p><a href="${data.bookLink}">Agendar manualmente</a></p>`,
-      IT_IT: `<p>Impossibile creare la sessione ricorrente per ${data.date}.</p>${data.reason ? `<p><strong>Motivo:</strong> ${data.reason}</p>` : ''}<p><a href="${data.bookLink}">Prenota manualmente</a></p>`,
+      PT_BR: `<p>Não foi possível criar a aula recorrente para ${slot}.</p>${reasonText ? `<p><strong>Motivo:</strong> ${reasonText}</p>` : ''}<p><a href="${bookLink}">Agendar manualmente</a></p>`,
+      EN_US: `<p>Could not create the recurring session for ${slot}.</p>${reasonText ? `<p><strong>Reason:</strong> ${reasonText}</p>` : ''}<p><a href="${bookLink}">Book manually</a></p>`,
+      ES_ES: `<p>No se pudo crear la sesión recurrente para ${slot}.</p>${reasonText ? `<p><strong>Motivo:</strong> ${reasonText}</p>` : ''}<p><a href="${bookLink}">Agendar manualmente</a></p>`,
+      IT_IT: `<p>Impossibile creare la sessione ricorrente per ${slot}.</p>${reasonText ? `<p><strong>Motivo:</strong> ${reasonText}</p>` : ''}<p><a href="${bookLink}">Prenota manualmente</a></p>`,
     };
     return { subject: subjects[locale], html: wrapLayout(bodies[locale]) };
   },
@@ -441,6 +454,34 @@ const TEMPLATES: Record<EmailType, TemplateRenderer> = {
   },
 };
 
+// ── Helpers do template de recorrencia ──
+
+/** Rotulos de dia da semana indexados por `Date.getDay()` (0=domingo). */
+const WEEKDAY_LABELS: Record<SupportedLanguage, readonly string[]> = {
+  PT_BR: ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'],
+  EN_US: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  ES_ES: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+  IT_IT: ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'],
+};
+
+/** Traducao das chaves de motivo emitidas pelo cron; chave desconhecida vira ausencia de motivo. */
+const RECURRING_FAILURE_REASONS: Record<string, Record<SupportedLanguage, string>> = {
+  insufficient_credits: {
+    PT_BR: 'Créditos insuficientes.',
+    EN_US: 'Insufficient credits.',
+    ES_ES: 'Créditos insuficientes.',
+    IT_IT: 'Crediti insufficienti.',
+  },
+};
+
+/** Usado quando o payload nao traz nem dia nem horario: nunca renderizar `undefined`. */
+const FALLBACK_SLOT: Record<SupportedLanguage, string> = {
+  PT_BR: 'no horario configurado',
+  EN_US: 'at your scheduled time',
+  ES_ES: 'en el horario configurado',
+  IT_IT: "nell'orario configurato",
+};
+
 // ── Layout wrapper ──
 
 function wrapLayout(body: string): string {
@@ -500,7 +541,7 @@ class ResendProvider implements IEmailProvider {
           subject: params.subject,
           html: params.html,
         }),
-        signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
+        signal: timeoutSignal(RESEND_TIMEOUT_MS),
       });
 
       if (!response.ok) {

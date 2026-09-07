@@ -75,18 +75,15 @@
     "buy": "Comprar"
   },
   "sessionCard": {
-    "status": {
-      "upcoming": "Programada",
-      "inProgress": "En curso",
-      "completed": "Completada",
-      "cancelled": "Cancelada"
-    },
     "actions": {
       "enter": "Entrar",
       "cancel": "Cancelar",
       "reschedule": "Reprogramar"
     },
-    "enterAvailableIn": "Disponible en {minutes} min"
+    "enterAvailableIn": "Disponible en {minutes} min",
+    "fallbackTitle": "Clase",
+    "startLabel": "Inicio:",
+    "endLabel": "Fin:"
   },
   "modal": {
     "confirm": {
@@ -148,7 +145,9 @@
     "marketing_label": "Marketing",
     "marketing_description": "Permiten personalizar contenido",
     "save_preferences": "Guardar preferencias",
-    "manage_preferences": "Gestionar preferencias"
+    "manage_preferences": "Gestionar preferencias",
+    "sync_failed_title": "Elección guardada en este dispositivo",
+    "sync_failed_description": "No pudimos registrar tu preferencia en el servidor ahora. Sigue aplicándose en este navegador."
   },
   "privacy": {
     "title": "Política de Privacidad",
@@ -367,7 +366,8 @@
             "Cancela la mensual al final del ciclo"
           ]
         }
-      }
+      },
+      "cta_checking_session": "Comprobando tu sesión..."
     },
     "testimonials": {
       "title": "Lo que dicen los alumnos",
@@ -435,6 +435,12 @@
       "subtitle": "Clase particular en vivo en Zoom. Primera clase US$ 12,50.",
       "button": "Quiero mi clase por {price}",
       "button_secondary": "Ver planes"
+    },
+    "content_preview": {
+      "badge": "Contenido gratuito",
+      "title": "Empieza a estudiar antes de la primera clase",
+      "subtitle": "Vídeos y materiales de portugués brasileño para practicar a tu ritmo, sin pagar nada.",
+      "cta": "Ver contenido gratuito"
     }
   },
   "content": {
@@ -490,7 +496,36 @@
     "next": "Siguiente",
     "prev": "Anterior",
     "progress": "Slide {current} de {total}",
-    "completing": "Finalizando..."
+    "completing": "Finalizando...",
+    "later": "Más tarde",
+    "complete_error": "No pudimos completar tu onboarding. Revisa tu conexión e inténtalo de nuevo.",
+    "equipment": {
+      "fail_title": "No pudimos validar tu equipo",
+      "fail_description": "Tu cámara, micrófono o conexión no pasaron la prueba. Si denegaste el permiso, haz clic en el candado junto a la dirección del sitio, autoriza la cámara y el micrófono y repite la prueba. Si ahora no tienes cámara web, puedes continuar igualmente: podrás repetir esta prueba en la sala de espera antes de cada clase.",
+      "retry": "Repetir la prueba",
+      "acknowledge_fail": "Entiendo que mi cámara, micrófono o conexión no pasaron la prueba y quiero continuar igualmente.",
+      "skip": "Omitir por ahora e ir al Panel",
+      "eyebrow": "Onboarding",
+      "page_title": "Prueba tu equipo",
+      "page_description": "Antes de tu primera clase, vamos a comprobar cámara, micrófono y conexión. Así evitas sorpresas durante la clase en directo.",
+      "storage_blocked": "Resultado guardado solo en esta sesión. El navegador bloqueó el almacenamiento local.",
+      "audit_sync_failed": "Resultado guardado localmente. No pudimos sincronizar el registro de auditoría ahora.",
+      "guides_intro": "Encontramos puntos a ajustar antes de seguir:",
+      "guides_loading": "Cargando guías de corrección...",
+      "guides_error": "No pudimos cargar las guías ahora. Inténtalo de nuevo o sigue las indicaciones del navegador.",
+      "acknowledge_warning": "Entiendo que la conexión puede ser inestable (sin TURN/relay o micrófono en silencio) y quiero continuar de todos modos.",
+      "saving": "Guardando resultado...",
+      "status": "Estado: {status}",
+      "idle": "Inicia la prueba para comprobar tu equipo.",
+      "continue": "Continuar",
+      "retest_note": "Podrás repetir esta prueba en cualquier momento en la sala de espera, antes de cada clase.",
+      "failure": {
+        "camera": "Cámara",
+        "microphone": "Micrófono",
+        "permission": "Permisos",
+        "bandwidth": "Conexión"
+      }
+    }
   },
   "credits": {
     "page": {
@@ -624,7 +659,11 @@
       "changeDueNow": "Total a pagar ahora",
       "changeEffective": "Efectiva el {effectiveAt}. El periodo actual termina el {periodEnd}.",
       "changeCurrentPlanNotice": "La simulación apunta al mismo plan que ya tienes: no se cobrará nada.",
-      "changePreviewError": "No fue posible simular el cambio de plan. Inténtalo de nuevo."
+      "changePreviewError": "No fue posible simular el cambio de plan. Inténtalo de nuevo.",
+      "currencyLoading": "Cargando la moneda de tu cobro...",
+      "currencyUnavailable": "No pudimos confirmar la moneda de tu cobro. El importe permanece oculto hasta confirmarla.",
+      "currencyRetry": "Intentar de nuevo",
+      "priceNoteCharged": "Importe en la moneda registrada en tu suscripción."
     },
     "breakdown": {
       "title": "Desglose de Créditos",
@@ -687,6 +726,10 @@
       "retry": "Reintentar",
       "note": "La moneda cobrada se confirma en el pago.",
       "usdcNote": "USDC disponible según el soporte de la pasarela."
+    },
+    "paymentCanceled": {
+      "title": "Pago cancelado.",
+      "message": "Puedes intentarlo de nuevo cuando quieras."
     }
   },
   "errors": {
@@ -699,7 +742,11 @@
     "serverError": {
       "title": "Algo salió mal",
       "description": "Ocurrió un error inesperado. Nuestro equipo fue notificado.",
-      "retry": "Intentar de nuevo"
+      "retry": "Intentar de nuevo",
+      "backToSessions": "Ver todas las sesiones",
+      "backToContent": "Ver todos los contenidos",
+      "goDashboard": "Volver al panel",
+      "reconnect": "Intentar reconectar"
     }
   },
   "unsubscribe": {
@@ -740,6 +787,19 @@
     "resourcesDownloadAria": "Descargar recurso {name}",
     "resourcesError": "No se pudo generar el enlace de descarga. Intentalo de nuevo."
   },
+  "history": {
+    "metaTitle": "Historial de clases",
+    "title": "Historial de clases",
+    "subtitle": "Todas tus clases programadas, completadas, canceladas y con cambio pendiente.",
+    "filterAll": "Todas",
+    "emptyTitle": "Todavía no hay clases en tu historial",
+    "emptyDescription": "En cuanto programes tu primera clase, aparecerá aquí.",
+    "emptyAction": "Programar clase",
+    "pageStatus": "Página {page} de {totalPages}",
+    "errorTitle": "Error al cargar el historial",
+    "errorDescription": "No hemos podido cargar tus clases ahora. Inténtalo de nuevo.",
+    "errorRetry": "Intentar de nuevo"
+  },
   "skipNav": {
     "label": "Saltar al contenido principal"
   },
@@ -775,5 +835,94 @@
     "errorTitle": "Error al cargar los ejercicios",
     "errorDescription": "No hemos podido montar el ejercicio de esta clase. Inténtalo de nuevo.",
     "errorRetry": "Intentar de nuevo"
+  },
+  "auth": {
+    "register": {
+      "planNoticeTitle": "Plan elegido: {plan}",
+      "planNoticeDesc": "Guardamos tu elección en este navegador. Cuando confirmes tu correo e inicies sesión, ya estará seleccionada en la página de créditos."
+    }
+  },
+  "dashboard": {
+    "nextSession": {
+      "error": {
+        "title": "No pudimos cargar tu próxima clase",
+        "description": "Esto no significa que no tengas clases reservadas: solo no pudimos leer tu agenda en este momento.",
+        "retry": "Intentar de nuevo",
+        "retrying": "Cargando...",
+        "viewHistory": "Ver historial"
+      },
+      "ended": {
+        "clock": "Clase finalizada",
+        "hint": "Esta clase terminó. Actualiza para ver la siguiente.",
+        "refresh": "Actualizar",
+        "refreshing": "Actualizando...",
+        "viewHistory": "Ver historial"
+      }
+    }
+  },
+  "documentSearch": {
+    "placeholder": "Buscar en los cuadernos de tus clases",
+    "ariaLabel": "Buscar en los cuadernos de tus clases",
+    "minChars": "Escribe al menos {min} caracteres para buscar.",
+    "searching": "Buscando...",
+    "empty": "Ningún cuaderno menciona \"{query}\".",
+    "error": "La búsqueda falló: {message}",
+    "errorUnknown": "error inesperado. Inténtalo de nuevo en unos instantes.",
+    "pageStatus": "Página {page} de {totalPages} · {total} resultado(s)"
+  },
+  "support": {
+    "newTicket": {
+      "attachmentsMax": "Máximo de {max} archivos adjuntos por ticket.",
+      "attachmentTypeRejected": "\"{filename}\": tipo de archivo no admitido.",
+      "attachmentTooLarge": "\"{filename}\" supera el límite de {limit}.",
+      "createSuccess": "¡Ticket abierto! Nuestro equipo te responderá por aquí.",
+      "rateLimited": "Demasiadas solicitudes. Inténtalo de nuevo en unos minutos.",
+      "createFailed": "No pudimos abrir tu ticket. Inténtalo de nuevo."
+    }
+  },
+  "sessionLobby": {
+    "title": "Sala de espera de la clase",
+    "subtitle": "Confirma que tu equipo está listo antes de entrar a la sala.",
+    "lastCheckTitle": "Última prueba",
+    "lastCheckAt": "Realizada el {when}.",
+    "pendingPoints": "Puntos pendientes: {items}. Recomendamos repetir la prueba.",
+    "approved": "El equipo pasó la última prueba.",
+    "emptyTitle": "Ninguna prueba reciente",
+    "emptyDescription": "Todavía no has probado tu equipo. Haz la prueba antes de entrar.",
+    "retest": "Repetir prueba",
+    "runTest": "Probar equipo",
+    "warningConfirm": "Entiendo que la conexión puede ser inestable y quiero entrar igualmente.",
+    "finishTest": "Finalizar prueba",
+    "back": "Volver",
+    "enter": "Entrar a la sala",
+    "storageBlocked": "Resultado válido solo en esta sesión. El navegador bloqueó el almacenamiento local.",
+    "currentStatus": "Estado actual:",
+    "status": {
+      "ok": "Aprobado",
+      "warning": "Atención",
+      "fail": "Fallo",
+      "checking": "Probando",
+      "idle": "Esperando"
+    }
+  },
+  "sessionStatus": {
+    "SCHEDULED": "Programada",
+    "IN_PROGRESS": "En curso",
+    "COMPLETED": "Completada",
+    "CANCELLED_BY_STUDENT": "Cancelada por el alumno",
+    "CANCELLED_BY_ADMIN": "Cancelada por el profesor",
+    "NO_SHOW_STUDENT": "El alumno no asistió",
+    "NO_SHOW_ADMIN": "Profesor ausente",
+    "INTERRUPTED": "Interrumpida",
+    "RESCHEDULE_PENDING": "Reprogramación pendiente"
+  },
+  "creditType": {
+    "SINGLE": "Clase suelta",
+    "PACK_5": "Pack 5 clases",
+    "PACK_10": "Pack 10 clases",
+    "MONTHLY": "Mensual",
+    "PROMO": "Promoción",
+    "MANUAL": "Manual",
+    "REFUND": "Reembolso"
   }
 }

@@ -2,8 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { Search, Loader2, FileText } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import { ROUTES } from '@/lib/constants/routes';
 import { cn } from '@/lib/utils';
+
+/** Endpoint da busca. Nao ha entrada correspondente em `constants/routes.ts`. */
+const SEARCH_ENDPOINT = '/api/v1/documents/search';
+const PAGE_SIZE = 10;
+const DEBOUNCE_MS = 350;
+const MIN_TERM_LENGTH = 2;
 
 interface SearchHit {
   id: string;
@@ -26,67 +35,101 @@ interface SearchResponse {
   totalPages: number;
 }
 
+/**
+ * Desfecho de UMA busca, carimbado com o termo e a pagina que o produziram.
+ *
+ * O carimbo e o que impede resultado obsoleto na tela: quando o aluno digita
+ * mais uma letra, o desfecho anterior deixa de casar com o termo atual e o
+ * componente volta sozinho para o estado de carregamento — sem precisar
+ * "limpar" estado dentro de efeito, que e o que gera render em cascata.
+ */
+interface SearchOutcome {
+  term: string;
+  page: number;
+  result: { kind: 'ready'; body: SearchResponse } | { kind: 'error'; message: string };
+}
+
 interface DocumentSearchProps {
   className?: string;
-  /** Rota base para o link do resultado. Default: /sessions/{sessionId} */
-  buildHref?: (hit: SearchHit) => string;
-  placeholder?: string;
 }
 
 /**
- * DocumentSearch — busca com debounce em SessionDocuments do usuario.
- * Estados: idle, loading, empty, error, success (todos renderizaveis — Zero Estados Indefinidos).
+ * Busca com debounce nos SessionDocuments visiveis ao usuario.
+ *
+ * Consome `GET /api/v1/documents/search` pelo `apiClient` (contrato do modulo:
+ * componente nao chama `fetch` direto), o que traz de graca cookie httpOnly,
+ * timeout de 30s e mensagem de erro ja traduzida pelo catalogo de erros. O
+ * RBAC fica no servidor: o aluno so ve as proprias aulas.
+ *
+ * Cada resultado leva ao caderno read-only da aula (`/history/{id}/notes`),
+ * unica tela que renderiza o documento encontrado — o `bookingId` da rota
+ * resolve para `Session.id`, o mesmo id que a busca devolve em `hit.sessionId`.
+ *
+ * Estados idle, loading, empty, error e success sao todos renderizaveis.
+ * Copy: namespace `documentSearch` (paginacao reaproveita `pagination`).
  */
-export function DocumentSearch({
-  className,
-  buildHref,
-  placeholder = 'Buscar nos documentos das aulas…',
-}: DocumentSearchProps) {
+export function DocumentSearch({ className }: DocumentSearchProps) {
+  const t = useTranslations('documentSearch');
+  const tPagination = useTranslations('pagination');
+  const locale = useLocale();
+
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
-  const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
-  const [resp, setResp] = useState<SearchResponse | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [outcome, setOutcome] = useState<SearchOutcome | null>(null);
+
+  const term = q.trim();
+  const isActive = term.length >= MIN_TERM_LENGTH;
+
+  // A copy do erro generico e resolvida no render (assim a varredura de chaves
+  // consumidas enxerga `errorUnknown` como literal) e entra no efeito pelo ref,
+  // para que trocar de idioma nao reinicie a busca em andamento.
+  const erroDesconhecido = t('errorUnknown');
+  const erroDesconhecidoRef = useRef(erroDesconhecido);
+  useEffect(() => {
+    erroDesconhecidoRef.current = erroDesconhecido;
+  });
 
   useEffect(() => {
-    const term = q.trim();
-    if (term.length < 2) {
-      setState('idle');
-      setResp(null);
-      setErr(null);
-      return;
-    }
-    const t = setTimeout(() => {
-      abortRef.current?.abort();
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-      setState('loading');
-      setErr(null);
+    if (!isActive) return;
 
-      const url = `/api/v1/documents/search?q=${encodeURIComponent(term)}&page=${page}&limit=10`;
-      fetch(url, { signal: ctrl.signal })
-        .then(async (r) => {
-          const json = await r.json();
-          if (!r.ok) throw new Error(json?.error ?? 'Falha na busca');
-          return json;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      apiClient
+        .get<{ data: SearchResponse }>(SEARCH_ENDPOINT, {
+          params: { q: term, page, limit: PAGE_SIZE },
+          signal: ctrl.signal,
         })
-        .then((json) => {
-          setResp(json.data ?? json);
-          setState('ready');
+        .then((body) => {
+          setOutcome({ term, page, result: { kind: 'ready', body: body.data } });
         })
-        .catch((e) => {
-          if (e.name === 'AbortError') return;
-          setErr(e.message ?? 'Erro desconhecido');
-          setState('error');
+        .catch((error: unknown) => {
+          // Busca substituida por outra tecla: cancelamento deliberado NAO e
+          // erro de usuario. O timeout interno do apiClient tambem chega como
+          // abort, mas sem marcar ESTE controller — e esse continua visivel.
+          if (ctrl.signal.aborted) return;
+          const raw = error instanceof Error && error.message ? error.message : '';
+          setOutcome({
+            term,
+            page,
+            result: { kind: 'error', message: raw || erroDesconhecidoRef.current },
+          });
         });
-    }, 350);
+    }, DEBOUNCE_MS);
 
-    return () => clearTimeout(t);
-  }, [q, page]);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [term, page, isActive]);
 
-  const hrefOf = (hit: SearchHit) =>
-    buildHref ? buildHref(hit) : `/sessions/${hit.sessionId}`;
+  // Desfecho valido para o par (termo, pagina) atual. Enquanto nao houver um,
+  // a busca esta em andamento — e nunca se ve o resultado do termo anterior.
+  const current = outcome && outcome.term === term && outcome.page === page ? outcome.result : null;
+  const isLoading = isActive && current === null;
+  const resp = current?.kind === 'ready' ? current.body : null;
+  // Digitou algo, mas ainda e curto demais para consultar o servidor: dizer
+  // isso e melhor que nao reagir a tecla nenhuma.
+  const showMinChars = term.length > 0 && !isActive;
 
   return (
     <div data-testid="document-search" className={cn('relative w-full', className)}>
@@ -100,45 +143,51 @@ export function DocumentSearch({
             setQ(e.target.value);
             setPage(1);
           }}
-          placeholder={placeholder}
-          aria-label="Buscar nos documentos das aulas"
+          placeholder={t('placeholder')}
+          aria-label={t('ariaLabel')}
           className="h-10 w-full rounded-md border bg-background pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
-        {state === 'loading' && (
+        {isLoading && (
           <Loader2 data-testid="document-search-input-loading" className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}
       </div>
 
-      {q.trim().length >= 2 && (
+      {showMinChars && (
+        <p data-testid="document-search-min-chars" className="mt-1 text-xs text-muted-foreground">
+          {t('minChars', { min: MIN_TERM_LENGTH })}
+        </p>
+      )}
+
+      {isActive && (
         <div data-testid="document-search-results" className="absolute z-20 mt-1 max-h-[60vh] w-full overflow-auto rounded-md border bg-popover shadow-md">
-          {state === 'loading' && (
-            <div data-testid="document-search-loading" className="p-3 text-sm text-muted-foreground">Buscando…</div>
-          )}
-          {state === 'error' && (
-            <div data-testid="document-search-error" className="p-3 text-sm text-destructive">Erro: {err}</div>
-          )}
-          {state === 'ready' && resp && resp.data.length === 0 && (
-            <div data-testid="document-search-empty" className="p-3 text-sm text-muted-foreground">
-              Nenhum resultado para “{q}”.
+          {isLoading && (
+            <div data-testid="document-search-loading" className="p-3 text-sm text-muted-foreground">
+              {t('searching')}
             </div>
           )}
-          {state === 'ready' && resp && resp.data.length > 0 && (
+          {current?.kind === 'error' && (
+            <div data-testid="document-search-error" className="p-3 text-sm text-destructive">
+              {t('error', { message: current.message })}
+            </div>
+          )}
+          {resp && resp.data.length === 0 && (
+            <div data-testid="document-search-empty" className="p-3 text-sm text-muted-foreground">
+              {t('empty', { query: term })}
+            </div>
+          )}
+          {resp && resp.data.length > 0 && (
             <ul data-testid="document-search-list" className="divide-y">
               {resp.data.map((hit) => (
                 <li key={hit.id} data-testid={`document-search-item-${hit.id}`}>
                   <Link
                     data-testid={`document-search-item-${hit.id}-link`}
-                    href={hrefOf(hit)}
+                    href={`${ROUTES.HISTORY}/${hit.sessionId}/notes`}
                     className="block px-3 py-2 hover:bg-accent focus:bg-accent focus:outline-none"
                   >
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <FileText className="h-3.5 w-3.5" />
-                      <span>
-                        {new Date(hit.session.startAt).toLocaleString('pt-BR')}
-                      </span>
-                      {hit.session.studentName && (
-                        <span>• {hit.session.studentName}</span>
-                      )}
+                      <span>{new Date(hit.session.startAt).toLocaleString(locale)}</span>
+                      {hit.session.studentName && <span>• {hit.session.studentName}</span>}
                     </div>
                     <p
                       className="mt-1 text-sm"
@@ -150,7 +199,7 @@ export function DocumentSearch({
               ))}
             </ul>
           )}
-          {state === 'ready' && resp && resp.totalPages > 1 && (
+          {resp && resp.totalPages > 1 && (
             <div data-testid="document-search-pagination" className="flex items-center justify-between border-t px-3 py-2 text-xs">
               <button
                 data-testid="document-search-pagination-prev-button"
@@ -159,10 +208,14 @@ export function DocumentSearch({
                 disabled={page <= 1}
                 className="disabled:opacity-50"
               >
-                ← Anterior
+                {`← ${tPagination('prev')}`}
               </button>
               <span className="text-muted-foreground">
-                Pagina {resp.page} de {resp.totalPages} ({resp.total} resultados)
+                {t('pageStatus', {
+                  page: resp.page,
+                  totalPages: resp.totalPages,
+                  total: resp.total,
+                })}
               </span>
               <button
                 data-testid="document-search-pagination-next-button"
@@ -171,7 +224,7 @@ export function DocumentSearch({
                 disabled={page >= resp.totalPages}
                 className="disabled:opacity-50"
               >
-                Proxima →
+                {`${tPagination('next')} →`}
               </button>
             </div>
           )}
@@ -180,5 +233,3 @@ export function DocumentSearch({
     </div>
   );
 }
-
-export default DocumentSearch;

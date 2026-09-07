@@ -18,7 +18,9 @@ const MIN_REASON_LENGTH = 10;
 const adjustSchema = z.object({
   userId: z.string().min(1),
   credits: z.coerce
-    .number({ invalid_type_error: 'invalid' })
+    // Zod v4 removeu `invalid_type_error`; `error` cobre exatamente a mesma
+    // issue de tipo invalido (as demais mensagens seguem nos proprios refinements).
+    .number({ error: 'invalid' })
     .int('int')
     .min(MIN_CREDITS, 'min')
     .max(MAX_CREDITS, 'max'),

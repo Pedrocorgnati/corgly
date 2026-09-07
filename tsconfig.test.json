@@ -1,0 +1,9 @@
+{
+  "//": "Type-check dos arquivos de teste. O `tsconfig.json` de producao exclui `src/**/__tests__/**`, entao nenhum teste jamais passou pelo `tsc` do `npm run type-check`. Este config estende o de producao, remove esse exclude e declara os globais que o vitest injeta em runtime (`globals: true` em `vitest.config.ts`), para que `describe`/`it`/`expect`/`vi` sejam reconhecidos sem import. Rodar com `npm run type-check:tests`.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "types": ["node", "vitest/globals"]
+  },
+  "exclude": ["node_modules"]
+}

@@ -95,7 +95,9 @@ export function TiptapEditor({
     editable: !isReadOnly,
     extensions: [
       StarterKit.configure({
-        history: false, // Yjs handles undo/redo
+        // O StarterKit renomeou a extensao `history` para `undoRedo`.
+        // Continua desligada porque o Yjs cuida do undo/redo colaborativo.
+        undoRedo: false,
       }),
       Link.configure({
         openOnClick: false,

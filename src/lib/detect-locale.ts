@@ -1,23 +1,55 @@
-import { LOCALE_COOKIE } from '../../i18n/config';
+import { LOCALE_COOKIE, defaultLocale, locales, type Locale } from '../../i18n/config';
 
-export type SupportedLocale = 'pt-BR' | 'en-US' | 'es-ES' | 'it-IT';
+/**
+ * Locale suportado pelo produto.
+ *
+ * NAO ha lista propria aqui: o tipo e um apelido de `Locale` (`i18n/config.ts`),
+ * unica fonte da verdade dos idiomas do app. Antes este modulo redeclarava a
+ * uniao literal, o que permitia as duas listas divergirem em silencio — um
+ * quinto idioma entraria no `i18n/config` e o `detectLocale` continuaria
+ * recusando-o sem erro de compilacao.
+ */
+export type SupportedLocale = Locale;
 
-export const SUPPORTED_LOCALES: SupportedLocale[] = ['pt-BR', 'en-US', 'es-ES', 'it-IT'];
-export const DEFAULT_LOCALE: SupportedLocale = 'en-US';
+/** Copia mutavel de `locales`, derivada — nunca redigitada. */
+export const SUPPORTED_LOCALES: SupportedLocale[] = [...locales];
+export const DEFAULT_LOCALE: SupportedLocale = defaultLocale;
 
 // Re-export LOCALE_COOKIE from i18n/config to keep a single source of truth
 export { LOCALE_COOKIE };
 
+/**
+ * Apelidos aceitos -> locale canonico, DERIVADOS de `SUPPORTED_LOCALES`.
+ *
+ * Para cada locale sao aceitos: a forma canonica em minusculas (`pt-br`), a
+ * variante com underscore (`pt_br`) e a lingua base (`pt`). A lingua base fica
+ * com o primeiro locale que a reivindica, na ordem de `locales`.
+ *
+ * Derivar em vez de digitar e o que impede o retorno do defeito: um idioma novo
+ * em `i18n/config.ts` passa a ser aceito aqui sem que ninguem lembre de editar
+ * uma segunda tabela.
+ */
+const LOCALE_ALIASES: Record<string, SupportedLocale> = SUPPORTED_LOCALES.reduce(
+  (acc, locale) => {
+    const lower = locale.toLowerCase();
+    acc[lower] = locale;
+    acc[lower.replace('-', '_')] = locale;
+    const base = lower.split('-')[0];
+    if (!(base in acc)) acc[base] = locale;
+    return acc;
+  },
+  {} as Record<string, SupportedLocale>,
+);
+
 /** Maps raw locale strings (from cookies/Accept-Language) to a SupportedLocale. */
 function normalizeLocale(raw: string): SupportedLocale | null {
   const normalized = raw.toLowerCase().trim();
-  const map: Record<string, SupportedLocale> = {
-    'pt': 'pt-BR', 'pt-br': 'pt-BR', 'pt_br': 'pt-BR',
-    'en': 'en-US', 'en-us': 'en-US', 'en_us': 'en-US',
-    'es': 'es-ES', 'es-es': 'es-ES', 'es_es': 'es-ES',
-    'it': 'it-IT', 'it-it': 'it-IT', 'it_it': 'it-IT',
-  };
-  return map[normalized] || map[normalized.split('-')[0]] || map[normalized.split('_')[0]] || null;
+  return (
+    LOCALE_ALIASES[normalized] ||
+    LOCALE_ALIASES[normalized.split('-')[0]] ||
+    LOCALE_ALIASES[normalized.split('_')[0]] ||
+    null
+  );
 }
 
 /**

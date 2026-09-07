@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { CalendarView } from '@/components/calendar/CalendarView';
 import { useCalendar } from '@/hooks/useCalendar';
-import { SessionStatus, SESSION_STATUS_MAP } from '@/lib/constants/enums';
+import { SessionStatus, SESSION_STATUS_MAP, SESSION_STATUS_LABEL_KEY } from '@/lib/constants/enums';
 import { cn } from '@/lib/utils';
-import type { AvailabilitySlot } from '@/hooks/useCalendar';
+import type { AvailabilitySlot, UseCalendarReturn } from '@/hooks/useCalendar';
 
 interface SessionSlot extends AvailabilitySlot {
   sessionStatus?: string;
@@ -22,9 +23,19 @@ interface AdminCalendarProps {
     availabilitySlotId?: string;
   }>;
   onSlotClick?: (slot: AvailabilitySlot, session?: { id: string; status: string; studentName?: string }) => void;
+  /**
+   * Fonte de dados vinda de fora (ex.: `useAdminSchedule`, que enxerga slots
+   * bloqueados e vendidos). Quando ausente, o componente cai no `useCalendar`
+   * publico de sempre.
+   */
+  calendar?: UseCalendarReturn;
 }
 
-export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps) {
+export function AdminCalendar({ sessions = [], onSlotClick, calendar }: AdminCalendarProps) {
+  const tStatus = useTranslations('sessionStatus');
+  // Hook chamado incondicionalmente (regra dos hooks); `enabled: false` evita o
+  // fetch publico redundante quando a fonte ja vem por prop.
+  const internal = useCalendar({ enabled: !calendar });
   const {
     currentMonth,
     currentYear,
@@ -32,7 +43,7 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
     isLoading,
     prevMonth,
     nextMonth,
-  } = useCalendar();
+  } = calendar ?? internal;
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -92,9 +103,6 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
               {slotsForDate.map((slot) => {
                 const colors = getSlotColor(slot);
                 const session = sessionBySlotTime.get(slot.startAt);
-                const statusConfig = session
-                  ? SESSION_STATUS_MAP[session.status as SessionStatus]
-                  : null;
 
                 return (
                   <button
@@ -125,8 +133,8 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
                     <span className={cn('text-xs font-medium', colors.text)}>
                       {slot.isBlocked
                         ? 'Bloqueado'
-                        : statusConfig
-                          ? statusConfig.label
+                        : session && SESSION_STATUS_LABEL_KEY[session.status as SessionStatus]
+                          ? tStatus(SESSION_STATUS_LABEL_KEY[session.status as SessionStatus])
                           : 'Disponível'}
                     </span>
                   </button>
@@ -142,10 +150,18 @@ export function AdminCalendar({ sessions = [], onSlotClick }: AdminCalendarProps
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-emerald-500" /> Disponível
         </span>
-        {Object.entries(SESSION_STATUS_MAP).map(([key, config]) => (
+        {(Object.keys(SESSION_STATUS_MAP) as SessionStatus[]).map((key) => (
           <span key={key} className="flex items-center gap-1.5">
-            <span className={cn('w-3 h-3 rounded-full', config.bg, 'border', 'border-current', config.color)} />
-            {config.label}
+            <span
+              className={cn(
+                'w-3 h-3 rounded-full',
+                SESSION_STATUS_MAP[key].bg,
+                'border',
+                'border-current',
+                SESSION_STATUS_MAP[key].color,
+              )}
+            />
+            {tStatus(SESSION_STATUS_LABEL_KEY[key])}
           </span>
         ))}
         <span className="flex items-center gap-1.5">

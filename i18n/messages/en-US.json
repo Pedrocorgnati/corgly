@@ -75,18 +75,15 @@
     "buy": "Buy"
   },
   "sessionCard": {
-    "status": {
-      "upcoming": "Scheduled",
-      "inProgress": "In progress",
-      "completed": "Completed",
-      "cancelled": "Cancelled"
-    },
     "actions": {
       "enter": "Enter",
       "cancel": "Cancel",
       "reschedule": "Reschedule"
     },
-    "enterAvailableIn": "Available in {minutes} min"
+    "enterAvailableIn": "Available in {minutes} min",
+    "fallbackTitle": "Class",
+    "startLabel": "Start:",
+    "endLabel": "End:"
   },
   "modal": {
     "confirm": {
@@ -148,7 +145,9 @@
     "marketing_label": "Marketing",
     "marketing_description": "Allow personalized content",
     "save_preferences": "Save preferences",
-    "manage_preferences": "Manage preferences"
+    "manage_preferences": "Manage preferences",
+    "sync_failed_title": "Choice saved on this device",
+    "sync_failed_description": "We could not record your preference on the server right now. It still applies in this browser."
   },
   "privacy": {
     "title": "Privacy Policy",
@@ -367,7 +366,8 @@
             "Cancel monthly at the end of the cycle"
           ]
         }
-      }
+      },
+      "cta_checking_session": "Checking your session..."
     },
     "testimonials": {
       "title": "What students say",
@@ -435,6 +435,12 @@
       "subtitle": "Private live lesson on Zoom. First lesson US$ 12.50.",
       "button": "I want my lesson for {price}",
       "button_secondary": "See plans"
+    },
+    "content_preview": {
+      "badge": "Free content",
+      "title": "Start studying before your first lesson",
+      "subtitle": "Brazilian Portuguese videos and materials to practice at your own pace, at no cost.",
+      "cta": "Browse free content"
     }
   },
   "content": {
@@ -490,7 +496,36 @@
     "next": "Next",
     "prev": "Previous",
     "progress": "Slide {current} of {total}",
-    "completing": "Completing..."
+    "completing": "Completing...",
+    "later": "Later",
+    "complete_error": "We couldn't finish your onboarding. Check your connection and try again.",
+    "equipment": {
+      "fail_title": "We couldn't validate your equipment",
+      "fail_description": "Your camera, microphone or connection did not pass the test. If you denied permission, click the padlock next to the site address, allow camera and microphone, and run the test again. If you have no webcam right now, you can continue anyway: you can redo this test in the lobby before every class.",
+      "retry": "Run the test again",
+      "acknowledge_fail": "I understand that my camera, microphone or connection did not pass the test and I want to continue anyway.",
+      "skip": "Skip for now and go to the Dashboard",
+      "eyebrow": "Onboarding",
+      "page_title": "Test your equipment",
+      "page_description": "Before your first lesson, let's check your camera, microphone and connection. That way you avoid surprises during the live class.",
+      "storage_blocked": "Result saved for this session only. Your browser blocked local storage.",
+      "audit_sync_failed": "Result saved locally. We could not sync the audit record right now.",
+      "guides_intro": "We found a few things to fix before you continue:",
+      "guides_loading": "Loading fix guides...",
+      "guides_error": "We could not load the guides right now. Try again or follow your browser's instructions.",
+      "acknowledge_warning": "I understand the connection may be unstable (no TURN/relay, or a silent microphone) and I want to continue anyway.",
+      "saving": "Saving result...",
+      "status": "Status: {status}",
+      "idle": "Start the test to check your equipment.",
+      "continue": "Continue",
+      "retest_note": "You can redo this test any time in the room lobby, before every lesson.",
+      "failure": {
+        "camera": "Camera",
+        "microphone": "Microphone",
+        "permission": "Permissions",
+        "bandwidth": "Connection"
+      }
+    }
   },
   "credits": {
     "page": {
@@ -624,7 +659,11 @@
       "changeDueNow": "Due now",
       "changeEffective": "Effective on {effectiveAt}. The current period ends on {periodEnd}.",
       "changeCurrentPlanNotice": "The preview points to the plan you already have: nothing will be charged.",
-      "changePreviewError": "We couldn’t preview the plan change. Please try again."
+      "changePreviewError": "We couldn’t preview the plan change. Please try again.",
+      "currencyLoading": "Loading your billing currency...",
+      "currencyUnavailable": "We could not confirm your billing currency. The amount stays hidden until it is confirmed.",
+      "currencyRetry": "Try again",
+      "priceNoteCharged": "Amount in the currency registered on your subscription."
     },
     "breakdown": {
       "title": "Credit Breakdown",
@@ -687,6 +726,10 @@
       "retry": "Try again",
       "note": "The charged currency is confirmed at checkout.",
       "usdcNote": "USDC available subject to gateway support."
+    },
+    "paymentCanceled": {
+      "title": "Payment canceled.",
+      "message": "You can try again whenever you want."
     }
   },
   "errors": {
@@ -699,7 +742,11 @@
     "serverError": {
       "title": "Something went wrong",
       "description": "An unexpected error occurred. Our team has been notified.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "backToSessions": "See all sessions",
+      "backToContent": "Browse all content",
+      "goDashboard": "Back to dashboard",
+      "reconnect": "Try reconnecting"
     }
   },
   "unsubscribe": {
@@ -740,6 +787,19 @@
     "resourcesDownloadAria": "Download resource {name}",
     "resourcesError": "Could not generate the download link. Please try again."
   },
+  "history": {
+    "metaTitle": "Lesson history",
+    "title": "Lesson history",
+    "subtitle": "Every lesson you have scheduled, completed, cancelled or asked to reschedule.",
+    "filterAll": "All",
+    "emptyTitle": "No lessons in your history yet",
+    "emptyDescription": "As soon as you schedule your first lesson, it shows up here.",
+    "emptyAction": "Schedule a lesson",
+    "pageStatus": "Page {page} of {totalPages}",
+    "errorTitle": "Could not load your history",
+    "errorDescription": "We could not load your lessons right now. Please try again.",
+    "errorRetry": "Try again"
+  },
   "skipNav": {
     "label": "Skip to main content"
   },
@@ -775,5 +835,94 @@
     "errorTitle": "Could not load the exercises",
     "errorDescription": "We could not build this lesson's exercise. Please try again.",
     "errorRetry": "Try again"
+  },
+  "auth": {
+    "register": {
+      "planNoticeTitle": "Selected plan: {plan}",
+      "planNoticeDesc": "We saved your choice in this browser. After you confirm your email and sign in, it will already be selected on the credits page."
+    }
+  },
+  "dashboard": {
+    "nextSession": {
+      "error": {
+        "title": "We couldn't load your next lesson",
+        "description": "This does not mean you have no lessons booked: we just could not read your schedule right now.",
+        "retry": "Try again",
+        "retrying": "Loading...",
+        "viewHistory": "View history"
+      },
+      "ended": {
+        "clock": "Lesson ended",
+        "hint": "This lesson is over. Refresh to see the next one.",
+        "refresh": "Refresh",
+        "refreshing": "Refreshing...",
+        "viewHistory": "View history"
+      }
+    }
+  },
+  "documentSearch": {
+    "placeholder": "Search your lesson notebooks",
+    "ariaLabel": "Search your lesson notebooks",
+    "minChars": "Type at least {min} characters to search.",
+    "searching": "Searching...",
+    "empty": "No notebook mentions \"{query}\".",
+    "error": "The search failed: {message}",
+    "errorUnknown": "an unexpected error occurred. Please try again shortly.",
+    "pageStatus": "Page {page} of {totalPages} · {total} result(s)"
+  },
+  "support": {
+    "newTicket": {
+      "attachmentsMax": "Up to {max} attachments per ticket.",
+      "attachmentTypeRejected": "\"{filename}\": file type not supported.",
+      "attachmentTooLarge": "\"{filename}\" exceeds the {limit} limit.",
+      "createSuccess": "Ticket opened! Our team will reply right here.",
+      "rateLimited": "Too many requests. Please try again in a few minutes.",
+      "createFailed": "We could not open your ticket. Please try again."
+    }
+  },
+  "sessionLobby": {
+    "title": "Lesson lobby",
+    "subtitle": "Make sure your equipment is ready before entering the room.",
+    "lastCheckTitle": "Last test",
+    "lastCheckAt": "Run on {when}.",
+    "pendingPoints": "Pending items: {items}. We recommend running the test again.",
+    "approved": "Equipment passed the last test.",
+    "emptyTitle": "No recent test",
+    "emptyDescription": "You have not tested your equipment yet. Run the test before entering.",
+    "retest": "Run test again",
+    "runTest": "Test equipment",
+    "warningConfirm": "I understand the connection may be unstable and I want to enter the room anyway.",
+    "finishTest": "Finish test",
+    "back": "Back",
+    "enter": "Enter the room",
+    "storageBlocked": "Result valid for this session only. Your browser blocked local storage.",
+    "currentStatus": "Current status:",
+    "status": {
+      "ok": "Passed",
+      "warning": "Warning",
+      "fail": "Failed",
+      "checking": "Testing",
+      "idle": "Waiting"
+    }
+  },
+  "sessionStatus": {
+    "SCHEDULED": "Scheduled",
+    "IN_PROGRESS": "In progress",
+    "COMPLETED": "Completed",
+    "CANCELLED_BY_STUDENT": "Cancelled by student",
+    "CANCELLED_BY_ADMIN": "Cancelled by teacher",
+    "NO_SHOW_STUDENT": "Student no-show",
+    "NO_SHOW_ADMIN": "Teacher absent",
+    "INTERRUPTED": "Interrupted",
+    "RESCHEDULE_PENDING": "Reschedule pending"
+  },
+  "creditType": {
+    "SINGLE": "Single class",
+    "PACK_5": "5-class pack",
+    "PACK_10": "10-class pack",
+    "MONTHLY": "Monthly",
+    "PROMO": "Promotion",
+    "MANUAL": "Manual",
+    "REFUND": "Refund"
   }
 }

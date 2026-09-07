@@ -10,6 +10,18 @@ export type RouteHandler<Ctx = unknown> = (
 ) => Promise<NextResponse> | NextResponse;
 
 /**
+ * Assinatura do handler ja embrulhado. O `context` e OPCIONAL aqui porque rota
+ * sem segmento dinamico e chamada so com o request — pelo proprio Next e pelos
+ * testes de integracao, que invocam o handler exportado diretamente. Handlers
+ * que dependem de `params` declaram `Ctx` com o formato deles e continuam
+ * recebendo o contexto que o Next passa.
+ */
+export type WrappedRouteHandler<Ctx = unknown> = (
+  request: NextRequest,
+  context?: Ctx,
+) => Promise<NextResponse>;
+
+/**
  * Higher-order wrapper para route handlers do App Router.
  *
  * - Extrai correlationId do header `x-request-id` (setado pelo proxy, src/proxy.ts).
@@ -20,7 +32,7 @@ export type RouteHandler<Ctx = unknown> = (
  */
 export function withApiHandler<Ctx = unknown>(
   handler: RouteHandler<Ctx>,
-): RouteHandler<Ctx> {
+): WrappedRouteHandler<Ctx> {
   return async (request, context) => {
     const correlationId =
       request.headers.get('x-request-id') ?? cryptoRandomId();
@@ -33,7 +45,7 @@ export function withApiHandler<Ctx = unknown>(
       logger.info('api.request.start', { action: 'api_request', method });
 
       try {
-        const res = await handler(request, context);
+        const res = await handler(request, context as Ctx);
         const latencyMs = Date.now() - started;
         const status = res.status;
         // Garante que correlationId volta na resposta mesmo em handlers

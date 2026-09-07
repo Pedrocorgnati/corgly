@@ -171,6 +171,12 @@ export class AuthService {
     logAuthSuccess({ event: 'password.reset', userId: user.id });
   }
 
+  /**
+   * Perfil da sessao. Devolve SOMENTE colunas de `User` — saldo de credito nao
+   * mora aqui e nao deve ser adicionado ao select: a fonte de verdade do saldo
+   * e `CreditService.getBalance`, e quem compoe as duas coisas para o cliente e
+   * `GET /api/v1/auth/me` (src/app/api/v1/auth/me/route.ts).
+   */
   async getMe(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -211,12 +217,24 @@ export class AuthService {
     return user;
   }
 
+  /**
+   * Marca o onboarding como concluido.
+   *
+   * NAO toca em `isFirstPurchase`. O slide final do onboarding e justamente o
+   * CTA "Comprar primeira aula — $12.50", e ele chama este metodo; zerar a
+   * elegibilidade aqui matava o preco PROMO ANTES de qualquer compra
+   * acontecer (regra em `stripe.service.ts`: `isPromo = isFirstPurchase &&
+   * packageType === 'SINGLE'`).
+   *
+   * O ponto legitimo de consumo e a transacao da compra em
+   * `stripe.service.ts` (`if (packageType === 'PROMO') ... isFirstPurchase:
+   * false`), que so roda depois do pagamento confirmado.
+   */
   async completeOnboarding(userId: string): Promise<void> {
     await prisma.user.update({
       where: { id: userId },
       data: {
         onboardingCompletedAt: new Date(),
-        isFirstPurchase: false,
       },
     });
   }

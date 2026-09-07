@@ -93,10 +93,17 @@ export function writeLastEquipmentCheck(value: LastEquipmentCheck): boolean {
   }
 }
 
-/** Rótulo amigável por tipo de falha (para resumo no lobby/onboarding). */
-export const EQUIPMENT_FAILURE_LABEL: Record<EquipmentFailure, string> = {
-  camera: 'Câmera',
-  microphone: 'Microfone',
-  permission: 'Permissões',
-  bandwidth: 'Conexão',
+/**
+ * CHAVE de catalogo por tipo de falha (resumo no lobby/onboarding).
+ *
+ * Antes esta tabela guardava o rotulo pronto em pt-BR e era renderizada crua
+ * dentro de paginas ja traduzidas — o aluno em en-US lia "Câmera, Permissões"
+ * no meio de um texto em ingles. Guardar a CHAVE e nao o texto deixa a
+ * traducao com o dono dela (`i18n/messages/*.json`), no namespace `onboarding`.
+ */
+export const EQUIPMENT_FAILURE_LABEL_KEY: Record<EquipmentFailure, string> = {
+  camera: 'equipment.failure.camera',
+  microphone: 'equipment.failure.microphone',
+  permission: 'equipment.failure.permission',
+  bandwidth: 'equipment.failure.bandwidth',
 };

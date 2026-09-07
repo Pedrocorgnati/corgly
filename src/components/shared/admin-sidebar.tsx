@@ -1,5 +1,6 @@
 'use client';
 
+import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -12,31 +13,80 @@ import { AvatarInitials } from '@/components/ui/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 
-interface AdminSidebarProps {
-  user: { name: string; email: string };
+/**
+ * FONTE UNICA DA NAVEGACAO DO ADMIN.
+ *
+ * Gemeo de `src/lib/navigation/student-nav.ts` para as superficies do admin
+ * (sidebar desktop e drawer mobile). Antes existiam dois arrays literais
+ * duplicados que ja tinham dessincronizado: o drawer nao listava
+ * `/admin/emails/templates` nem `/admin/health`, e nao havia motivo declarado
+ * para o admin no celular perder duas telas — era so drift.
+ *
+ * O modulo do aluno nao foi reaproveitado porque ele e especifico daquela area:
+ * traduz em `sidebar.student`, tem a barra inferior mobile com outro namespace
+ * (`bottomNav`) e ordem propria. O admin nao tem barra inferior.
+ *
+ * REGRA: item novo de navegacao do admin entra AQUI e em lugar nenhum mais.
+ * Ao adicionar um item, confira:
+ *  1. a rota existe em `src/lib/constants/routes.ts` (nunca href cru);
+ *  2. `labelKey` existe no namespace i18n `sidebar.admin` nos 4 locales.
+ */
+
+/** Superficies que renderizam a navegacao do admin. */
+export type AdminNavSurface = 'sidebar' | 'drawer';
+
+export interface AdminNavItem {
+  /** Rota de destino. Sempre vinda de `ROUTES`, nunca string crua. */
+  href: string;
+  /** Chave dentro do namespace i18n `sidebar.admin`. */
+  labelKey: string;
+  icon: LucideIcon;
+  showIn: readonly AdminNavSurface[];
 }
 
-function useNavItems() {
-  const t = useTranslations('sidebar.admin');
-  return [
-    { href: ROUTES.ADMIN_DASHBOARD, label: t('dashboard'), icon: LayoutDashboard },
-    { href: ROUTES.ADMIN_SCHEDULE, label: t('schedule'), icon: CalendarDays },
-    { href: ROUTES.ADMIN_STUDENTS, label: t('students'), icon: Users },
-    { href: ROUTES.ADMIN_SESSIONS, label: t('sessions'), icon: Video },
-    { href: ROUTES.ADMIN_CREDITS, label: t('credits'), icon: CreditCard },
-    { href: ROUTES.ADMIN_REPORTS, label: t('reports'), icon: BarChart3 },
-    { href: ROUTES.ADMIN_CONTENT, label: t('content'), icon: BookOpen },
-    { href: ROUTES.ADMIN_EMAIL_TEMPLATES, label: t('emailTemplates'), icon: Mail },
-    { href: ROUTES.ADMIN_SUPPORT, label: t('support'), icon: LifeBuoy },
-    { href: ROUTES.ADMIN_HEALTH, label: t('health'), icon: Activity },
-    { href: ROUTES.ADMIN_ACCOUNT_SECURITY, label: t('security'), icon: ShieldCheck },
-  ];
+/** Ordem canonica das duas superficies do admin. */
+export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
+  { href: ROUTES.ADMIN_DASHBOARD, labelKey: 'dashboard', icon: LayoutDashboard, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_SCHEDULE, labelKey: 'schedule', icon: CalendarDays, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_STUDENTS, labelKey: 'students', icon: Users, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_SESSIONS, labelKey: 'sessions', icon: Video, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_CREDITS, labelKey: 'credits', icon: CreditCard, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_REPORTS, labelKey: 'reports', icon: BarChart3, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_CONTENT, labelKey: 'content', icon: BookOpen, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_EMAIL_TEMPLATES, labelKey: 'emailTemplates', icon: Mail, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_SUPPORT, labelKey: 'support', icon: LifeBuoy, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_HEALTH, labelKey: 'health', icon: Activity, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_ACCOUNT_SECURITY, labelKey: 'security', icon: ShieldCheck, showIn: ['sidebar', 'drawer'] },
+];
+
+/** Itens de uma superficie, na ordem canonica. */
+export function getAdminNavItems(surface: AdminNavSurface): AdminNavItem[] {
+  return ADMIN_NAV_ITEMS.filter((item) => item.showIn.includes(surface));
+}
+
+/**
+ * Sufixo do `data-testid` derivado do href ('/admin/schedule' -> 'admin-schedule').
+ * As duas superficies derivam o testid por aqui para nao divergirem: os nomes
+ * `sidebar-nav-item-*` e `sidebar-mobile-nav-item-*` sao ancora de teste.
+ */
+export function adminNavSlug(href: string): string {
+  return href.replace(/^\//, '').replace(/\//g, '-');
+}
+
+/** Marca o item ativo: match exato ou rota filha. */
+export function isAdminNavItemActive(href: string, pathname: string): boolean {
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+interface AdminSidebarProps {
+  user: { name: string; email: string };
 }
 
 export function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const navItems = useNavItems();
+  const tNav = useTranslations('sidebar.admin');
+  const navItems = getAdminNavItems('sidebar');
   const { logout } = useAuth();
 
   return (
@@ -59,14 +109,13 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
 
       {/* Navigation */}
       <nav data-testid="sidebar-nav" aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/');
-          const slug = href.replace(/^\//, '').replace(/\//g, '-');
+        {navItems.map(({ href, labelKey, icon: Icon }) => {
+          const active = isAdminNavItemActive(href, pathname);
           return (
             <Link
               key={href}
               href={href}
-              data-testid={`sidebar-nav-item-${slug}`}
+              data-testid={`sidebar-nav-item-${adminNavSlug(href)}`}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-[120ms]',
                 active
@@ -75,7 +124,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
-              {label}
+              {tNav(labelKey)}
             </Link>
           );
         })}

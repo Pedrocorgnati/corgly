@@ -4,6 +4,7 @@ import { apiResponse } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { SessionStatus } from '@/lib/constants/enums';
 import { PAGINATION } from '@/lib/constants';
+import { creditService } from '@/services/credit.service';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -42,15 +43,23 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json(apiResponse(null, 'Usuário não encontrado.'), { status: 404 });
     }
 
-    const [sessionCounts, creditBatches, recentSessions, recentFeedbacks] = await Promise.all([
+    const [creditBalance, sessionCounts, creditBatches, recentSessions, recentFeedbacks] = await Promise.all([
+      // Saldo = SUM agregado no banco sobre TODOS os lotes validos do aluno.
+      // Nao pode sair da lista abaixo: aquela e paginada (take), entao somar a
+      // janela exibida faz o admin ver saldo MENOR que o do aluno assim que o
+      // aluno tem mais lotes que o tamanho da pagina. CreditService.getBalance
+      // e a fonte da verdade do predicado (nao expirado + com credito sobrando).
+      creditService.getBalance(studentId),
       prisma.session.groupBy({
         by:    ['status'],
         where: { studentId },
         _count: { status: true },
       }),
+      // Lista EXIBIDA de lotes — paginada de proposito (ultimos N). Serve para
+      // auditoria visual, nunca para calcular saldo.
       prisma.creditBatch.findMany({
         where:   { userId: studentId },
-        select:  { id: true, type: true, totalCredits: true, usedCredits: true, expiresAt: true, createdAt: true },
+        select:  { id: true, type: true, totalCredits: true, usedCredits: true, expiresAt: true },
         orderBy: { createdAt: 'desc' },
         take:    PAGINATION.USER_DETAIL_PAYMENTS,
       }),
@@ -84,12 +93,19 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       }),
     ]);
 
-    // Saldo de creditos — mesmo predicado de CreditService.getBalance:
-    // lote nao expirado (expiresAt futuro OU null) e ainda com credito sobrando.
+    // Marca cada lote exibido como expirado ou nao, para o admin entender por
+    // que um lote com "restantes" > 0 pode nao estar somando no saldo (o
+    // soft-expire so zera o lote no cron diario).
     const now = new Date();
-    const creditBalance = creditBatches
-      .filter((b) => (!b.expiresAt || b.expiresAt > now) && b.usedCredits < b.totalCredits)
-      .reduce((s, b) => s + (b.totalCredits - b.usedCredits), 0);
+    const creditBatchesView = creditBatches.map((b) => ({
+      id:        b.id,
+      type:      b.type,
+      total:     b.totalCredits,
+      used:      b.usedCredits,
+      remaining: b.totalCredits - b.usedCredits,
+      expiresAt: b.expiresAt,
+      expired:   !!b.expiresAt && b.expiresAt <= now,
+    }));
 
     // Session counts by status
     const sessionStats: Record<string, number> = {};
@@ -105,7 +121,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         completedSessions: sessionStats[SessionStatus.COMPLETED] ?? 0,
         cancelledSessions: (sessionStats[SessionStatus.CANCELLED_BY_STUDENT] ?? 0) + (sessionStats[SessionStatus.CANCELLED_BY_ADMIN] ?? 0),
       },
-      creditBatches,
+      creditBatches: creditBatchesView,
       recentSessions: recentSessions.map((s) => ({
         id:          s.id,
         status:      s.status,

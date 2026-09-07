@@ -26,6 +26,7 @@ import {
   type FxPreviewInput,
   calculateFxPreview,
 } from '@/lib/billing/fx.schema';
+import { FX_FROM_USD } from '@/lib/pricing/config';
 
 /**
  * Moeda de cobranca de registro padrao quando nada mais resolve.
@@ -52,8 +53,34 @@ export const FX_SOURCE_PRIORITY: Record<'FIAT' | 'CRYPTO', readonly FxRateSource
 /** Moedas cripto tratadas pela cadeia CRYPTO. Demais sao FIAT. */
 const CRYPTO_CURRENCIES: readonly Currency[] = ['USDC'];
 
-/** Politica de arredondamento padrao, consistente com fx.schema.ts. */
+/**
+ * Politica aplicada a moeda cuja unidade menor tem 2 casas decimais (centavo,
+ * centesimo de euro, centavo de real). Consistente com o default de
+ * `fx.schema.ts`.
+ */
 export const DEFAULT_ROUNDING_POLICY: FxRoundingPolicy = 'HALF_UP';
+
+/**
+ * Politica de arredondamento DECLARADA moeda a moeda (ADR-0006 §3).
+ *
+ * `Record<Currency, ...>` de proposito: acrescentar uma moeda a
+ * `SUPPORTED_CURRENCIES` quebra a compilacao aqui ate que alguem declare a
+ * politica dela. E o que faltava — antes existia so um parametro `_currency`
+ * ignorado, ou seja, uma promessa de politica por moeda que o codigo nao
+ * cumpria e que nenhuma moeda nova era obrigada a responder.
+ *
+ * As quatro moedas suportadas hoje declaram HALF_UP porque as quatro tem
+ * unidade menor de 2 casas (USD/USDC em centavos, EUR em centesimos, BRL em
+ * centavos): nao ha divergencia real a inventar. Moeda de unidade menor
+ * diferente (JPY, zero casas, por exemplo) entra aqui com a SUA politica, e o
+ * compilador cobra isso.
+ */
+export const ROUNDING_POLICY_BY_CURRENCY: Record<Currency, FxRoundingPolicy> = {
+  USD: DEFAULT_ROUNDING_POLICY,
+  USDC: DEFAULT_ROUNDING_POLICY,
+  EUR: DEFAULT_ROUNDING_POLICY,
+  BRL: DEFAULT_ROUNDING_POLICY,
+};
 
 export interface ResolveChargeCurrencyOptions {
   /** Moeda escolhida explicitamente pelo usuario, se houver. */
@@ -121,11 +148,37 @@ export function resolveFxSource(
 }
 
 /**
- * Politica de arredondamento aplicavel a moeda (ponto de extensao por moeda).
- * Por ora todas usam HALF_UP (ADR-0006 §3).
+ * Politica de arredondamento da moeda, lida da tabela declarada acima
+ * (ADR-0006 §3). O argumento e de fato consultado: nao existe mais politica
+ * unica disfarcada de parametro.
  */
-export function getRoundingPolicy(_currency: Currency): FxRoundingPolicy {
-  return DEFAULT_ROUNDING_POLICY;
+export function getRoundingPolicy(currency: Currency): FxRoundingPolicy {
+  return ROUNDING_POLICY_BY_CURRENCY[currency];
+}
+
+/**
+ * Taxa do elo SEED da cadeia de fallback, para o par `base -> quote`.
+ *
+ * Le a UNICA tabela de cambio do produto (`FX_FROM_USD`, em
+ * `src/lib/pricing/config.ts`) — a mesma que derivou cada linha de `PRICING`.
+ * Existe porque a rota de preview mantinha uma SEGUNDA tabela com exatamente os
+ * mesmos numeros: duas tabelas identicas divergem no dia em que alguem atualiza
+ * uma so, e o topo deste arquivo proibe reimplementar cambio fora daqui.
+ *
+ * Taxa cruzada = cotacao do alvo / cotacao da origem, ambas em base USD
+ * (`FX_FROM_USD.USD === 1`, entao os pares com USD caem no caso geral).
+ * Cotacao ausente ou nao positiva estoura em vez de devolver `Infinity`,
+ * `NaN` ou zero disfarcados de taxa (Zero Silencio).
+ */
+export function seedFxRate(base: Currency, quote: Currency): number {
+  const baseRate = FX_FROM_USD[base];
+  const quoteRate = FX_FROM_USD[quote];
+  if (!(baseRate > 0) || !(quoteRate > 0)) {
+    throw new Error(
+      `Taxa SEED indisponivel para ${base}->${quote}: FX_FROM_USD tem ${base}=${baseRate}, ${quote}=${quoteRate}`,
+    );
+  }
+  return quoteRate / baseRate;
 }
 
 /**

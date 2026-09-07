@@ -160,33 +160,71 @@ export const PackageType = {
 } as const;
 export type PackageType = (typeof PackageType)[keyof typeof PackageType];
 
-// ── Status Maps (status → label + cor) ──
+// ── Status Maps (status → cor) e chaves de rotulo (status → catalogo i18n) ──
 
-export const SESSION_STATUS_MAP: Record<SessionStatus, { label: string; color: string; bg: string }> = {
-  SCHEDULED: { label: 'Agendada', color: 'text-[#0284C7]', bg: 'bg-[#E0F2FE]' },
-  IN_PROGRESS: { label: 'Em andamento', color: 'text-[#059669]', bg: 'bg-[#D1FAE5]' },
-  COMPLETED: { label: 'Concluída', color: 'text-[#6B7280]', bg: 'bg-[#F3F4F6]' },
-  CANCELLED_BY_STUDENT: { label: 'Cancelada pelo aluno', color: 'text-[#DC2626]', bg: 'bg-[#FEE2E2]' },
-  CANCELLED_BY_ADMIN: { label: 'Cancelada pelo professor', color: 'text-[#DC2626]', bg: 'bg-[#FEE2E2]' },
-  NO_SHOW_STUDENT: { label: 'Não compareceu', color: 'text-[#D97706]', bg: 'bg-[#FEF3C7]' },
-  NO_SHOW_ADMIN: { label: 'Professor ausente', color: 'text-[#D97706]', bg: 'bg-[#FEF3C7]' },
-  INTERRUPTED: { label: 'Interrompida', color: 'text-[#D97706]', bg: 'bg-[#FEF3C7]' },
-  RESCHEDULE_PENDING: { label: 'Reagendamento pendente', color: 'text-[#6366F1]', bg: 'bg-[#EEF2FF]' },
+/**
+ * Cor de cada status de sessao. O ROTULO nao mora aqui de proposito: este
+ * modulo e uma constante de `src/lib` sem acesso ao catalogo do next-intl,
+ * entao qualquer texto escrito aqui ficaria congelado num idioma so — foi o
+ * que aconteceu ate esta rodada (nove rotulos pt-BR renderizados tambem para
+ * en-US, es-ES e it-IT). O texto vive no catalogo, e a ponte ate ele e
+ * `SESSION_STATUS_LABEL_KEY`.
+ */
+export const SESSION_STATUS_MAP: Record<SessionStatus, { color: string; bg: string }> = {
+  SCHEDULED: { color: 'text-[#0284C7]', bg: 'bg-[#E0F2FE]' },
+  IN_PROGRESS: { color: 'text-[#059669]', bg: 'bg-[#D1FAE5]' },
+  COMPLETED: { color: 'text-[#6B7280]', bg: 'bg-[#F3F4F6]' },
+  CANCELLED_BY_STUDENT: { color: 'text-[#DC2626]', bg: 'bg-[#FEE2E2]' },
+  CANCELLED_BY_ADMIN: { color: 'text-[#DC2626]', bg: 'bg-[#FEE2E2]' },
+  NO_SHOW_STUDENT: { color: 'text-[#D97706]', bg: 'bg-[#FEF3C7]' },
+  NO_SHOW_ADMIN: { color: 'text-[#D97706]', bg: 'bg-[#FEF3C7]' },
+  INTERRUPTED: { color: 'text-[#D97706]', bg: 'bg-[#FEF3C7]' },
+  RESCHEDULE_PENDING: { color: 'text-[#6366F1]', bg: 'bg-[#EEF2FF]' },
 };
 
-export const CREDIT_TYPE_MAP: Record<CreditType, { label: string; count: number }> = {
-  SINGLE: { label: 'Aula avulsa', count: 1 },
-  PACK_5: { label: 'Pack 5 aulas', count: 5 },
-  PACK_10: { label: 'Pack 10 aulas', count: 10 },
-  MONTHLY: { label: 'Mensal', count: 10 },
-  PROMO: { label: 'Promoção', count: 1 },
-  MANUAL: { label: 'Manual', count: 1 },
-  REFUND: { label: 'Reembolso', count: 1 },
+/**
+ * Chave do rotulo de cada status dentro do namespace `sessionStatus` do
+ * catalogo. Consumir SEMPRE como `t(SESSION_STATUS_LABEL_KEY[status])` com
+ * `useTranslations('sessionStatus')` (ou `getTranslations` no server).
+ *
+ * O mapa e NOMEADO e literal de proposito: a guarda estatica de i18n
+ * (`src/__tests__/i18n/_message-scan.ts`) sabe expandir `t(MAPA[x])` para os
+ * nove valores e cobrar cada um dos quatro catalogos. Trocar isto por
+ * `t(status)` cru devolveria o site para o balde "NAO VERIFICAVEL" e uma
+ * chave removida do catalogo voltaria a passar verde.
+ *
+ * Consumidores: `src/app/(student)/history/history-client.tsx`,
+ * `src/components/session/SessionList.tsx`,
+ * `src/components/admin/AdminCalendar.tsx`,
+ * `src/components/calendar/RescheduleRequestBadge.tsx`,
+ * `src/components/ui/session-card.tsx`,
+ * `src/app/(admin)/admin/sessions/[id]/page.tsx`.
+ */
+export const SESSION_STATUS_LABEL_KEY: Record<SessionStatus, string> = {
+  SCHEDULED: 'SCHEDULED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED_BY_STUDENT: 'CANCELLED_BY_STUDENT',
+  CANCELLED_BY_ADMIN: 'CANCELLED_BY_ADMIN',
+  NO_SHOW_STUDENT: 'NO_SHOW_STUDENT',
+  NO_SHOW_ADMIN: 'NO_SHOW_ADMIN',
+  INTERRUPTED: 'INTERRUPTED',
+  RESCHEDULE_PENDING: 'RESCHEDULE_PENDING',
 };
 
-export const FEEDBACK_DIMENSION_MAP: Record<FeedbackDimension, { label: string; icon: string }> = {
-  LISTENING: { label: 'Compreensão oral', icon: '👂' },
-  SPEAKING: { label: 'Fala', icon: '🗣️' },
-  WRITING: { label: 'Escrita', icon: '✍️' },
-  VOCABULARY: { label: 'Vocabulário', icon: '📚' },
+/**
+ * Chave do rotulo de cada tipo de credito dentro do namespace `creditType`.
+ * Mesma regra do mapa de status: consumir como
+ * `t(CREDIT_TYPE_LABEL_KEY[tipo])`.
+ *
+ * Consumidor: `src/components/admin/credit-log.tsx`.
+ */
+export const CREDIT_TYPE_LABEL_KEY: Record<CreditType, string> = {
+  SINGLE: 'SINGLE',
+  PACK_5: 'PACK_5',
+  PACK_10: 'PACK_10',
+  MONTHLY: 'MONTHLY',
+  PROMO: 'PROMO',
+  MANUAL: 'MANUAL',
+  REFUND: 'REFUND',
 };

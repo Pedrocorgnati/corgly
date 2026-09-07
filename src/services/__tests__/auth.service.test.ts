@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthService } from '../auth.service';
 
@@ -84,8 +84,10 @@ describe('AuthService', () => {
           name: 'Test',
           email: 'test@test.com',
           password: 'Password1!',
+          country: 'BR',
           timezone: 'America/Sao_Paulo',
           termsAccepted: true,
+          privacyAccepted: true,
           marketingOptIn: false,
         }),
       ).resolves.toBeUndefined();
@@ -101,8 +103,10 @@ describe('AuthService', () => {
           name: 'Test',
           email: 'test@test.com',
           password: 'Password1!',
+          country: 'BR',
           timezone: 'America/Sao_Paulo',
           termsAccepted: true,
+          privacyAccepted: true,
         }),
       ).rejects.toThrow('EMAIL_ALREADY_EXISTS');
     });
@@ -452,57 +456,203 @@ describe('requireAuth — tokenVersion validation (AUTH_001)', () => {
 
 // ── Rate limiting (ST005 — AUTH_006, RATE_001) ───────────────────────────────
 
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+/**
+ * `checkRateLimit` deixou de ser um contador sincrono em memoria: hoje e
+ * `async` e delega ao `@upstash/ratelimit` sobre Redis. Os casos abaixo pinam o
+ * contrato REAL do modulo:
+ *
+ *  - sem `UPSTASH_REDIS_REST_URL/TOKEN` ele FALHA ABERTO (permite tudo);
+ *  - com Redis, `allowed` espelha `result.success` e `remaining`/`resetAt` vem
+ *    do limiter;
+ *  - o identificador carrega `maxRequests:windowMs:key`, entao configs
+ *    diferentes nao compartilham contador;
+ *  - erro do Redis tambem falha aberto.
+ *
+ * `getRedis()` (via `redisChecked`) e `limiterCache` sao estado de MODULO, logo
+ * cada caso re-importa `@/lib/rate-limit` apos `vi.resetModules()` para partir
+ * de um estado limpo.
+ */
+
+// Handle compartilhado com a fabrica do mock (que e hoisted acima dos imports).
+const upstashControl = vi.hoisted(() => ({ throwOnLimit: false }));
+
+vi.mock('@upstash/redis', () => ({
+  Redis: class FakeRedis {
+    constructor(_config: unknown) {
+      void _config;
+    }
+  },
+}));
+
+vi.mock('@upstash/ratelimit', () => {
+  interface FakeWindow {
+    max: number;
+    windowMs: number;
+  }
+
+  class FakeRatelimit {
+    private readonly window: FakeWindow;
+    private readonly counters = new Map<string, { count: number; resetAt: number }>();
+
+    constructor(opts: { limiter: FakeWindow }) {
+      this.window = opts.limiter;
+    }
+
+    // O modulo chama `Ratelimit.slidingWindow(max, `${n} s`)`.
+    static slidingWindow(max: number, window: string): FakeWindow {
+      const [amount, unit] = window.split(' ');
+      const factor = unit === 'm' ? 60_000 : 1_000;
+      return { max, windowMs: Number(amount) * factor };
+    }
+
+    async limit(identifier: string) {
+      if (upstashControl.throwOnLimit) throw new Error('redis unreachable');
+
+      const now = Date.now();
+      const previous = this.counters.get(identifier);
+      const bucket =
+        !previous || previous.resetAt <= now
+          ? { count: 0, resetAt: now + this.window.windowMs }
+          : previous;
+
+      bucket.count += 1;
+      this.counters.set(identifier, bucket);
+
+      return {
+        success: bucket.count <= this.window.max,
+        remaining: Math.max(0, this.window.max - bucket.count),
+        reset: bucket.resetAt,
+      };
+    }
+  }
+
+  return { Ratelimit: FakeRatelimit };
+});
+
+// `@/lib/env` congela o ambiente no import; o mock injeta as credenciais do
+// Upstash apenas neste arquivo, sem tocar em `process.env` (que e compartilhado
+// entre arquivos de teste no mesmo worker).
+vi.mock('@/lib/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/env')>();
+  return {
+    ...actual,
+    env: {
+      ...actual.env,
+      UPSTASH_REDIS_REST_URL: 'https://fake-upstash.test',
+      UPSTASH_REDIS_REST_TOKEN: 'fake-upstash-token',
+    },
+  };
+});
+
+/** Re-importa o modulo com `limiterCache`/`redisChecked` zerados. */
+async function freshRateLimit() {
+  vi.resetModules();
+  return import('@/lib/rate-limit');
+}
 
 describe('rateLimiting — checkRateLimit (AUTH_006, RATE_001)', () => {
-  it('should allow requests up to the max limit', () => {
-    const key = `test-login-allow-${Date.now()}`;
-    for (let i = 0; i < RATE_LIMITS.AUTH_LOGIN.maxRequests; i++) {
-      const result = checkRateLimit(key, RATE_LIMITS.AUTH_LOGIN);
-      expect(result.allowed).toBe(true);
-    }
+  beforeEach(() => {
+    upstashControl.throwOnLimit = false;
   });
 
-  it('should block the 11th login attempt — AUTH_006', () => {
-    const key = `test-login-block-${Date.now()}`;
-    // Exhaust 10 allowed requests
+  it('permite requests ate o limite e bloqueia a 11a tentativa de login — AUTH_006', async () => {
+    const { checkRateLimit, RATE_LIMITS } = await freshRateLimit();
+    const key = 'test-login';
+
     for (let i = 0; i < RATE_LIMITS.AUTH_LOGIN.maxRequests; i++) {
-      checkRateLimit(key, RATE_LIMITS.AUTH_LOGIN);
+      const allowed = await checkRateLimit(key, RATE_LIMITS.AUTH_LOGIN);
+      expect(allowed.allowed).toBe(true);
     }
-    // 11th attempt should be blocked
-    const result = checkRateLimit(key, RATE_LIMITS.AUTH_LOGIN);
-    expect(result.allowed).toBe(false);
-    expect(result.remaining).toBe(0);
+
+    const blocked = await checkRateLimit(key, RATE_LIMITS.AUTH_LOGIN);
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.remaining).toBe(0);
   });
 
-  it('should block the 4th forgot-password attempt (max is 3)', () => {
-    const key = `test-forgot-${Date.now()}`;
+  it('bloqueia a 4a tentativa de forgot-password (max 3)', async () => {
+    const { checkRateLimit, RATE_LIMITS } = await freshRateLimit();
+    const key = 'test-forgot';
+
     for (let i = 0; i < RATE_LIMITS.AUTH_FORGOT.maxRequests; i++) {
-      checkRateLimit(key, RATE_LIMITS.AUTH_FORGOT);
+      expect((await checkRateLimit(key, RATE_LIMITS.AUTH_FORGOT)).allowed).toBe(true);
     }
-    const result = checkRateLimit(key, RATE_LIMITS.AUTH_FORGOT);
-    expect(result.allowed).toBe(false);
+
+    expect((await checkRateLimit(key, RATE_LIMITS.AUTH_FORGOT)).allowed).toBe(false);
   });
 
-  it('should block the 101st general request — RATE_001', () => {
-    const key = `test-general-${Date.now()}`;
+  it('bloqueia a 101a request geral — RATE_001', async () => {
+    const { checkRateLimit, RATE_LIMITS } = await freshRateLimit();
+    const key = 'test-general';
+
     for (let i = 0; i < RATE_LIMITS.GENERAL.maxRequests; i++) {
-      checkRateLimit(key, RATE_LIMITS.GENERAL);
+      expect((await checkRateLimit(key, RATE_LIMITS.GENERAL)).allowed).toBe(true);
     }
-    const result = checkRateLimit(key, RATE_LIMITS.GENERAL);
-    expect(result.allowed).toBe(false);
+
+    expect((await checkRateLimit(key, RATE_LIMITS.GENERAL)).allowed).toBe(false);
   });
 
-  it('should reset rate limit counter after window expires', async () => {
-    const key = `test-reset-${Date.now()}`;
-    const shortLimit = { maxRequests: 2, windowMs: 50 }; // 50ms window
-    checkRateLimit(key, shortLimit);
-    checkRateLimit(key, shortLimit);
-    expect(checkRateLimit(key, shortLimit).allowed).toBe(false);
+  it('mantem contadores separados por config (identifier carrega max:window:key)', async () => {
+    const { checkRateLimit, RATE_LIMITS } = await freshRateLimit();
+    const key = 'mesma-chave';
 
-    // Wait for window to expire
-    await new Promise((r) => setTimeout(r, 60));
-    const result = checkRateLimit(key, shortLimit);
+    // Esgota o balde de forgot-password (3/15min).
+    for (let i = 0; i < RATE_LIMITS.AUTH_FORGOT.maxRequests; i++) {
+      await checkRateLimit(key, RATE_LIMITS.AUTH_FORGOT);
+    }
+    expect((await checkRateLimit(key, RATE_LIMITS.AUTH_FORGOT)).allowed).toBe(false);
+
+    // A MESMA chave em outra config continua liberada.
+    expect((await checkRateLimit(key, RATE_LIMITS.AUTH_LOGIN)).allowed).toBe(true);
+  });
+
+  it('reseta o contador depois que a janela expira', async () => {
+    const { checkRateLimit } = await freshRateLimit();
+    // O modulo converte a janela para segundos inteiros (`Math.ceil`), entao a
+    // menor janela real e 1s — nao adianta pedir 50ms aqui.
+    const shortLimit = { maxRequests: 2, windowMs: 1_000 };
+    const key = 'test-reset';
+
+    await checkRateLimit(key, shortLimit);
+    await checkRateLimit(key, shortLimit);
+    expect((await checkRateLimit(key, shortLimit)).allowed).toBe(false);
+
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    expect((await checkRateLimit(key, shortLimit)).allowed).toBe(true);
+  });
+
+  it('falha aberto quando o Redis lanca', async () => {
+    const { checkRateLimit, RATE_LIMITS } = await freshRateLimit();
+    upstashControl.throwOnLimit = true;
+
+    const result = await checkRateLimit('test-redis-down', RATE_LIMITS.AUTH_LOGIN);
+
     expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(RATE_LIMITS.AUTH_LOGIN.maxRequests);
+  });
+
+  it('falha aberto quando UPSTASH_REDIS_REST_URL/TOKEN nao estao configurados', async () => {
+    vi.resetModules();
+    vi.doMock('@/lib/env', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@/lib/env')>();
+      return {
+        ...actual,
+        env: {
+          ...actual.env,
+          UPSTASH_REDIS_REST_URL: undefined,
+          UPSTASH_REDIS_REST_TOKEN: undefined,
+        },
+      };
+    });
+
+    try {
+      const { checkRateLimit, RATE_LIMITS } = await import('@/lib/rate-limit');
+      // Sem Redis o limiter nem e criado: toda request passa.
+      for (let i = 0; i < RATE_LIMITS.AUTH_LOGIN.maxRequests + 5; i++) {
+        expect((await checkRateLimit('sem-redis', RATE_LIMITS.AUTH_LOGIN)).allowed).toBe(true);
+      }
+    } finally {
+      vi.doUnmock('@/lib/env');
+      vi.resetModules();
+    }
   });
 });

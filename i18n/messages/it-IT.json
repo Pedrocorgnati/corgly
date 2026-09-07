@@ -75,18 +75,15 @@
     "buy": "Acquista"
   },
   "sessionCard": {
-    "status": {
-      "upcoming": "Programmata",
-      "inProgress": "In corso",
-      "completed": "Completata",
-      "cancelled": "Annullata"
-    },
     "actions": {
       "enter": "Entra",
       "cancel": "Annulla",
       "reschedule": "Riprogramma"
     },
-    "enterAvailableIn": "Disponibile tra {minutes} min"
+    "enterAvailableIn": "Disponibile tra {minutes} min",
+    "fallbackTitle": "Lezione",
+    "startLabel": "Inizio:",
+    "endLabel": "Fine:"
   },
   "modal": {
     "confirm": {
@@ -148,7 +145,9 @@
     "marketing_label": "Marketing",
     "marketing_description": "Permettono di personalizzare i contenuti",
     "save_preferences": "Salva preferenze",
-    "manage_preferences": "Gestisci preferenze"
+    "manage_preferences": "Gestisci preferenze",
+    "sync_failed_title": "Scelta salvata su questo dispositivo",
+    "sync_failed_description": "Non siamo riusciti a registrare la tua preferenza sul server ora. Resta valida in questo browser."
   },
   "privacy": {
     "title": "Informativa sulla Privacy",
@@ -367,7 +366,8 @@
             "Disdici il mensile a fine ciclo"
           ]
         }
-      }
+      },
+      "cta_checking_session": "Verifica della sessione in corso..."
     },
     "testimonials": {
       "title": "Cosa dicono gli studenti",
@@ -435,6 +435,12 @@
       "subtitle": "Lezione privata dal vivo su Zoom. Prima lezione US$ 12.50.",
       "button": "Voglio la mia lezione a {price}",
       "button_secondary": "Vedi i piani"
+    },
+    "content_preview": {
+      "badge": "Contenuto gratuito",
+      "title": "Inizia a studiare prima della prima lezione",
+      "subtitle": "Video e materiali di portoghese brasiliano per esercitarti al tuo ritmo, senza pagare nulla.",
+      "cta": "Vedi il contenuto gratuito"
     }
   },
   "content": {
@@ -490,7 +496,36 @@
     "next": "Avanti",
     "prev": "Indietro",
     "progress": "Slide {current} di {total}",
-    "completing": "Completamento..."
+    "completing": "Completamento...",
+    "later": "Più tardi",
+    "complete_error": "Non siamo riusciti a completare l'onboarding. Controlla la connessione e riprova.",
+    "equipment": {
+      "fail_title": "Non siamo riusciti a verificare la tua attrezzatura",
+      "fail_description": "Fotocamera, microfono o connessione non hanno superato il test. Se hai negato l'autorizzazione, clicca sul lucchetto accanto all'indirizzo del sito, consenti fotocamera e microfono e ripeti il test. Se al momento non hai una webcam, puoi comunque proseguire: potrai ripetere questo test nella sala d'attesa prima di ogni lezione.",
+      "retry": "Ripeti il test",
+      "acknowledge_fail": "Capisco che fotocamera, microfono o connessione non hanno superato il test e voglio proseguire comunque.",
+      "skip": "Salta per ora e vai al Pannello",
+      "eyebrow": "Onboarding",
+      "page_title": "Prova la tua attrezzatura",
+      "page_description": "Prima della tua prima lezione, controlliamo videocamera, microfono e connessione. Così eviti sorprese durante la lezione dal vivo.",
+      "storage_blocked": "Risultato salvato solo per questa sessione. Il browser ha bloccato l'archiviazione locale.",
+      "audit_sync_failed": "Risultato salvato in locale. Non siamo riusciti a sincronizzare il registro di audit ora.",
+      "guides_intro": "Abbiamo trovato dei punti da sistemare prima di continuare:",
+      "guides_loading": "Caricamento delle guide di correzione...",
+      "guides_error": "Non siamo riusciti a caricare le guide ora. Riprova o segui le indicazioni del browser.",
+      "acknowledge_warning": "Capisco che la connessione può essere instabile (senza TURN/relay o con microfono muto) e voglio continuare lo stesso.",
+      "saving": "Salvataggio del risultato...",
+      "status": "Stato: {status}",
+      "idle": "Avvia il test per controllare la tua attrezzatura.",
+      "continue": "Continua",
+      "retest_note": "Potrai rifare questo test in qualsiasi momento nella lobby della stanza, prima di ogni lezione.",
+      "failure": {
+        "camera": "Videocamera",
+        "microphone": "Microfono",
+        "permission": "Autorizzazioni",
+        "bandwidth": "Connessione"
+      }
+    }
   },
   "credits": {
     "page": {
@@ -624,7 +659,11 @@
       "changeDueNow": "Totale da pagare ora",
       "changeEffective": "Efficace dal {effectiveAt}. Il periodo attuale termina il {periodEnd}.",
       "changeCurrentPlanNotice": "La simulazione indica lo stesso piano che hai già: non verrà addebitato nulla.",
-      "changePreviewError": "Non è stato possibile simulare il cambio di piano. Riprova."
+      "changePreviewError": "Non è stato possibile simulare il cambio di piano. Riprova.",
+      "currencyLoading": "Caricamento della valuta di addebito...",
+      "currencyUnavailable": "Non è stato possibile confermare la valuta del tuo addebito. L'importo resta nascosto fino alla conferma.",
+      "currencyRetry": "Riprova",
+      "priceNoteCharged": "Importo nella valuta registrata sul tuo abbonamento."
     },
     "breakdown": {
       "title": "Dettaglio Crediti",
@@ -687,6 +726,10 @@
       "retry": "Riprova",
       "note": "La valuta addebitata viene confermata al pagamento.",
       "usdcNote": "USDC disponibile in base al supporto del gateway."
+    },
+    "paymentCanceled": {
+      "title": "Pagamento annullato.",
+      "message": "Puoi riprovare quando vuoi."
     }
   },
   "errors": {
@@ -699,7 +742,11 @@
     "serverError": {
       "title": "Qualcosa è andato storto",
       "description": "Si è verificato un errore imprevisto. Il nostro team è stato avvisato.",
-      "retry": "Riprova"
+      "retry": "Riprova",
+      "backToSessions": "Vedi tutte le sessioni",
+      "backToContent": "Vedi tutti i contenuti",
+      "goDashboard": "Torna alla dashboard",
+      "reconnect": "Prova a riconnetterti"
     }
   },
   "unsubscribe": {
@@ -740,6 +787,19 @@
     "resourcesDownloadAria": "Scarica risorsa {name}",
     "resourcesError": "Impossibile generare il link di download. Riprova."
   },
+  "history": {
+    "metaTitle": "Cronologia delle lezioni",
+    "title": "Cronologia delle lezioni",
+    "subtitle": "Tutte le tue lezioni prenotate, completate, annullate e con richiesta di spostamento.",
+    "filterAll": "Tutte",
+    "emptyTitle": "Ancora nessuna lezione nella cronologia",
+    "emptyDescription": "Appena prenoti la tua prima lezione, comparirà qui.",
+    "emptyAction": "Prenota lezione",
+    "pageStatus": "Pagina {page} di {totalPages}",
+    "errorTitle": "Errore nel caricamento della cronologia",
+    "errorDescription": "Non siamo riusciti a caricare le tue lezioni ora. Riprova.",
+    "errorRetry": "Riprova"
+  },
   "skipNav": {
     "label": "Salta al contenuto principale"
   },
@@ -775,5 +835,94 @@
     "errorTitle": "Errore nel caricamento degli esercizi",
     "errorDescription": "Non è stato possibile costruire l'esercizio di questa lezione. Riprova.",
     "errorRetry": "Riprova"
+  },
+  "auth": {
+    "register": {
+      "planNoticeTitle": "Piano scelto: {plan}",
+      "planNoticeDesc": "Abbiamo salvato la tua scelta in questo browser. Dopo aver confermato l'email ed effettuato l'accesso, sarà già selezionata nella pagina dei crediti."
+    }
+  },
+  "dashboard": {
+    "nextSession": {
+      "error": {
+        "title": "Non siamo riusciti a caricare la tua prossima lezione",
+        "description": "Questo non significa che non hai lezioni prenotate: semplicemente non siamo riusciti a leggere la tua agenda in questo momento.",
+        "retry": "Riprova",
+        "retrying": "Caricamento...",
+        "viewHistory": "Vedi cronologia"
+      },
+      "ended": {
+        "clock": "Lezione conclusa",
+        "hint": "Questa lezione è terminata. Aggiorna per vedere la prossima.",
+        "refresh": "Aggiorna",
+        "refreshing": "Aggiornamento...",
+        "viewHistory": "Vedi cronologia"
+      }
+    }
+  },
+  "documentSearch": {
+    "placeholder": "Cerca nei quaderni delle tue lezioni",
+    "ariaLabel": "Cerca nei quaderni delle tue lezioni",
+    "minChars": "Digita almeno {min} caratteri per cercare.",
+    "searching": "Ricerca in corso...",
+    "empty": "Nessun quaderno menziona \"{query}\".",
+    "error": "La ricerca non è riuscita: {message}",
+    "errorUnknown": "errore imprevisto. Riprova tra poco.",
+    "pageStatus": "Pagina {page} di {totalPages} · {total} risultato/i"
+  },
+  "support": {
+    "newTicket": {
+      "attachmentsMax": "Massimo {max} allegati per ticket.",
+      "attachmentTypeRejected": "\"{filename}\": tipo di file non supportato.",
+      "attachmentTooLarge": "\"{filename}\" supera il limite di {limit}.",
+      "createSuccess": "Ticket aperto! Il nostro team ti risponderà qui.",
+      "rateLimited": "Troppe richieste. Riprova tra qualche minuto.",
+      "createFailed": "Non è stato possibile aprire il ticket. Riprova."
+    }
+  },
+  "sessionLobby": {
+    "title": "Sala d'attesa della lezione",
+    "subtitle": "Verifica che la tua attrezzatura sia pronta prima di entrare in aula.",
+    "lastCheckTitle": "Ultimo test",
+    "lastCheckAt": "Eseguito il {when}.",
+    "pendingPoints": "Punti in sospeso: {items}. Consigliamo di ripetere il test.",
+    "approved": "Attrezzatura approvata nell'ultimo test.",
+    "emptyTitle": "Nessun test recente",
+    "emptyDescription": "Non hai ancora testato la tua attrezzatura. Esegui il test prima di entrare.",
+    "retest": "Ripeti test",
+    "runTest": "Testa attrezzatura",
+    "warningConfirm": "Capisco che la connessione può essere instabile e voglio entrare comunque.",
+    "finishTest": "Concludi test",
+    "back": "Indietro",
+    "enter": "Entra in aula",
+    "storageBlocked": "Risultato valido solo in questa sessione. Il browser ha bloccato l'archiviazione locale.",
+    "currentStatus": "Stato attuale:",
+    "status": {
+      "ok": "Approvato",
+      "warning": "Attenzione",
+      "fail": "Fallito",
+      "checking": "Test in corso",
+      "idle": "In attesa"
+    }
+  },
+  "sessionStatus": {
+    "SCHEDULED": "Programmata",
+    "IN_PROGRESS": "In corso",
+    "COMPLETED": "Completata",
+    "CANCELLED_BY_STUDENT": "Annullata dallo studente",
+    "CANCELLED_BY_ADMIN": "Annullata dall'insegnante",
+    "NO_SHOW_STUDENT": "Studente assente",
+    "NO_SHOW_ADMIN": "Insegnante assente",
+    "INTERRUPTED": "Interrotta",
+    "RESCHEDULE_PENDING": "Riprogrammazione in attesa"
+  },
+  "creditType": {
+    "SINGLE": "Lezione singola",
+    "PACK_5": "Pacchetto 5 lezioni",
+    "PACK_10": "Pacchetto 10 lezioni",
+    "MONTHLY": "Mensile",
+    "PROMO": "Promozione",
+    "MANUAL": "Manuale",
+    "REFUND": "Rimborso"
   }
 }

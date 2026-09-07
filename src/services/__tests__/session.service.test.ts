@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SessionService } from '../session.service';
+import { SLOT_OCCUPYING_STATUSES } from '../availability.service';
 import { AppError } from '@/lib/errors';
 
 // ── Mocks ──
@@ -8,6 +9,7 @@ const mockPrisma = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
   session: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
@@ -104,6 +106,7 @@ describe('SessionService', () => {
           session: {
             ...mockPrisma.session,
             findUnique: vi.fn().mockResolvedValue(null),
+            findFirst: vi.fn().mockResolvedValue(null),
             count: vi.fn().mockResolvedValue(0),
             create: vi.fn().mockResolvedValue(newSession),
           },
@@ -115,6 +118,81 @@ describe('SessionService', () => {
       const result = await service.create('student-1', { availabilitySlotId: 'slot-1' });
       expect(result.id).toBe('session-1');
       expect(result.status).toBe('SCHEDULED');
+    });
+
+    it('consulta o slot por findFirst filtrando SLOT_OCCUPYING_STATUSES', async () => {
+      const newSession = makeSession();
+      const findFirst = vi.fn().mockResolvedValue(null);
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        maxFutureSessions: 5,
+        preferredLanguage: 'PT_BR',
+        email: 'student@test.com',
+      });
+
+      mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
+        const tx = {
+          ...mockPrisma,
+          $queryRaw: vi.fn().mockResolvedValue([
+            { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
+          ]),
+          session: {
+            ...mockPrisma.session,
+            findFirst,
+            count: vi.fn().mockResolvedValue(0),
+            create: vi.fn().mockResolvedValue(newSession),
+          },
+          $executeRaw: vi.fn().mockResolvedValue(1),
+        };
+        return cb(tx as unknown as typeof mockPrisma);
+      });
+
+      await service.create('student-1', { availabilitySlotId: 'slot-1' });
+
+      // Forma da query, nao so o resultado: `findUnique` por availabilitySlotId
+      // deixou de existir e o filtro de status e o que devolve o slot cancelado.
+      expect(findFirst).toHaveBeenCalledWith({
+        where: {
+          availabilitySlotId: 'slot-1',
+          status: { in: [...SLOT_OCCUPYING_STATUSES] },
+        },
+        select: { id: true },
+      });
+    });
+
+    it('sessao cancelada no slot nao bloqueia nova reserva', async () => {
+      const newSession = makeSession({ id: 'session-2', studentId: 'student-2' });
+      // O filtro de status roda no banco: com apenas historico cancelado no slot,
+      // o findFirst nao encontra ocupante e a criacao segue.
+      const findFirst = vi.fn().mockResolvedValue(null);
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        maxFutureSessions: 5,
+        preferredLanguage: 'PT_BR',
+        email: 'student2@test.com',
+      });
+
+      mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
+        const tx = {
+          ...mockPrisma,
+          $queryRaw: vi.fn().mockResolvedValue([
+            { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
+          ]),
+          session: {
+            ...mockPrisma.session,
+            findFirst,
+            count: vi.fn().mockResolvedValue(0),
+            create: vi.fn().mockResolvedValue(newSession),
+          },
+          $executeRaw: vi.fn().mockResolvedValue(1),
+        };
+        return cb(tx as unknown as typeof mockPrisma);
+      });
+
+      const result = await service.create('student-2', { availabilitySlotId: 'slot-1' });
+      expect(result.id).toBe('session-2');
+      expect(findFirst.mock.calls[0][0].where.status.in).not.toContain('CANCELLED_BY_STUDENT');
+      expect(findFirst.mock.calls[0][0].where.status.in).not.toContain('CANCELLED_BY_ADMIN');
     });
 
     it('should throw SESSION_001 when student not found', async () => {
@@ -186,6 +264,7 @@ describe('SessionService', () => {
           session: {
             ...mockPrisma.session,
             findUnique: vi.fn().mockResolvedValue(null),
+            findFirst: vi.fn().mockResolvedValue(null),
             count: vi.fn().mockResolvedValue(2), // At max
           },
         };
@@ -212,6 +291,7 @@ describe('SessionService', () => {
           session: {
             ...mockPrisma.session,
             findUnique: vi.fn().mockResolvedValue(null),
+            findFirst: vi.fn().mockResolvedValue(null),
             count: vi.fn().mockResolvedValue(0),
           },
           $executeRaw: vi.fn().mockResolvedValue(0), // CAS failed

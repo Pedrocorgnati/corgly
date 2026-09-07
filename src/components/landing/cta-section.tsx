@@ -1,30 +1,35 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { ButtonLink } from '@/components/ui/button-link';
+import { SessionAwareCta } from '@/components/landing/pricing-section';
 import { firstLessonHref, formatUsd, FIRST_LESSON_USD } from '@/lib/constants/landing';
 import { useAuth } from '@/hooks/useAuth';
 
 export function CTASection() {
   const t = useTranslations('landing.cta');
   const locale = useLocale();
-  const { isAuthenticated } = useAuth();
+  // A sondagem de sessao tem TRES estados e este CTA precisa dos tres: ler so
+  // `isAuthenticated` manda o aluno ja logado para o cadastro enquanto
+  // `GET /auth/me` ainda esta em voo. `SessionAwareCta` (mesmo componente do
+  // hero e da vitrine) trata a espera sem deixar o CTA sem destino.
+  const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <section data-testid="landing-cta" className="py-11 md:py-12 bg-cta-lilac" aria-labelledby="cta-heading">
-      <div className="max-w-[1120px] mx-auto px-5 md:px-6 text-center">
-        <h2 id="cta-heading" className="text-[1.45rem] md:text-[1.85rem] font-semibold text-white tracking-tight">
+    <section data-testid="landing-cta" className="lp-cta" aria-labelledby="cta-heading">
+      <div className="lp-container lp-cta__inner">
+        <h2 id="cta-heading" className="lp-cta__title">
           {t('title')}
         </h2>
-        <p className="sr-only">{t('subtitle')}</p>
-        <ButtonLink
-          href={firstLessonHref(isAuthenticated)}
-          data-testid="landing-cta-primary-button"
-          size="lg"
-          className="mt-5 w-full sm:w-auto h-11 min-h-[44px] rounded-[10px] bg-white text-[#5b4a9a] hover:bg-white/90 font-semibold text-[15px] shadow-sm px-8"
+        <p className="lp-sr-only">{t('subtitle')}</p>
+        <SessionAwareCta
+          isLoading={isLoading}
+          isAuthenticated={isAuthenticated}
+          buildHref={firstLessonHref}
+          testId="landing-cta-primary-button"
+          className="lp-btn lp-btn--white lp-cta__button"
         >
           {t('button', { price: formatUsd(FIRST_LESSON_USD, locale) })}
-        </ButtonLink>
+        </SessionAwareCta>
       </div>
     </section>
   );

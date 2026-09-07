@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { Pagination } from '@/components/ui/pagination';
-import { CreditType, CREDIT_TYPE_MAP } from '@/lib/constants/enums';
+import { CreditType, CREDIT_TYPE_LABEL_KEY } from '@/lib/constants/enums';
 import { formatDatePtBR } from '@/lib/format-datetime';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { getRegionalDisplay } from '@/lib/billing/currency-policy';
@@ -45,6 +45,7 @@ interface PaginationData {
 
 export function CreditLog() {
   const t = useTranslations('credits.admin.log');
+  const tType = useTranslations('creditType');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [page, setPage] = useState(1);
@@ -191,7 +192,11 @@ export function CreditLog() {
                 {filteredPayments.map((payment) => (
                   <tr key={payment.id} data-testid={`admin-credit-log-row-${payment.id}`} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-3">
-                      <Badge variant="outline">{CREDIT_TYPE_MAP[payment.status as CreditType]?.label ?? payment.status}</Badge>
+                      <Badge variant="outline">
+                        {CREDIT_TYPE_LABEL_KEY[payment.status as CreditType]
+                          ? tType(CREDIT_TYPE_LABEL_KEY[payment.status as CreditType])
+                          : payment.status}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-foreground">
                       {getRegionalDisplay(payment.amount, toCurrency(payment.currency), 'pt-BR').formatted}

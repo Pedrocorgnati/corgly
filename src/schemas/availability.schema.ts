@@ -13,3 +13,10 @@ export const GenerateSlotsSchema = z.object({
 });
 
 export type GenerateSlotsInput = z.infer<typeof GenerateSlotsSchema>;
+
+/**
+ * Forma do formulario ANTES do parse: `timezone` tem `.default()`, entao ele e
+ * obrigatorio na saida (`GenerateSlotsInput`) e opcional na entrada. O
+ * react-hook-form tipa os campos pela entrada e o `handleSubmit` pela saida.
+ */
+export type GenerateSlotsFormValues = z.input<typeof GenerateSlotsSchema>;

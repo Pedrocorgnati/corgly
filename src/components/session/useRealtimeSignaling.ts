@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { timeoutSignal } from '@/lib/timeout-signal'
 import type { SessionSignal } from '@/types/sala-virtual'
 import type {
   RealtimeTransportKind,
@@ -28,7 +29,9 @@ import type {
  */
 
 const POLL_INTERVAL_MS = 2_000
-const NEGOTIATE_RETRY_MS = 3_000
+// Nao ha constante de retry de negociacao: `negotiate` que falha degrada para
+// poll na hora (ver `connect`). A antiga `NEGOTIATE_RETRY_MS` nunca teve
+// consumidor — era placeholder de um retry que a Fase 1 decidiu nao ter.
 
 export interface UseRealtimeSignalingReturn {
   /** Transporte efetivamente em uso após negociação/fallback. */
@@ -78,7 +81,7 @@ export function useRealtimeSignaling(): UseRealtimeSignalingReturn {
     try {
       const qs = lastSeenRef.current ? `?after=${encodeURIComponent(lastSeenRef.current)}` : ''
       const res = await fetch(`/api/v1/realtime/sessions/${sessionId}${qs}`, {
-        signal: AbortSignal.timeout(10_000),
+        signal: timeoutSignal(10_000),
       })
       if (!res.ok) return
       const json = await res.json()
@@ -105,7 +108,7 @@ export function useRealtimeSignaling(): UseRealtimeSignalingReturn {
   const negotiate = useCallback(async (sessionId: string): Promise<TransportDescriptor | null> => {
     try {
       const res = await fetch(`/api/v1/realtime/sessions/${sessionId}`, {
-        signal: AbortSignal.timeout(10_000),
+        signal: timeoutSignal(10_000),
       })
       if (!res.ok) return null
       const json = await res.json()
@@ -179,7 +182,7 @@ export function useRealtimeSignaling(): UseRealtimeSignalingReturn {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(message),
-      signal: AbortSignal.timeout(10_000),
+      signal: timeoutSignal(10_000),
     })
     if (!res.ok) throw new Error(`Realtime send falhou: ${res.status}`)
   }, [])

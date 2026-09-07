@@ -3,14 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import {
-  LayoutDashboard, CalendarDays, Users, Video, CreditCard, BarChart3, BookOpen, LifeBuoy, ShieldCheck, LogOut,
-} from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ROUTES } from '@/lib/constants/routes';
 import { AvatarInitials } from '@/components/ui/avatar-initials';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+// Fonte unica da navegacao do admin. Item novo entra la, nao aqui.
+import {
+  adminNavSlug,
+  getAdminNavItems,
+  isAdminNavItemActive,
+} from '@/components/shared/admin-sidebar';
 import { useAuth } from '@/hooks/useAuth';
 
 interface MobileAdminDrawerProps {
@@ -19,25 +22,11 @@ interface MobileAdminDrawerProps {
   onClose: () => void;
 }
 
-function useNavItems() {
-  const t = useTranslations('sidebar.admin');
-  return [
-    { href: ROUTES.ADMIN_DASHBOARD, label: t('dashboard'), icon: LayoutDashboard },
-    { href: ROUTES.ADMIN_SCHEDULE, label: t('schedule'), icon: CalendarDays },
-    { href: ROUTES.ADMIN_STUDENTS, label: t('students'), icon: Users },
-    { href: ROUTES.ADMIN_SESSIONS, label: t('sessions'), icon: Video },
-    { href: ROUTES.ADMIN_CREDITS, label: t('credits'), icon: CreditCard },
-    { href: ROUTES.ADMIN_REPORTS, label: t('reports'), icon: BarChart3 },
-    { href: ROUTES.ADMIN_CONTENT, label: t('content'), icon: BookOpen },
-    { href: ROUTES.ADMIN_SUPPORT, label: t('support'), icon: LifeBuoy },
-    { href: ROUTES.ADMIN_ACCOUNT_SECURITY, label: t('security'), icon: ShieldCheck },
-  ];
-}
-
 export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const navItems = useNavItems();
+  const tNav = useTranslations('sidebar.admin');
+  const navItems = getAdminNavItems('drawer');
   const { logout } = useAuth();
 
   return (
@@ -63,15 +52,14 @@ export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProp
 
         {/* Navigation */}
         <nav data-testid="sidebar-mobile-nav" aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/');
-            const slug = href.replace(/^\//, '').replace(/\//g, '-');
+          {navItems.map(({ href, labelKey, icon: Icon }) => {
+            const active = isAdminNavItemActive(href, pathname);
             return (
               <Link
                 key={href}
                 href={href}
                 onClick={onClose}
-                data-testid={`sidebar-mobile-nav-item-${slug}`}
+                data-testid={`sidebar-mobile-nav-item-${adminNavSlug(href)}`}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-[120ms]',
                   active
@@ -80,7 +68,7 @@ export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProp
                 )}
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
-                {label}
+                {tNav(labelKey)}
               </Link>
             );
           })}

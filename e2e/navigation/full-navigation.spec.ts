@@ -1,10 +1,13 @@
 import { test, expect } from '@playwright/test'
 import { loginAs, TEST_USERS } from '../helpers/auth'
 
-const STUDENT_ROUTES = ['/', '/dashboard', '/schedule', '/buy', '/history', '/progress']
+// Rotas do aluno: espelha os itens de navegação de src/lib/navigation/student-nav.ts.
+// Item novo na navegação do aluno entra aqui também — senão a suíte "sem links
+// órfãos" deixa de cobrir justamente a rota recém-criada.
+const STUDENT_ROUTES = ['/', '/dashboard', '/schedule', '/buy', '/history', '/progress', '/exercises', '/library']
 const ADMIN_ROUTES = ['/admin', '/admin/schedule', '/admin/sessions', '/admin/students', '/admin/credits', '/admin/feedback']
 const PUBLIC_ROUTES = ['/', '/auth/login', '/auth/register', '/auth/reset-password']
-const PROTECTED_ROUTES = ['/dashboard', '/schedule', '/buy', '/history', '/admin']
+const PROTECTED_ROUTES = ['/dashboard', '/schedule', '/buy', '/history', '/exercises', '/library', '/admin']
 
 test.describe('E2E-009: Navegação completa (sem links órfãos)', () => {
   test('rotas do aluno autenticado: todas retornam 200', async ({ page }) => {

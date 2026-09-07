@@ -1,13 +1,14 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SessionStatus, SESSION_STATUS_MAP } from '@/lib/constants/enums';
+import { SessionStatus, SESSION_STATUS_MAP, SESSION_STATUS_LABEL_KEY } from '@/lib/constants/enums';
 import { cn } from '@/lib/utils';
 
 interface SessionRow {
   id: string;
-  studentName: string;
+  studentName?: string;
   startAt: string;
   endAt: string;
   status: string;
@@ -41,6 +42,8 @@ export function SessionList({
   isLoading,
   onSessionClick,
 }: SessionListProps) {
+  const tStatus = useTranslations('sessionStatus');
+
   if (isLoading) {
     return (
       <div data-testid="admin-sessions-loading" className="bg-card border border-border rounded-2xl p-6 animate-pulse">
@@ -85,7 +88,7 @@ export function SessionList({
                   : 'border-border text-muted-foreground hover:border-primary',
               )}
             >
-              {config.label}
+              {tStatus(SESSION_STATUS_LABEL_KEY[status])}
             </button>
           );
         })}
@@ -111,14 +114,13 @@ export function SessionList({
             <tbody>
               {sessions.data.map((session) => {
                 const config = SESSION_STATUS_MAP[session.status as SessionStatus] ?? {
-                  label: session.status,
                   color: 'text-muted-foreground',
                   bg: 'bg-muted',
                 };
 
                 return (
                   <tr key={session.id} data-testid={`admin-sessions-row-${session.id}`} className="border-b border-border last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-3 text-foreground">{session.studentName}</td>
+                    <td className="px-4 py-3 text-foreground">{session.studentName ?? '—'}</td>
                     <td className="px-4 py-3 text-foreground">
                       {new Date(session.startAt).toLocaleDateString('pt-BR', {
                         day: '2-digit',
@@ -137,7 +139,9 @@ export function SessionList({
                           config.bg,
                         )}
                       >
-                        {config.label}
+                        {SESSION_STATUS_LABEL_KEY[session.status as SessionStatus]
+                          ? tStatus(SESSION_STATUS_LABEL_KEY[session.status as SessionStatus])
+                          : session.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-foreground">

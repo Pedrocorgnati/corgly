@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { HocuspocusProvider } from '@hocuspocus/provider'
+import { HocuspocusProvider, HocuspocusProviderWebsocket } from '@hocuspocus/provider'
 import type * as Y from 'yjs'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -42,13 +42,20 @@ export function useYjsProvider({
   }, [])
 
   useEffect(() => {
-    const provider = new HocuspocusProvider({
+    // `delay` e `maxAttempts` sao politica de reconexao do socket, nao do provider:
+    // vivem em `HocuspocusProviderWebsocketConfiguration`. Passa-los direto no
+    // `HocuspocusProvider` era ignorado em runtime e reprovado pelo tsc.
+    const socket = new HocuspocusProviderWebsocket({
       url: hocuspocusUrl,
+      delay: 1000,
+      maxAttempts: 30,
+    })
+
+    const provider = new HocuspocusProvider({
+      websocketProvider: socket,
       name: `session-${sessionId}`,
       token,
       document: doc,
-      delay: 1000,
-      maxAttempts: 30,
       onConnect() {
         setIsConnected(true)
       },
@@ -71,6 +78,7 @@ export function useYjsProvider({
 
     return () => {
       provider.destroy()
+      socket.destroy()
       providerRef.current = null
     }
   }, [sessionId, token, hocuspocusUrl, doc])

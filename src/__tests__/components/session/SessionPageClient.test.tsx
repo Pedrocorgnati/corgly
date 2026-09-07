@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { toast } from 'sonner'
 import { SessionPageClient } from '@/components/session/SessionPageClient'
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -53,14 +54,26 @@ vi.mock('@/hooks/useWebRTC', () => ({
   }),
 }))
 
+/**
+ * Guarda as opcoes com que o componente monta o hook, para que o teste possa
+ * disparar `onInterrupted` como o hook real dispara. `vi.hoisted` e necessario
+ * porque o factory de `vi.mock` sobe acima dos imports.
+ */
+const reconnectCall = vi.hoisted(() => ({
+  options: null as { onInterrupted?: (outcome: 'confirmed' | 'unconfirmed') => void } | null,
+}))
+
 vi.mock('@/hooks/useReconnect', () => ({
-  useReconnect: () => ({
-    isReconnecting: false,
-    reconnectCountdown: 120,
-    formattedCountdown: '02:00',
-    cancelReconnect: vi.fn(),
-    attemptCount: 0,
-  }),
+  useReconnect: (options: { onInterrupted?: (outcome: 'confirmed' | 'unconfirmed') => void }) => {
+    reconnectCall.options = options
+    return {
+      isReconnecting: false,
+      reconnectCountdown: 120,
+      formattedCountdown: '02:00',
+      cancelReconnect: vi.fn(),
+      attemptCount: 0,
+    }
+  },
 }))
 
 vi.mock('@/hooks/useSessionAccess', () => ({
@@ -188,6 +201,43 @@ describe('SessionPageClient', () => {
       screen.getByText(/1 crédito foi devolvido/),
     ).toBeInTheDocument()
     expect(screen.getByText('Contato')).toBeInTheDocument()
+  })
+
+  /**
+   * Zero Silencio: quando as duas tentativas do PATCH de interrupt falham, o
+   * hook entrega `unconfirmed` e a tela NAO pode afirmar que o credito voltou —
+   * o cliente nao tem como saber disso.
+   */
+  it('should admit that the interrupt was not confirmed by the server', async () => {
+    render(<SessionPageClient {...defaultProps} />)
+
+    expect(reconnectCall.options?.onInterrupted).toBeTypeOf('function')
+    await act(async () => {
+      reconnectCall.options?.onInterrupted?.('unconfirmed')
+    })
+
+    expect(screen.getByTestId('page-session-interrupted')).toBeInTheDocument()
+    expect(screen.getByTestId('session-interrupted-unconfirmed')).toHaveTextContent(
+      /Não conseguimos avisar o servidor/,
+    )
+    expect(screen.queryByTestId('session-interrupted-confirmed')).not.toBeInTheDocument()
+    expect(screen.queryByText(/1 crédito foi devolvido/)).not.toBeInTheDocument()
+    expect(toast.error).toHaveBeenCalledWith(
+      'Não conseguimos confirmar o aviso de interrupção ao servidor.',
+    )
+  })
+
+  it('should confirm the credit refund when the server acknowledged the interrupt', async () => {
+    render(<SessionPageClient {...defaultProps} />)
+
+    await act(async () => {
+      reconnectCall.options?.onInterrupted?.('confirmed')
+    })
+
+    expect(screen.getByTestId('session-interrupted-confirmed')).toHaveTextContent(
+      /1 crédito foi devolvido/,
+    )
+    expect(screen.queryByTestId('session-interrupted-unconfirmed')).not.toBeInTheDocument()
   })
 
   it('should show "Avaliar aula" link pointing to feedback page', () => {

@@ -37,8 +37,10 @@ export const metadata: Metadata = {
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Janela do aviso de expiracao — a mesma de src/components/credits/credit-expiry-alert.tsx. */
 const EXPIRY_THRESHOLD_MS = 7 * DAY_MS;
-/** Antecedencia em que o botao "Entrar" da sala destrava. */
-const ENTER_WINDOW_MS = 15 * 60 * 1000;
+// A janela de "entrar na sala" NAO mora mais aqui: era decidida uma unica vez
+// no `Date.now()` do render do servidor e congelava. Quem a avalia agora e o
+// proprio card, no relogio do cliente, junto com o contador
+// (src/components/student/next-session-card.tsx).
 
 /**
  * Fuso em que a data e a hora da proxima aula sao escritas.
@@ -95,9 +97,14 @@ export default async function DashboardPage() {
 
   const user = userResult.data;
   const credits = creditsResult.data;
-  const nextSessionData = nextSessionResult.data;
   const progress = progressResult.data;
   const recentFeedbacks = recentResult.data;
+
+  // `data === null` sempre significa FALHA nesta camada (src/actions/dashboard.ts).
+  // Creditos e proxima aula tem estado proprio de indisponibilidade: nenhum dos
+  // dois pode virar zero/vazio silencioso.
+  const creditsUnavailable = credits === null;
+  const nextSessionError = nextSessionResult.error;
 
   // Zero Silencio: painel que falhou nao pode virar "0" silencioso na tela.
   // Cada fetcher devolve `{ data, error }` (src/actions/dashboard.ts) e o erro
@@ -115,9 +122,11 @@ export default async function DashboardPage() {
   // ── Proxima aula ───────────────────────────────────────────────────────────
   // O campo canonico e `startAt` em ISO (produtor: `sessionToMeta`); `scheduledAt`
   // nunca existiu e `new Date(undefined)` renderizava "Invalid Date" sem estourar.
-  // A API ja devolve a aula mais proxima: status=SCHEDULED + from=agora +
-  // sort=startAt:asc + limit=1.
-  const nextSession = nextSessionData?.data?.[0] ?? null;
+  // O fetcher ja escolheu a aula certa: a EM ANDAMENTO na frente da proxima
+  // agendada, descartando o que ja terminou (`endAt <= agora`). Aqui so
+  // formatamos. `session: null` = agenda vazia de verdade; falha de leitura
+  // viaja em `nextSessionResult.error` e o card tem estado proprio para ela.
+  const nextSession = nextSessionResult.data?.session ?? null;
   const nextSessionStartMs = nextSession ? Date.parse(nextSession.startAt) : Number.NaN;
   const hasReadableStart = Number.isFinite(nextSessionStartMs);
 
@@ -127,6 +136,11 @@ export default async function DashboardPage() {
     ? {
         sessionId: nextSession.id,
         startAt: nextSession.startAt,
+        // `endAt` fecha a janela de entrada no cliente (a aula em andamento
+        // segue acionavel ate o fim); `status` e o que o dialogo de
+        // cancelamento le para decidir o aviso de cancelamento tardio.
+        endAt: nextSession.endAt,
+        status: nextSession.status,
         date: hasReadableStart
           ? new Date(nextSessionStartMs).toLocaleDateString('pt-BR', {
               timeZone: DISPLAY_TIMEZONE,
@@ -146,24 +160,32 @@ export default async function DashboardPage() {
     : null;
 
   const now = instanteDaRenderizacao();
-  const canEnter = hasReadableStart && nextSessionStartMs - now <= ENTER_WINDOW_MS;
 
   // ── Creditos a expirar ─────────────────────────────────────────────────────
   // Predicado canonico de src/components/credits/credit-expiry-alert.tsx:
   // expira DENTRO da janela, ainda NAO expirou e sobrou credito no lote.
   // `expiresAt: null` = lote de assinatura, que nao expira — antes disto o
   // `new Date(null)` caia na epoch, passava no teste e o card dizia "0 dia".
-  const balance = credits?.balance ?? 0;
   const expiryThreshold = now + EXPIRY_THRESHOLD_MS;
-  const expiringBatch = (credits?.breakdown ?? []).find((batch) => {
-    if (!batch.expiresAt) return false;
-    const expiresAt = new Date(batch.expiresAt).getTime();
-    if (Number.isNaN(expiresAt)) return false;
-    return batch.remaining > 0 && expiresAt > now && expiresAt <= expiryThreshold;
-  });
+  // `.find()` devolvia o PRIMEIRO lote da lista que caisse na janela — a ordem
+  // vem do servico, nao da urgencia. Com dois lotes vencendo (um em 6 dias,
+  // outro amanha), o aviso podia dizer "6 dias" e o aluno perdia o credito de
+  // amanha. Vence quem expira ANTES.
+  const expiringBatch = (credits?.breakdown ?? []).reduce<
+    { remaining: number; expiresAtMs: number } | null
+  >((maisUrgente, batch) => {
+    if (!batch.expiresAt) return maisUrgente;
+    const expiresAtMs = new Date(batch.expiresAt).getTime();
+    if (Number.isNaN(expiresAtMs)) return maisUrgente;
+    const dentroDaJanela =
+      batch.remaining > 0 && expiresAtMs > now && expiresAtMs <= expiryThreshold;
+    if (!dentroDaJanela) return maisUrgente;
+    if (maisUrgente && maisUrgente.expiresAtMs <= expiresAtMs) return maisUrgente;
+    return { remaining: batch.remaining, expiresAtMs };
+  }, null);
   const expiringCount = expiringBatch?.remaining ?? 0;
-  const expiringDays = expiringBatch?.expiresAt
-    ? Math.max(1, Math.ceil((new Date(expiringBatch.expiresAt).getTime() - now) / DAY_MS))
+  const expiringDays = expiringBatch
+    ? Math.max(1, Math.ceil((expiringBatch.expiresAtMs - now) / DAY_MS))
     : 0;
 
   // ── Corgly Circle ──────────────────────────────────────────────────────────
@@ -190,11 +212,18 @@ export default async function DashboardPage() {
     sessionId: fb.sessionId,
   }));
 
-  const nextSessionChipLabel = nextSessionForCard
-    ? nextSessionForCard.time
-      ? `Próxima: ${nextSessionForCard.time}`
-      : 'Horário a confirmar'
-    : 'Sem aula agendada';
+  // Chips do cabecalho: "nao consegui saber" nunca vira um numero.
+  const creditsChipLabel = creditsUnavailable
+    ? 'Créditos indisponíveis'
+    : `${credits.balance} credito${credits.balance === 1 ? '' : 's'}`;
+
+  const nextSessionChipLabel = nextSessionError
+    ? 'Agenda indisponível'
+    : nextSessionForCard
+      ? nextSessionForCard.time
+        ? `Próxima: ${nextSessionForCard.time}`
+        : 'Horário a confirmar'
+      : 'Sem aula agendada';
 
   return (
     <PageWrapper data-testid="page-dashboard">
@@ -214,7 +243,7 @@ export default async function DashboardPage() {
         chips={
           <>
             <DashboardHeaderChip icon={Coins} data-testid="dashboard-header-chip-credits">
-              {balance} credito{balance === 1 ? '' : 's'}
+              {creditsChipLabel}
             </DashboardHeaderChip>
             <DashboardHeaderChip icon={Calendar} data-testid="dashboard-header-chip-next-session">
               {nextSessionChipLabel}
@@ -260,17 +289,58 @@ export default async function DashboardPage() {
       {/* Grade unica: 1 / 2 / 3 colunas. Os spans vem daqui (ver SPAN). */}
       <div data-testid="dashboard-kpis" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* 1. Creditos */}
-        <WidgetErrorBoundary>
-          <CreditWidget
-            balance={balance}
-            expiringCount={expiringCount}
-            expiringDays={expiringDays}
-          />
+        <WidgetErrorBoundary label="creditos">
+          {creditsUnavailable ? (
+            // Saldo desconhecido NAO e saldo zero. `credits?.balance ?? 0` pintava
+            // "0 creditos" e o aluno com saldo achava que tinha perdido tudo — e,
+            // pior, ia comprar de novo. Aqui a tela diz o que aconteceu e oferece
+            // as duas saidas reais: recarregar ou abrir a pagina de creditos.
+            <WidgetCard
+              data-testid="dashboard-kpi-credits-unavailable"
+              title="Créditos"
+              icon={Coins}
+              accent="amber"
+            >
+              <div role="alert" className="flex-1">
+                <p className="text-[13.5px] font-semibold text-ink">
+                  Não foi possível ler seu saldo
+                </p>
+                <p className="mt-1.5 text-[12.5px] text-muted-foreground">
+                  {creditsResult.error ?? 'Tente de novo em instantes.'}
+                </p>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <a
+                  href={ROUTES.DASHBOARD}
+                  data-testid="dashboard-kpi-credits-retry-button"
+                  className={cn(
+                    buttonVariants({ variant: 'outline' }),
+                    'flex-1 h-11 min-h-[44px] rounded-lg font-semibold',
+                  )}
+                >
+                  Tentar de novo
+                </a>
+                <Link
+                  href={ROUTES.CREDITS}
+                  data-testid="dashboard-kpi-credits-open-button"
+                  className={cn(buttonVariants(), 'flex-1 h-11 min-h-[44px] rounded-lg font-semibold')}
+                >
+                  Ver créditos
+                </Link>
+              </div>
+            </WidgetCard>
+          ) : (
+            <CreditWidget
+              balance={credits.balance}
+              expiringCount={expiringCount}
+              expiringDays={expiringDays}
+            />
+          )}
         </WidgetErrorBoundary>
 
         {/* 2. Proxima aula */}
-        <WidgetErrorBoundary>
-          <NextSessionCard session={nextSessionForCard} canEnter={canEnter} />
+        <WidgetErrorBoundary label="proxima-aula">
+          <NextSessionCard session={nextSessionForCard} loadError={nextSessionError} />
         </WidgetErrorBoundary>
 
         {/* 3. Acoes rapidas */}
@@ -304,22 +374,27 @@ export default async function DashboardPage() {
         </WidgetCard>
 
         {/* 4. Historico */}
-        <WidgetErrorBoundary>
+        <WidgetErrorBoundary label="historico" className={SPAN.full}>
+          {/*
+            `streak` fica de fora: nao existe fonte de sequencia semanal ligada
+            ao dashboard. O valor anterior (`completedSessions`) era o total de
+            aulas concluidas rotulado como "Sequencia (sem.)" — numero errado
+            com nome de outra metrica. Sem fonte, o widget omite a metrica.
+          */}
           <QuickStats
             total={totalSessions}
             completedPercent={completedPercent}
-            streak={completedSessions}
             className={SPAN.full}
           />
         </WidgetErrorBoundary>
 
         {/* 5. Corgly Circle */}
-        <WidgetErrorBoundary>
+        <WidgetErrorBoundary label="corgly-circle" className={SPAN.wideTwoThirds}>
           <CorglyCircle scores={circleScores} isLoading={false} className={SPAN.wideTwoThirds} />
         </WidgetErrorBoundary>
 
         {/* 6. Avaliacoes recentes */}
-        <WidgetErrorBoundary>
+        <WidgetErrorBoundary label="avaliacoes-recentes" className={SPAN.wideThird}>
           <RecentFeedbackList
             feedbacks={feedbackList}
             isLoading={false}

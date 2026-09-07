@@ -9,6 +9,14 @@ interface GlobalErrorProps {
   reset: () => void;
 }
 
+/**
+ * Fronteira de erro GLOBAL: substitui o root layout inteiro, inclusive o
+ * `NextIntlClientProvider` que mora nele. Por isso — e so por isso — a copy
+ * aqui continua fixa; `useTranslations` lancaria "No intl context found"
+ * exatamente na tela que existe para nao quebrar. As fronteiras por rota
+ * (`src/app/**\/error.tsx`) renderizam DENTRO do provider e usam
+ * `errors.serverError.*`.
+ */
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
     // Log estruturado local para captura em containers/PM2.

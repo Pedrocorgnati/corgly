@@ -13,13 +13,29 @@ const PUBLIC_API_PATHS = [
   '/api/v1/auth/forgot-password',
   '/api/v1/auth/reset-password',
   '/api/v1/auth/resend-confirmation',
+  // Pedido de magic-link: quem pede login sem senha e, por definicao, quem nao
+  // tem sessao. Fora desta lista o proxy respondia 401 antes de a rota rodar e
+  // o login sem senha ficava inacessivel. Entrada com o caminho COMPLETO de
+  // proposito: `matchesPrefix` casa `p` e tudo sob `p + '/'`, entao listar
+  // `/api/v1/auth/magic-link` abriria o namespace inteiro para qualquer rota
+  // futura. O CONSUMO do token nao passa por aqui — mora na pagina
+  // `(public)/auth/magic-link/callback`, que nao e rota de API.
+  '/api/v1/auth/magic-link/request',
   '/api/v1/auth/cancel-deletion',
   '/api/v1/auth/cookie-consent', // Unauthenticated visitors must be able to set cookie consent (LGPD)
   '/api/v1/webhooks/stripe',
   '/api/v1/content',
-  '/api/v1/availability',
   '/api/v1/email/unsubscribe',
   '/api/v1/privacy/data-requests', // DSR público: titular anônimo abre pedido sem sessão (LGPD Art. 18)
+];
+
+// Rotas de API cujo GET e publico (aluno anonimo consulta horario) mas cujas
+// mutacoes exigem sessao: POST, PATCH e DELETE seguem para o ramo autenticado,
+// que injeta x-user-id, x-user-role e x-token-version lidos pelo requireAdmin.
+// Deliberadamente fora de ADMIN_ONLY_PATHS: o 403 de aluno deve nascer do
+// requireAdmin da rota, nao do proxy.
+const PUBLIC_API_READ_ONLY_PATHS = [
+  '/api/v1/availability',
 ];
 
 const ADMIN_ONLY_PATHS = [
@@ -88,23 +104,40 @@ function nextWithStripped(
   return NextResponse.next({ request: { headers: merged } });
 }
 
+/**
+ * Prefixos de area logada. Espelha os segmentos de rota de `src/app/(student)/`,
+ * `src/app/(admin)/` e `src/app/(minimal)/session`; tudo que nao casa aqui e
+ * tratado como pagina publica da landing.
+ *
+ * REGRA: segmento novo em `(student)/` ou `(admin)/` entra NESTA lista no mesmo
+ * commit. Rota logada ausente daqui nao ganha acesso indevido (quem autoriza e o
+ * bloco de sessao acima), mas passa a receber o header de locale da landing, ou
+ * seja, o proxy passa a trata-la como pagina de marketing.
+ */
+const PRIVATE_PATH_PREFIXES = [
+  // (student)
+  '/account',
+  '/billing',
+  '/credits',
+  '/dashboard',
+  '/exercises',
+  '/history',
+  '/library',
+  '/onboarding',
+  '/progress',
+  '/schedule',
+  '/support',
+  // (student) e (minimal)
+  '/session',
+  // (admin)
+  '/admin',
+  '/analytics',
+];
+
 function isPublicLandingPath(pathname: string): boolean {
   if (pathname.startsWith('/api')) return false;
   if (pathname.startsWith('/_next')) return false;
-  const privatePrefixes = [
-    '/dashboard',
-    '/admin',
-    '/session',
-    '/schedule',
-    '/credits',
-    '/progress',
-    '/account',
-    '/billing',
-    '/history',
-    '/library',
-    '/onboarding',
-  ];
-  return !privatePrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return !PRIVATE_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 function generateCorrelationId(): string {
@@ -221,9 +254,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // ─── Allow public API paths without auth ──────────────────────────────────
-  const isPublic = PUBLIC_API_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(p + '/'),
-  );
+  const matchesPrefix = (list: string[]) =>
+    list.some((p) => pathname === p || pathname.startsWith(p + '/'));
+
+  const isPublic =
+    matchesPrefix(PUBLIC_API_PATHS) ||
+    (request.method === 'GET' && matchesPrefix(PUBLIC_API_READ_ONLY_PATHS));
   if (isPublic) {
     return addSecurityHeaders(
       nextWithStripped(request, { 'x-request-id': correlationId }),

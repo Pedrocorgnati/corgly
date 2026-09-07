@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { timeoutSignal } from '@/lib/timeout-signal'
 import type { SessionSignal, IceServersConfig } from '@/types/sala-virtual'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ async function postSignal(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(10_000),
+      signal: timeoutSignal(10_000),
     })
     if (!res.ok) throw new Error(`Signal POST falhou: ${res.status}`)
   }
@@ -78,6 +79,12 @@ export function useWebRTC(): UseWebRTCReturn {
   const lastSignalTimestampRef = useRef<string | undefined>(undefined)
   const sessionIdRef = useRef<string | null>(null)
   const isInitiatorRef = useRef<boolean>(false)
+  /**
+   * Timer que dispara NOSSA oferta quando o peer nao ofereceu primeiro. Fica em
+   * ref porque quem precisa cancela-lo e o processamento de sinais, que roda no
+   * polling — sem isso os dois lados ofereciam ao mesmo tempo (glare).
+   */
+  const initiatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const remoteStreamRef = useRef<MediaStream | null>(null)
   const iceFailureCountRef = useRef(0)
   const iceServersRef = useRef<IceServersConfig[]>([])
@@ -107,6 +114,14 @@ export function useWebRTC(): UseWebRTCReturn {
 
     try {
       if (signal.type === 'offer') {
+        // O peer ofereceu primeiro: somos o lado que responde. Cancelar a nossa
+        // oferta agendada evita a colisao de duas offers (glare), em que os
+        // dois lados ficam em `have-local-offer` e a chamada nunca conecta.
+        if (initiatorTimerRef.current) {
+          clearTimeout(initiatorTimerRef.current)
+          initiatorTimerRef.current = null
+        }
+        isInitiatorRef.current = false
         const offer = signal.payload as RTCSessionDescriptionInit
         await pc.setRemoteDescription(new RTCSessionDescription(offer))
         const answer = await pc.createAnswer()
@@ -151,7 +166,7 @@ export function useWebRTC(): UseWebRTCReturn {
 
           const res = await fetch(
             `/api/v1/sessions/${sessionId}/signal?${params.toString()}`,
-            { signal: AbortSignal.timeout(8_000) },
+            { signal: timeoutSignal(8_000) },
           )
           if (!res.ok) return
 
@@ -178,7 +193,7 @@ export function useWebRTC(): UseWebRTCReturn {
 
     try {
       const res = await fetch(`/api/v1/sessions/${sid}/turn-credentials`, {
-        signal: AbortSignal.timeout(10_000),
+        signal: timeoutSignal(10_000),
       })
       if (!res.ok) throw new Error(`TURN credentials fetch falhou: ${res.status}`)
       const json = await res.json()
@@ -425,7 +440,8 @@ export function useWebRTC(): UseWebRTCReturn {
       // Aqui: role de admin é sempre o initiator; student responde
       // Como não temos acesso ao role aqui, tentamos detectar via primeiro sinal recebido
       // Estratégia: iniciar como initiator após 500ms se não receber offer do peer
-      const initiatorTimer = setTimeout(async () => {
+      initiatorTimerRef.current = setTimeout(async () => {
+        initiatorTimerRef.current = null
         if (!pcRef.current || pcRef.current.signalingState !== 'stable') return
 
         try {
@@ -442,15 +458,9 @@ export function useWebRTC(): UseWebRTCReturn {
         }
       }, 500)
 
-      // Limpar timer se já recebermos um offer antes de enviar o nosso
-      const originalProcessSignal = processSignal
-      const wrappedProcessSignal = async (signal: SessionSignal) => {
-        if (signal.type === 'offer' && isInitiatorRef.current === false) {
-          clearTimeout(initiatorTimer)
-          isInitiatorRef.current = false
-        }
-        await originalProcessSignal(signal)
-      }
+      // O cancelamento do timer acima quando o peer oferece primeiro vive
+      // dentro de `processSignal` (ramo 'offer'): era este wrapper, que nunca
+      // chegou a ser ligado ao polling e por isso nunca cancelou nada.
 
       // 8. Iniciar polling
       startPolling(sessionId)
@@ -459,7 +469,9 @@ export function useWebRTC(): UseWebRTCReturn {
       setIsMuted(false)
       setIsVideoOff(false)
     },
-    [processSignal, startPolling, rebuildPeerConnectionWithRelay],
+    // `processSignal` saiu daqui junto com o wrapper orfao: quem o usa e o
+    // `startPolling`, que ja o declara como dependencia propria.
+    [startPolling, rebuildPeerConnectionWithRelay],
   )
 
   // ── Disconnect ───────────────────────────────────────────────────────────────
@@ -485,6 +497,10 @@ export function useWebRTC(): UseWebRTCReturn {
     lastSignalTimestampRef.current = undefined
     sessionIdRef.current = null
     isInitiatorRef.current = false
+    if (initiatorTimerRef.current) {
+      clearTimeout(initiatorTimerRef.current)
+      initiatorTimerRef.current = null
+    }
     iceFailureCountRef.current = 0
   }, [stopPolling, stopLocalTracks])
 

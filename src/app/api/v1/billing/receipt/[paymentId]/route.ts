@@ -34,7 +34,12 @@ export async function GET(request: NextRequest, ctx: RouteCtx) {
       where: { id: paymentId },
       include: {
         user: { select: { id: true, name: true, email: true, preferredLanguage: true } },
-        creditBatch: { select: { credits: true } },
+        // Campos reais do model CreditBatch (prisma/schema.prisma): totalCredits
+        // e usedCredits. Nao existe `credits` — pedir essa coluna fazia o Prisma
+        // rejeitar o select em runtime e a rota devolver 500 para todo pagamento
+        // com lote associado (ex.: PACK_10). O recibo descreve o que foi
+        // COMPRADO, entao o numero certo e totalCredits.
+        creditBatch: { select: { totalCredits: true } },
       },
     });
 
@@ -69,8 +74,8 @@ export async function GET(request: NextRequest, ctx: RouteCtx) {
         receiptNumber,
         createdAt: payment.createdAt,
         description:
-          payment.creditBatch && payment.creditBatch.credits
-            ? `Compra de ${payment.creditBatch.credits} credito(s)`
+          payment.creditBatch && payment.creditBatch.totalCredits > 0
+            ? `Compra de ${payment.creditBatch.totalCredits} credito(s)`
             : 'Pagamento',
         amount: payment.amount,
         currency: payment.currency,

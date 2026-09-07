@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   Calendar,
@@ -23,7 +23,14 @@ import { CurrencySelector } from '@/components/billing/CurrencySelector';
 import { useUserCurrency } from '@/lib/hooks/use-user-currency';
 import type { Currency } from '@/lib/currency';
 import { monthlyPackageType, resolvePrice } from '@/lib/pricing/config';
-import { MONTHLY_OPTIONS, type MonthlyLessons } from '@/lib/constants/landing';
+import {
+  MONTHLY_OPTIONS,
+  type LandingPlanId,
+  type MonthlyLessons,
+  clearPlanSelection,
+  readPlanSelection,
+} from '@/lib/constants/landing';
+import { missingMessage } from '@/lib/i18n/message-fallback';
 
 /**
  * Vitrine do dashboard — espelho da vitrine publica (`landing/pricing-section`).
@@ -36,15 +43,13 @@ import { MONTHLY_OPTIONS, type MonthlyLessons } from '@/lib/constants/landing';
  * renderizado por `PriceDisplay`. NAO existe aritmetica de cambio aqui: as
  * unicas divisoes feitas neste arquivo sao preco-total / numero-de-aulas, que
  * dividem creditos, nao moeda.
+ *
+ * O identificador de plano e o MESMO da vitrine publica (`LandingPlanId`, em
+ * `src/lib/constants/landing.ts`). Este arquivo mantinha um `ShowcasePlanId`
+ * proprio com os mesmos tres literais: duas unioes fechadas para o mesmo
+ * catalogo, livres para divergir sem que compilador ou teste reclamassem — e o
+ * `?plan=` que a landing monta e lido por essa mesma uniao do outro lado.
  */
-export type ShowcasePlanId = 'SINGLE' | 'PACK_10' | 'MONTHLY';
-
-const SHOWCASE_PLAN_IDS: readonly ShowcasePlanId[] = ['SINGLE', 'PACK_10', 'MONTHLY'];
-
-/** Type guard usado pela pagina para validar `?plan=` sem inventar plano. */
-export function isShowcasePlanId(value: unknown): value is ShowcasePlanId {
-  return typeof value === 'string' && (SHOWCASE_PLAN_IDS as readonly string[]).includes(value);
-}
 
 const FEATURE_ICONS = {
   SINGLE: [Calendar, Clock],
@@ -53,21 +58,6 @@ const FEATURE_ICONS = {
 } as const;
 
 const PACK_10_CREDITS = 10;
-
-/**
- * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
- * Em desenvolvimento estoura no primeiro render; em producao devolve string
- * vazia — a chave crua NUNCA aparece para o usuario final.
- *
- * DUPLICADO em `src/components/billing/CurrencySelector.tsx`: extrair para um
- * modulo compartilhado sairia da lista de arquivos deste work package.
- */
-function missingMessage(fullKey: string): string {
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
-  }
-  return '';
-}
 
 /** Preco por aula = total / creditos. Divisao de creditos, nunca de cambio. */
 function perLessonCents(totalCents: number, lessons: number): number {
@@ -78,7 +68,7 @@ export interface PricingCardsProps {
   /** Habilita o preco promocional de primeira aula no plano avulso. */
   isFirstPurchase?: boolean;
   /** Plano vindo da landing (`?plan=`). Plano desconhecido chega como null. */
-  initialPlan?: ShowcasePlanId | null;
+  initialPlan?: LandingPlanId | null;
   /** Volume mensal vindo da landing (`?lessons=`). Default: 10 aulas. */
   initialMonthlyLessons?: MonthlyLessons | null;
 }
@@ -92,25 +82,52 @@ export function PricingCards({
   const tl = useTranslations('landing.pricing');
   const locale = useLocale();
   const { currency, isLoading, isSaving, error, setCurrency, reload } = useUserCurrency();
-  const [loadingPlan, setLoadingPlan] = useState<ShowcasePlanId | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<LandingPlanId | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<LandingPlanId | null>(initialPlan);
   const [monthlyLessons, setMonthlyLessons] = useState<MonthlyLessons>(
     initialMonthlyLessons ?? MONTHLY_OPTIONS[0].lessons,
   );
 
+  /**
+   * Ultimo elo da ponte landing -> cadastro -> vitrine.
+   *
+   * Quando o aluno chega pela URL (`/credits?plan=...`), a query manda e o
+   * registro guardado no cadastro ja cumpriu o papel dele: e apagado para nao
+   * ressurgir numa visita futura. Quando chega sem query — caso do aluno que
+   * atravessou confirmacao de e-mail e login — a escolha e recuperada do
+   * registro, aplicada UMA vez e apagada em seguida.
+   *
+   * Roda em efeito, nunca no render: ler `localStorage` durante o render quebra
+   * a hidratacao (servidor nao tem storage).
+   */
+  useEffect(() => {
+    if (initialPlan) {
+      clearPlanSelection();
+      return;
+    }
+    const saved = readPlanSelection();
+    if (!saved) return;
+    clearPlanSelection();
+    setSelectedPlan(saved.plan);
+    if (saved.plan === 'MONTHLY' && saved.monthlyLessons) {
+      setMonthlyLessons(saved.monthlyLessons);
+    }
+  }, [initialPlan]);
+
   const text = (key: string, values?: Record<string, string | number>): string =>
-    t.has(key) ? t(key, values) : missingMessage(`credits.pricing.${key}`);
+    t.has(key) ? t(key, values) : missingMessage(`credits.pricing.${key}`, 'PricingCards');
 
   const landing = (key: string, values?: Record<string, string | number>): string =>
-    tl.has(key) ? tl(key, values) : missingMessage(`landing.pricing.${key}`);
+    tl.has(key) ? tl(key, values) : missingMessage(`landing.pricing.${key}`, 'PricingCards');
 
   const landingList = (key: string): string[] => {
     if (!tl.has(key)) {
-      missingMessage(`landing.pricing.${key}`);
+      missingMessage(`landing.pricing.${key}`, 'PricingCards');
       return [];
     }
     const raw = tl.raw(key);
     if (!Array.isArray(raw)) {
-      missingMessage(`landing.pricing.${key}`);
+      missingMessage(`landing.pricing.${key}`, 'PricingCards');
       return [];
     }
     return raw.filter((item): item is string => typeof item === 'string');
@@ -121,7 +138,7 @@ export function PricingCards({
   const pack10Cents = resolvePrice('PACK_10', currency).amountCents;
   const monthlyCents = resolvePrice(monthlyPackageType(monthlyLessons), currency).amountCents;
 
-  async function handleBuy(plan: ShowcasePlanId) {
+  async function handleBuy(plan: LandingPlanId) {
     setLoadingPlan(plan);
     try {
       // MONTHLY usa o eixo canonico `monthlyLessons` (10 ou 20). SINGLE e
@@ -147,7 +164,7 @@ export function PricingCards({
     }
   }
 
-  function renderCta(plan: ShowcasePlanId, popular: boolean) {
+  function renderCta(plan: LandingPlanId, popular: boolean) {
     const busy = loadingPlan === plan;
     return (
       <Button
@@ -174,11 +191,17 @@ export function PricingCards({
     );
   }
 
-  function renderFeatures(plan: ShowcasePlanId, messageKey: string) {
+  /**
+   * A chave da lista fica no CHAMADOR, nao aqui: passada como parametro, ela
+   * vira expressao e a varredura de `src/__tests__/i18n/consumed-keys.test.ts`
+   * nao consegue provar que existe no catalogo — a lista de features poderia
+   * sumir dos quatro locales sem nenhum teste ficar vermelho.
+   */
+  function renderFeatures(plan: LandingPlanId, features: string[]) {
     const icons = FEATURE_ICONS[plan];
     return (
       <ul className="mt-5 space-y-2.5">
-        {landingList(messageKey).map((feature, index) => {
+        {features.map((feature, index) => {
           const Icon = icons[index] ?? CheckCircle2;
           return (
             <li key={feature} className="flex items-center gap-2.5 text-sm text-muted-foreground">
@@ -191,8 +214,8 @@ export function PricingCards({
     );
   }
 
-  function renderSelectedNote(plan: ShowcasePlanId) {
-    if (initialPlan !== plan) return null;
+  function renderSelectedNote(plan: LandingPlanId) {
+    if (selectedPlan !== plan) return null;
     return (
       <p
         data-testid={`credits-package-${plan.toLowerCase()}-selected-note`}
@@ -227,11 +250,11 @@ export function PricingCards({
         {/* ---------------------------------------------------------- SINGLE */}
         <div
           data-testid="credits-package-single"
-          data-selected={initialPlan === 'SINGLE' ? 'true' : undefined}
+          data-selected={selectedPlan === 'SINGLE' ? 'true' : undefined}
           className={cn(
             cardBase,
             'border border-border shadow-sm',
-            initialPlan === 'SINGLE' && 'ring-2 ring-primary/40',
+            selectedPlan === 'SINGLE' && 'ring-2 ring-primary/40',
           )}
         >
           <h3 className="text-lg font-bold text-foreground">{text('singleTitle')}</h3>
@@ -278,17 +301,17 @@ export function PricingCards({
 
           {renderSelectedNote('SINGLE')}
           {renderCta('SINGLE', false)}
-          {renderFeatures('SINGLE', 'packages.single.features')}
+          {renderFeatures('SINGLE', landingList('packages.single.features'))}
         </div>
 
         {/* --------------------------------------------------------- PACK_10 */}
         <div
           data-testid="credits-package-pack_10"
-          data-selected={initialPlan === 'PACK_10' ? 'true' : undefined}
+          data-selected={selectedPlan === 'PACK_10' ? 'true' : undefined}
           className={cn(
             cardBase,
             'border-2 border-primary shadow-lg shadow-primary/10',
-            initialPlan === 'PACK_10' && 'ring-2 ring-primary/40',
+            selectedPlan === 'PACK_10' && 'ring-2 ring-primary/40',
           )}
         >
           <Badge
@@ -324,17 +347,17 @@ export function PricingCards({
 
           {renderSelectedNote('PACK_10')}
           {renderCta('PACK_10', true)}
-          {renderFeatures('PACK_10', 'packages.pack10.features')}
+          {renderFeatures('PACK_10', landingList('packages.pack10.features'))}
         </div>
 
         {/* --------------------------------------------------------- MONTHLY */}
         <div
           data-testid="credits-package-monthly"
-          data-selected={initialPlan === 'MONTHLY' ? 'true' : undefined}
+          data-selected={selectedPlan === 'MONTHLY' ? 'true' : undefined}
           className={cn(
             cardBase,
             'border border-border shadow-sm',
-            initialPlan === 'MONTHLY' && 'ring-2 ring-primary/40',
+            selectedPlan === 'MONTHLY' && 'ring-2 ring-primary/40',
           )}
         >
           <h3 className="text-lg font-bold text-foreground">{text('monthlyTitle')}</h3>
@@ -418,7 +441,7 @@ export function PricingCards({
 
           {renderSelectedNote('MONTHLY')}
           {renderCta('MONTHLY', false)}
-          {renderFeatures('MONTHLY', 'packages.monthly.features')}
+          {renderFeatures('MONTHLY', landingList('packages.monthly.features'))}
         </div>
       </div>
 

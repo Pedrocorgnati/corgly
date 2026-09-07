@@ -11,6 +11,7 @@ import { SubscriptionManager } from '@/components/billing/subscription-manager';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants/routes';
 import { CUSTOMER_PORTAL_RETURN_AFTER_PATH } from '@/lib/billing/customer-portal.config';
+import { missingMessage } from '@/lib/i18n/message-fallback';
 
 // ST-22 (Assinatura). Integracao do Customer Portal = redirect para o portal
 // hospedado da Stripe (embed inviavel, X-Frame-Options). Decisao canonica:
@@ -27,25 +28,10 @@ interface PortalSessionResponse {
   error?: string | null;
 }
 
-/**
- * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
- * Em desenvolvimento estoura no primeiro render; em producao devolve string
- * vazia — a chave crua NUNCA aparece para o usuario final.
- *
- * DUPLICADO nos outros arquivos deste work package: um modulo compartilhado
- * ficaria fora da lista de arquivos de propriedade.
- */
-function missingMessage(fullKey: string): string {
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
-  }
-  return '';
-}
-
 export default function BillingSubscriptionPage() {
   const t = useTranslations('credits.subscription');
   const text = (key: string): string =>
-    t.has(key) ? t(key) : missingMessage(`credits.subscription.${key}`);
+    t.has(key) ? t(key) : missingMessage(`credits.subscription.${key}`, 'BillingSubscriptionPage');
 
   const [isOpening, setIsOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);

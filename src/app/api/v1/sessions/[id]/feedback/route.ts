@@ -12,7 +12,10 @@ interface RouteContext {
 
 /**
  * POST /api/v1/sessions/[id]/feedback
- * Student submits session-quality feedback (clarity, didactics, punctuality, engagement).
+ * Student submits session feedback scored on the canonical Feedback dimensions
+ * (listening, speaking, writing, vocabulary — see prisma/schema.prisma).
+ * Free text goes in overallFeedback plus the optional per-dimension notes
+ * (listeningFeedback, speakingFeedback, writingFeedback, vocabularyFeedback).
  * Validates: session exists → owner → COMPLETED → window 48h → not duplicate → schema → creates.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {

@@ -15,24 +15,21 @@ export interface DualContext {
  * Cada contexto tem cookies/storage independentes — necessário para simular
  * dois usuários diferentes conectados ao mesmo tempo.
  *
- * Usar fakeMicWithInput/fakeCameraWithFile para CI onde hardware de mídia não existe.
+ * Câmera e microfone falsos (CI sem hardware de mídia) NÃO se configuram aqui:
+ * `--use-fake-ui-for-media-stream` / `--use-fake-device-for-media-stream` são
+ * flags de LINHA DE COMANDO do Chromium e valem no launch do browser, não no
+ * contexto. Elas vivem em `playwright.config.ts` (`use.launchOptions.args`).
+ * Passá-las para `newContext()` era ruído: o Playwright ignora a chave em
+ * runtime — os contextos rodavam com o hardware real da máquina — e o
+ * `tsc` reprovava com TS2353 ('args' não existe em BrowserContextOptions).
  */
 export async function createDualContext(browser: Browser): Promise<DualContext> {
   const adminContext = await browser.newContext({
     permissions: ['camera', 'microphone'],
-    // Simula câmera e microfone para CI (sem hardware real)
-    args: [
-      '--use-fake-ui-for-media-stream',
-      '--use-fake-device-for-media-stream',
-    ],
   })
 
   const studentContext = await browser.newContext({
     permissions: ['camera', 'microphone'],
-    args: [
-      '--use-fake-ui-for-media-stream',
-      '--use-fake-device-for-media-stream',
-    ],
   })
 
   const adminPage = await adminContext.newPage()

@@ -24,3 +24,10 @@ if (dsn) {
     // @sentry/nextjs nao instalado — ver output/workspace/corgly/PENDING-ACTIONS.md
   }
 }
+
+// Marcador de MODULO. Sem nenhum `import`/`export`, o TypeScript trata este
+// arquivo como script global: os tres `sentry.*.config.ts` passam a dividir o
+// mesmo escopo e o `const dsn` de cada um colide com o dos outros (TS2451,
+// que reprovava o type-check do `next build`). O `export {}` isola o escopo
+// sem alterar o efeito colateral de inicializacao no import.
+export {};

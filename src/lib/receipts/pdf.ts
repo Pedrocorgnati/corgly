@@ -33,7 +33,7 @@ const LABELS: Record<SupportedLocale, Record<string, string>> = {
     total: 'Total',
     status: 'Status',
     transactionId: 'ID da transação',
-    taxId: 'CNPJ',
+    taxId: 'CPF/CNPJ',
     address: 'Endereço',
     issuedBy: 'Emitido por',
   },

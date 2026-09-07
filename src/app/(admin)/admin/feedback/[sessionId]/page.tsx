@@ -2,11 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight, ClipboardList, Star } from 'lucide-react';
-import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
+import { getSessionFeedback, type SessionFeedbackDetail } from '@/actions/admin-students';
 import { FeedbackReviewButton } from '@/components/admin/FeedbackReviewButton';
-import { getSessionFeedback } from '@/actions/admin-students';
 import { ROUTES } from '@/lib/constants/routes';
 import { PageWrapper } from '@/components/shared';
 
@@ -28,32 +27,15 @@ interface Props {
  * Nao existe clarity/didacticQuality/punctuality/engagement, nem studentName,
  * nem `comment`: o texto livre se chama `overallFeedback`.
  *
- * A validacao acontece aqui porque o tipo declarado no fetcher
- * (`SessionFeedbackDetail` em src/actions/admin-students.ts) ainda descreve o
- * vocabulario antigo. Zod na fronteira e a unica prova do que chegou.
+ * Onde esse contrato e conferido: no fetcher. `getSessionFeedback`
+ * (src/actions/admin-students.ts) passa `sessionFeedbackDetailOrNullSchema` para
+ * o `apiFetch` de admin, que valida com Zod na fronteira de rede e devolve
+ * `SessionFeedbackDetail | null` ou um erro com o motivo logado. Payload fora do
+ * formato chega aqui como `error`, nao como objeto meio preenchido — por isso
+ * esta tela consome o tipo em vez de revalidar (schema duplicado e schema que
+ * sai de sincronia; foi exatamente esse o drift corrigido em 09-06).
  */
-const sessionFeedbackSchema = z.object({
-  id: z.string(),
-  sessionId: z.string(),
-  sessionDate: z.string(),
-  scores: z.object({
-    listening: z.number(),
-    speaking: z.number(),
-    writing: z.number(),
-    vocabulary: z.number(),
-  }),
-  averageScore: z.number(),
-  overallFeedback: z.string().nullable(),
-  listeningFeedback: z.string().nullable().default(null),
-  speakingFeedback: z.string().nullable().default(null),
-  writingFeedback: z.string().nullable().default(null),
-  vocabularyFeedback: z.string().nullable().default(null),
-  reviewed: z.boolean(),
-  reviewedAt: z.string().nullable(),
-});
-
-type SessionFeedback = z.infer<typeof sessionFeedbackSchema>;
-type DimensionKey = keyof SessionFeedback['scores'];
+type DimensionKey = keyof SessionFeedbackDetail['scores'];
 type DimensionNoteKey =
   | 'listeningFeedback'
   | 'speakingFeedback'
@@ -114,7 +96,7 @@ export default async function AdminFeedbackPage({ params }: Props) {
 
   if (!sessionId) notFound();
 
-  const { data, error } = await getSessionFeedback(sessionId);
+  const { data: feedback, error } = await getSessionFeedback(sessionId);
 
   if (error?.includes('404') || error?.includes('não encontrado')) {
     notFound();
@@ -132,7 +114,7 @@ export default async function AdminFeedbackPage({ params }: Props) {
 
   // A rota responde 200 com `data: null` quando a sessao ainda nao tem
   // feedback. Isso e estado vazio legitimo, nao erro.
-  if (!data) {
+  if (!feedback) {
     return (
       <PageWrapper className="max-w-2xl" data-testid="page-admin-feedback-detail">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
@@ -146,26 +128,6 @@ export default async function AdminFeedbackPage({ params }: Props) {
       </PageWrapper>
     );
   }
-
-  const parsed = sessionFeedbackSchema.safeParse(data);
-
-  if (!parsed.success) {
-    console.error('[admin/feedback] contrato de dados quebrado', {
-      sessionId,
-      issues: parsed.error.issues,
-    });
-    return (
-      <PageWrapper className="max-w-2xl" data-testid="page-admin-feedback-detail">
-        <div data-testid="admin-feedback-detail-error" className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center">
-          <p className="text-sm text-destructive">
-            Erro ao carregar feedback: resposta do servidor fora do formato esperado.
-          </p>
-        </div>
-      </PageWrapper>
-    );
-  }
-
-  const feedback = parsed.data;
 
   return (
     <PageWrapper className="max-w-2xl space-y-6" data-testid="page-admin-feedback-detail">

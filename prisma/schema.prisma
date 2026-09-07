@@ -391,7 +391,7 @@ model RecurringPattern {
 model Session {
   id                      String        @id @default(uuid())
   studentId               String
-  availabilitySlotId      String        @unique // UNIQUE_session_slot - um slot por sessão
+  availabilitySlotId      String        // FK do slot; NAO-unico desde a devolucao de slot cancelado (varias Session historicas por slot, no maximo uma viva - garantia em SLOT_OCCUPYING_STATUSES + tx SERIALIZABLE/FOR UPDATE/CAS)
   startAt                 DateTime
   endAt                   DateTime
   status                  SessionStatus @default(SCHEDULED)
@@ -422,6 +422,7 @@ model Session {
   @@index([studentId, status])
   @@index([startAt])
   @@index([status])
+  @@index([availabilitySlotId])
   @@map("sessions")
 }
 

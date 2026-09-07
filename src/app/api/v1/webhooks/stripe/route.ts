@@ -4,10 +4,17 @@ import { apiResponse } from '@/lib/auth';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { withApiHandler } from '@/lib/api-handler';
 
-// ## Stripe webhook ingress
-export const config = {
-  api: { bodyParser: false },
-};
+/**
+ * NAO declarar `export const config = { api: { bodyParser: false } }` aqui.
+ *
+ * Aquilo e configuracao de Pages Router. Num route handler de App Router o
+ * Turbopack recusa o campo em build ("Next.js can't recognize the exported
+ * `config` field in route") e o runtime o ignora — o comentario que o
+ * acompanhava descrevia um comportamento que nunca existiu. App Router nao
+ * parseia corpo nenhum por conta propria: o handler abaixo le os bytes crus com
+ * `request.arrayBuffer()`, que e exatamente o que a verificacao de assinatura
+ * da Stripe exige.
+ */
 
 /** POST /api/v1/webhooks/stripe */
 export const POST = withApiHandler(async (request: NextRequest) => {

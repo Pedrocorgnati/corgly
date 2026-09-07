@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { missingMessage } from '@/lib/i18n/message-fallback';
 import { API } from '@/lib/constants/routes';
 import type { MonthlyLessonsPlan } from '@/schemas/checkout.schema';
 
@@ -81,22 +82,6 @@ interface UseSubscriptionReturn {
   ) => Promise<void>;
 }
 
-/**
- * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
- * Em desenvolvimento estoura no primeiro uso; em producao devolve string vazia
- * — a chave crua NUNCA aparece para o usuario final.
- *
- * DUPLICADO em `src/components/billing/subscription-manager.tsx` e nos demais
- * arquivos deste work package: extrair para um modulo compartilhado sairia da
- * lista de arquivos de propriedade.
- */
-function missingMessage(fullKey: string): string {
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
-  }
-  return '';
-}
-
 function buildIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -131,7 +116,7 @@ function normalizeSubscription(row: SubscriptionApiRow | null): Subscription | n
 export function useSubscription(): UseSubscriptionReturn {
   const t = useTranslations('credits.subscription');
   const text = (key: string): string =>
-    t.has(key) ? t(key) : missingMessage(`credits.subscription.${key}`);
+    t.has(key) ? t(key) : missingMessage(`credits.subscription.${key}`, 'useSubscription');
 
   /**
    * Os callbacks abaixo sao estaveis de proposito (o efeito de carga depende de

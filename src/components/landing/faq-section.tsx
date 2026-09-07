@@ -2,12 +2,6 @@
 
 import { Minus, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 
 const FAQ_KEYS = [
   'duration',
@@ -24,42 +18,50 @@ const FAQ_KEYS = [
   'payment',
 ] as const;
 
+/**
+ * O acordeao e `<details>/<summary>` nativo, nao o componente shadcn.
+ *
+ * Dois motivos: (1) o shadcn desenha tudo com utilitarios do Tailwind, e a home
+ * inteira saiu do Tailwind para nao depender do chunk unico de CSS que ja
+ * chegou vazio em producao (ver o cabecalho de `src/app/(public)/landing.css`);
+ * (2) `<details>` abre e fecha sem JavaScript, o que importa numa pagina
+ * servida do cache com `revalidate 3600` — sem hidratacao, um acordeao movido a
+ * JS deixaria as 12 respostas inalcancaveis.
+ */
 export function FAQSection() {
   const t = useTranslations('landing.faq');
 
   return (
-    <section data-testid="landing-faq" className="py-[4.5rem] bg-white" id="faq" aria-labelledby="faq-heading">
-      <div className="max-w-[760px] mx-auto px-5 md:px-6">
-        <div className="text-center mb-9">
-          <h2 id="faq-heading" className="text-[2.15rem] md:text-[2.6rem] font-bold tracking-tight text-[#1B2140]">
+    <section data-testid="landing-faq" className="lp-faq" id="faq" aria-labelledby="faq-heading">
+      <div className="lp-faq__container">
+        <div className="lp-faq__head">
+          <h2 id="faq-heading" className="lp-faq__title">
             {t('title')}
           </h2>
-          <span className="mx-auto mt-3 block h-[3px] w-12 rounded-full bg-[#7c5cbf]" />
+          <span className="lp-rule lp-rule--center lp-faq__rule" />
         </div>
-        <Accordion data-testid="landing-faq-list" className="space-y-3" defaultValue={['item-0']}>
+        <div data-testid="landing-faq-list" className="lp-faq__list">
           {FAQ_KEYS.map((key, idx) => (
-            <AccordionItem
+            <details
               key={key}
-              value={`item-${idx}`}
               data-testid={`landing-faq-item-${key.replace(/_/g, '-')}`}
-              className="border border-border rounded-[10px] px-5 bg-white shadow-sm"
+              className="lp-faq__item"
+              open={idx === 0}
             >
-              <AccordionTrigger
+              <summary
                 data-testid={`landing-faq-item-${key.replace(/_/g, '-')}-trigger`}
-                className="text-sm md:text-base font-semibold text-foreground hover:no-underline py-4 min-h-[52px] **:data-[slot=accordion-trigger-icon]:hidden"
+                className="lp-faq__trigger"
               >
                 {t(`items.${key}.q`)}
-                <span className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#efe7fb] text-primary">
-                  <Plus className="h-4 w-4 group-aria-expanded/accordion-trigger:hidden" />
-                  <Minus className="hidden h-4 w-4 group-aria-expanded/accordion-trigger:inline" />
+                <span className="lp-faq__toggle" aria-hidden="true">
+                  <Plus className="lp-faq__icon--plus" />
+                  <Minus className="lp-faq__icon--minus" />
                 </span>
-              </AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground pb-4 leading-relaxed">
-                {t(`items.${key}.a`)}
-              </AccordionContent>
-            </AccordionItem>
+              </summary>
+              <div className="lp-faq__answer">{t(`items.${key}.a`)}</div>
+            </details>
           ))}
-        </Accordion>
+        </div>
       </div>
     </section>
   );

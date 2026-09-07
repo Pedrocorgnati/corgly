@@ -2,10 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Mock external dependencies
-vi.mock('@/services/stripe.service', () => ({
-  stripeService: {
-    createCheckoutSession: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/test', sessionId: 'cs_test' }),
-    createSubscriptionCheckout: vi.fn().mockResolvedValue({ url: 'https://checkout.stripe.com/sub-test', sessionId: 'cs_sub_test' }),
+//
+// A rota NAO fala com `@/services/stripe.service`: o boundary de checkout e o
+// `checkoutService` de `@/lib/billing/checkout.service` (idempotencia T-028).
+// Mockar o stripe.service deixava a rota chamando o servico REAL, que tropecava
+// em `prisma.user.findUniqueOrThrow` e caia no catch generico (500).
+vi.mock('@/lib/billing/checkout.service', () => ({
+  checkoutService: {
+    createOneTimeCheckout: vi
+      .fn()
+      .mockResolvedValue({ url: 'https://checkout.stripe.com/test', sessionId: 'cs_test' }),
+    createSubscriptionCheckout: vi
+      .fn()
+      .mockResolvedValue({ url: 'https://checkout.stripe.com/sub-test', sessionId: 'cs_sub_test' }),
   },
 }));
 
@@ -15,21 +24,32 @@ vi.mock('@/services/auth.service', () => ({
   },
 }));
 
+// `checkRateLimit` e assincrono desde a migracao para @upstash/ratelimit.
 vi.mock('@/lib/rate-limit', () => ({
-  checkRateLimit: vi.fn().mockReturnValue({ allowed: true, remaining: 9 }),
+  checkRateLimit: vi
+    .fn()
+    .mockResolvedValue({ allowed: true, remaining: 9, resetAt: Date.now() + 60_000 }),
 }));
 
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: {
-      findUnique: vi.fn().mockResolvedValue({
-        id: 'user-1',
-        role: 'STUDENT',
-        tokenVersion: 1,
-      }),
+vi.mock('@/lib/prisma', () => {
+  const user = {
+    id: 'user-1',
+    role: 'STUDENT',
+    tokenVersion: 1,
+    email: 'aluno@test.local',
+    name: 'Aluno',
+    stripeCustomerId: 'cus_test',
+  };
+  return {
+    prisma: {
+      user: {
+        findUnique: vi.fn().mockResolvedValue(user),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(user),
+        update: vi.fn().mockResolvedValue(user),
+      },
     },
-  },
-}));
+  };
+});
 
 function createRequest(body: object, headers: Record<string, string> = {}) {
   const req = new NextRequest('http://localhost:3000/api/v1/checkout', {
@@ -94,8 +114,8 @@ describe('POST /api/v1/checkout', () => {
   // ST003 — PAYMENT_050: anti-fraude de desconto e assinatura duplicada
   it('deve bloquear assinatura duplicada ativa com PAYMENT_050 — ST003', async () => {
     const { AppError } = await import('@/lib/errors');
-    const { stripeService } = await import('@/services/stripe.service');
-    vi.mocked(stripeService.createSubscriptionCheckout).mockRejectedValueOnce(
+    const { checkoutService } = await import('@/lib/billing/checkout.service');
+    vi.mocked(checkoutService.createSubscriptionCheckout).mockRejectedValueOnce(
       new AppError('PAYMENT_050', 'Usuário já possui assinatura ativa.', 409),
     );
 
@@ -110,7 +130,7 @@ describe('POST /api/v1/checkout', () => {
 
   it('não aplica desconto de primeira compra para usuário com isFirstPurchase=false (anti-fraude PAYMENT_050) — ST003', async () => {
     const { authService } = await import('@/services/auth.service');
-    const { stripeService } = await import('@/services/stripe.service');
+    const { checkoutService } = await import('@/lib/billing/checkout.service');
 
     vi.mocked(authService.getMe).mockResolvedValueOnce({
       id: 'user-1',
@@ -122,11 +142,12 @@ describe('POST /api/v1/checkout', () => {
     const res = await POST(req);
 
     expect(res.status).toBe(200);
-    // Verifica que isFirstPurchase=false foi passado ao stripeService — sem desconto
-    expect(stripeService.createCheckoutSession).toHaveBeenCalledWith(
+    // Verifica que isFirstPurchase=false foi propagado ao checkoutService — sem desconto
+    expect(checkoutService.createOneTimeCheckout).toHaveBeenCalledWith(
       'user-1',
       false,
       expect.objectContaining({ packageType: 'SINGLE' }),
+      null,
     );
   });
 });

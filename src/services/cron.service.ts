@@ -6,6 +6,7 @@ import {
   runSerializableCreditTransaction,
 } from '@/lib/credits/credit-consumption.service';
 import { EmailType } from '@/lib/constants/enums';
+import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
 import type { ReminderSentAt } from '@/types/session.types';
 import { logger } from '@/lib/logger';
 
@@ -353,7 +354,7 @@ export class CronService {
           where: {
             startAt: { gte: slotFrom, lte: slotTo },
             isBlocked: false,
-            sessions: { none: {} },
+            sessions: { none: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } },
           },
         });
 
@@ -404,6 +405,22 @@ export class CronService {
           `;
           const lockedSlot = slots[0];
           if (!lockedSlot) throw new Error('SLOT_GONE');
+
+          // Re-check de ocupacao DENTRO da transacao, sob o FOR UPDATE acima.
+          // `availabilitySlotId` deixou de ser unico quando o slot passou a ser
+          // devolvido no cancelamento (ver SLOT_OCCUPYING_STATUSES), entao o
+          // P2002 do indice UNIQUE nao serve mais de backstop. Sem esta leitura
+          // duas execucoes concorrentes criariam duas sessoes vivas no mesmo
+          // slot: o filtro `sessions: { none: ... }` do findFirst la em cima
+          // roda FORA da transacao e ja pode estar stale aqui.
+          const occupant = await tx.session.findFirst({
+            where: {
+              availabilitySlotId: slot.id,
+              status: { in: [...SLOT_OCCUPYING_STATUSES] },
+            },
+            select: { id: true },
+          });
+          if (occupant) throw new Error('SLOT_TAKEN');
 
           const cas = await tx.$executeRaw`
             UPDATE availability_slots SET version = version + 1

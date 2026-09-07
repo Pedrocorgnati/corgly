@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Calculator, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { PageWrapper } from '@/components/shared';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -20,8 +20,10 @@ import {
   stripeCurrencyToCurrency,
 } from '@/lib/billing/subscription-pricing';
 import { API, ROUTES } from '@/lib/constants/routes';
+import { missingMessage } from '@/lib/i18n/message-fallback';
 import { cn } from '@/lib/utils';
 import { useSubscription, type SubscriptionUpdatePayload } from '@/hooks/useSubscription';
+import type { Currency } from '@/lib/currency';
 import type { MonthlyLessonsPlan } from '@/schemas/checkout.schema';
 // Contrato do preview importado como TIPO do proprio produtor
 // (`previewSubscriptionChange`), para nao existir uma copia local que envelhece.
@@ -49,32 +51,53 @@ type PlanSelection =
   | { axis: 'monthly'; monthlyLessons: MonthlyLessonsPlan }
   | { axis: 'weekly'; weeklyFrequency: number };
 
-/**
- * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
- * Em desenvolvimento estoura no primeiro render; em producao devolve string
- * vazia — a chave crua NUNCA aparece para o usuario final.
- *
- * DUPLICADO nos outros arquivos deste work package: um modulo compartilhado
- * ficaria fora da lista de arquivos de propriedade.
- */
-function missingMessage(fullKey: string): string {
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
-  }
-  return '';
-}
-
 function toRequestBody(selection: PlanSelection): SubscriptionUpdatePayload {
   return selection.axis === 'monthly'
     ? { monthlyLessons: selection.monthlyLessons }
     : { weeklyFrequency: selection.weeklyFrequency };
 }
 
-/** Valor mensal de referencia da opcao, pela tabela unica de precos. */
-function optionAmountCents(selection: PlanSelection): number {
+/**
+ * Valor mensal da opcao pela tabela unica de precos, JA na moeda de cobranca da
+ * assinatura. A moeda e obrigatoria de proposito: fixar `'USD'` aqui era o
+ * defeito — um aluno brasileiro escolhia "20 aulas por mes" lendo "US$ 300,00"
+ * e era debitado em R$ 1.500,00.
+ */
+function optionAmountCents(selection: PlanSelection, currency: Currency): number {
   return selection.axis === 'monthly'
-    ? calculateMonthlyLessonsAmountCents(selection.monthlyLessons, 'USD')
-    : calculateSubscriptionMonthlyAmountCents(selection.weeklyFrequency, 'USD');
+    ? calculateMonthlyLessonsAmountCents(selection.monthlyLessons, currency)
+    : calculateSubscriptionMonthlyAmountCents(selection.weeklyFrequency, currency);
+}
+
+/** Estados distintos da resolucao da moeda de cobranca. Nunca implicito. */
+type ChargeCurrencyState = 'loading' | 'ready' | 'unavailable';
+
+/**
+ * Desfecho de UMA consulta de moeda, carimbado com a consulta que o produziu.
+ * O carimbo impede a resposta de uma tentativa anterior de rotular os precos da
+ * atual: mudou a chave, o desfecho antigo deixa de valer e a tela volta sozinha
+ * para `loading`, sem setState sincrono dentro do efeito.
+ */
+type ChargeCurrencyResult =
+  | { key: string; state: 'ready'; currency: Currency }
+  | { key: string; state: 'unavailable' };
+
+/**
+ * Corpo do preview do plano VIGENTE, no eixo em que a assinatura foi contratada.
+ *
+ * Pedir o proprio plano faz `previewSubscriptionChange` classificar a troca como
+ * `current_plan` e retornar cedo (`src/lib/billing/subscription-preview.service.ts`):
+ * uma unica `subscriptions.retrieve`, nenhuma `invoices.createPreview`, todos os
+ * valores zerados — e o campo `currency`, o unico que interessa aqui, sai de
+ * `subscriptionItem.price.currency`, a moeda em que o Stripe cobra.
+ */
+function currentPlanPreviewBody(subscription: {
+  monthlyLessons: number | null;
+  weeklyFrequency: number;
+}): SubscriptionUpdatePayload {
+  return subscription.monthlyLessons != null
+    ? { monthlyLessons: normalizeMonthlyLessons(subscription.monthlyLessons) }
+    : { weeklyFrequency: subscription.weeklyFrequency };
 }
 
 function isSameSelection(a: PlanSelection, b: PlanSelection): boolean {
@@ -110,7 +133,7 @@ export default function ChangeSubscriptionPlanPage() {
   const t = useTranslations('credits.subscription');
   const locale = useLocale();
   const text = (key: string, values?: Record<string, string | number>): string =>
-    t.has(key) ? t(key, values) : missingMessage(`credits.subscription.${key}`);
+    t.has(key) ? t(key, values) : missingMessage(`credits.subscription.${key}`, 'ChangePlanPage');
 
   const { subscription, isLoading, error, refetch, updatePlan, isUpdating } = useSubscription();
   const [selection, setSelection] = useState<PlanSelection | null>(null);
@@ -118,6 +141,71 @@ export default function ChangeSubscriptionPlanPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+
+  // Moeda REAL da cobranca. `model Subscription` nao tem coluna `currency` e
+  // `GET /api/v1/subscriptions` devolve o registro cru, entao a moeda vem de
+  // onde ela de fato existe: o item da assinatura no Stripe, exposto pelo
+  // preview do plano vigente. Enquanto nao chega, os cartoes NAO exibem preco.
+  const [currencyResult, setCurrencyResult] = useState<ChargeCurrencyResult | null>(null);
+  const [currencyAttempt, setCurrencyAttempt] = useState(0);
+
+  const subscriptionId = subscription?.id ?? null;
+  const subscriptionMonthlyLessons = subscription?.monthlyLessons ?? null;
+  const subscriptionWeeklyFrequency = subscription?.weeklyFrequency ?? null;
+
+  // Identidade da consulta em curso: assinatura, eixo contratado e tentativa.
+  // `null` enquanto a assinatura nao chegou — nao ha o que consultar.
+  const currencyKey =
+    subscriptionId === null || subscriptionWeeklyFrequency === null
+      ? null
+      : `${subscriptionId}|${subscriptionMonthlyLessons ?? 'legacy'}|${subscriptionWeeklyFrequency}|${currencyAttempt}`;
+
+  // Estado DERIVADO: sem desfecho carimbado com a chave atual, esta carregando.
+  const settledCurrency =
+    currencyResult !== null && currencyResult.key === currencyKey ? currencyResult : null;
+  const currencyState: ChargeCurrencyState = settledCurrency?.state ?? 'loading';
+  const chargeCurrency: Currency | null =
+    settledCurrency?.state === 'ready' ? settledCurrency.currency : null;
+
+  useEffect(() => {
+    // A chave nula ja cobre o caso "sem assinatura"; repetir o eixo legado aqui
+    // e o que garante ao TypeScript o `number` que o corpo da requisicao exige.
+    if (currencyKey === null || subscriptionWeeklyFrequency === null) return;
+
+    let cancelled = false;
+
+    apiClient
+      .post<ApiResponse<SubscriptionChangePreview>>(
+        API.BILLING_SUBSCRIPTION_PREVIEW_CHANGE,
+        currentPlanPreviewBody({
+          monthlyLessons: subscriptionMonthlyLessons,
+          weeklyFrequency: subscriptionWeeklyFrequency,
+        }),
+      )
+      .then((response) => {
+        if (cancelled) return;
+        setCurrencyResult({
+          key: currencyKey,
+          state: 'ready',
+          currency: stripeCurrencyToCurrency(response.data.currency),
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Assinatura PAST_DUE responde 404 (`PAYMENT_080` so aceita
+        // ACTIVE/TRIAL) e queda de rede responde outra coisa: nos dois casos o
+        // desfecho e o mesmo — moeda desconhecida, preco oculto, retry visivel.
+        setCurrencyResult({ key: currencyKey, state: 'unavailable' });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currencyKey, subscriptionMonthlyLessons, subscriptionWeeklyFrequency]);
+
+  const retryCurrency = useCallback(() => {
+    setCurrencyAttempt((attempt) => attempt + 1);
+  }, []);
 
   /** Plano vigente traduzido para os mesmos eixos das opcoes da tela. */
   const currentSelection: PlanSelection | null = subscription
@@ -278,18 +366,34 @@ export default function ChangeSubscriptionPlanPage() {
           )}
         </span>
         <span className="mt-2 flex flex-wrap items-baseline gap-1 text-sm text-muted-foreground">
-          <PriceDisplay
-            amountCents={optionAmountCents(option)}
-            currency="USD"
-            locale={locale}
-          />
-          <span>{text('changeEstimated')}</span>
+          {currencyState === 'loading' && (
+            <>
+              <Skeleton className="h-4 w-20" />
+              <span className="sr-only">{text('currencyLoading')}</span>
+            </>
+          )}
+          {currencyState === 'ready' && chargeCurrency !== null && (
+            <>
+              <PriceDisplay
+                amountCents={optionAmountCents(option, chargeCurrency)}
+                currency={chargeCurrency}
+                locale={locale}
+              />
+              <span>{text('changeEstimated')}</span>
+            </>
+          )}
+          {currencyState === 'unavailable' && <span>{text('currencyUnavailable')}</span>}
         </span>
       </button>
     );
   };
 
-  const previewCurrency = preview ? stripeCurrencyToCurrency(preview.currency) : 'USD';
+  // Moeda do painel de simulacao: sai do proprio preview, que a devolve do item
+  // da assinatura no Stripe. Sem preview nao ha painel, entao nao existe
+  // fallback de moeda aqui — fallback seria um numero rotulado por adivinhacao.
+  const previewCurrency: Currency | null = preview
+    ? stripeCurrencyToCurrency(preview.currency)
+    : null;
 
   return (
     <PageWrapper data-testid="page-billing-subscription-change-plan" className="max-w-4xl">
@@ -400,6 +504,26 @@ export default function ChangeSubscriptionPlanPage() {
             </p>
           )}
 
+          {currencyState === 'unavailable' && (
+            <div
+              data-testid="billing-change-plan-currency-error"
+              role="alert"
+              className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+            >
+              <span>{text('currencyUnavailable')}</span>
+              <Button
+                data-testid="billing-change-plan-currency-retry-button"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={retryCurrency}
+              >
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                {text('currencyRetry')}
+              </Button>
+            </div>
+          )}
+
           {previewError && (
             <div
               data-testid="billing-change-plan-preview-error"
@@ -418,7 +542,7 @@ export default function ChangeSubscriptionPlanPage() {
             <p className="mt-3 text-sm text-muted-foreground">{text('changePreviewHint')}</p>
           )}
 
-          {previewMatches && preview && (
+          {previewMatches && preview && previewCurrency !== null && (
             <div className="mt-4 space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">{text('changeSummaryLabel')}</p>

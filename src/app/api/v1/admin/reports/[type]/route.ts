@@ -80,7 +80,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ type: s
   }
 
   const buffer = await rowsToXlsxBuffer(report.sheet, report.headers, report.rows);
-  return new NextResponse(buffer, {
+  // `Buffer` e um `Uint8Array<ArrayBufferLike>`, e `ArrayBufferLike` inclui
+  // `SharedArrayBuffer`, que nao e `BodyInit`. Copiar para um `Uint8Array`
+  // respaldado por `ArrayBuffer` satisfaz o tipo sem mudar o conteudo enviado.
+  const body = new Uint8Array(buffer);
+  return new NextResponse(body, {
     status: 200,
     headers: {
       'Content-Type':        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

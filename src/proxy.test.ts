@@ -34,6 +34,16 @@ function req(path: string) {
   return new NextRequest(`http://localhost${path}`, { method: 'GET' });
 }
 
+function apiReq(path: string, method = 'GET') {
+  return new NextRequest(`http://localhost${path}`, { method });
+}
+
+// O proxy repassa contexto via NextResponse.next({ request: { headers } }); o Next
+// serializa cada override como `x-middleware-request-<header>` na resposta.
+function forwarded(res: Response, header: string) {
+  return res.headers.get(`x-middleware-request-${header}`);
+}
+
 const nowSec = () => Math.floor(Date.now() / 1000);
 
 describe('proxy: gate de MFA admin (UI)', () => {
@@ -137,5 +147,93 @@ describe('proxy: gate de MFA admin (UI)', () => {
     mockGetPayload.mockReturnValue(null);
     const res = await proxy(req('/pt-BR'));
     expect(res.status).toBe(200);
+  });
+});
+
+describe('proxy: allowlist de /api/v1/availability', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('GET sem sessao continua publico e nao recebe headers internos', async () => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq('/api/v1/availability?date=2030-06-15', 'GET'));
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+  });
+
+  it.each([
+    ['POST', '/api/v1/availability'],
+    ['PATCH', '/api/v1/availability/slot-1/block'],
+    ['PATCH', '/api/v1/availability/slot-1/unblock'],
+    ['DELETE', '/api/v1/availability/slot-1'],
+  ])('%s %s sem sessao -> 401', async (method, path) => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq(path, method));
+    expect(res.status).toBe(401);
+  });
+
+  it.each([
+    ['POST', '/api/v1/availability'],
+    ['PATCH', '/api/v1/availability/slot-1/block'],
+    ['PATCH', '/api/v1/availability/slot-1/unblock'],
+    ['DELETE', '/api/v1/availability/slot-1'],
+  ])('%s %s com sessao de admin atravessa com os tres headers', async (method, path) => {
+    mockGetPayload.mockReturnValue({ sub: 'a1', role: 'ADMIN', version: 0 });
+    const res = await proxy(apiReq(path, method));
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBe('a1');
+    expect(forwarded(res, 'x-user-role')).toBe('ADMIN');
+    expect(forwarded(res, 'x-token-version')).toBe('0');
+  });
+
+  it('POST com sessao de aluno atravessa o proxy (o 403 nasce no requireAdmin da rota)', async () => {
+    mockGetPayload.mockReturnValue({ sub: 'u1', role: 'STUDENT', version: 0 });
+    const res = await proxy(apiReq('/api/v1/availability', 'POST'));
+    expect(res.status).not.toBe(401);
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBe('u1');
+    expect(forwarded(res, 'x-user-role')).toBe('STUDENT');
+  });
+});
+
+describe('proxy: allowlist do pedido de magic-link', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('deslogado alcanca POST /api/v1/auth/magic-link/request sem headers internos', async () => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq('/api/v1/auth/magic-link/request', 'POST'));
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+    expect(forwarded(res, 'x-user-role')).toBeNull();
+  });
+
+  it.each([
+    '/api/v1/auth/me',
+    '/api/v1/auth/logout',
+    // O namespace pai NAO entrou na lista: so o caminho completo do pedido e
+    // publico, entao rota futura sob /magic-link continua exigindo sessao.
+    '/api/v1/auth/magic-link',
+    '/api/v1/auth/magic-link/consume',
+  ])('vizinha protegida %s sem sessao -> 401', async (path) => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq(path, 'POST'));
+    expect(res.status).toBe(401);
   });
 });

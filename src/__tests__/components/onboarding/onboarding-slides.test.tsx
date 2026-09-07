@@ -1,140 +1,148 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { OnboardingSlides } from '@/components/onboarding/onboarding-slides';
+import ptBR from '../../../../i18n/messages/pt-BR.json';
 
-const messages = {
-  onboarding: {
-    progress: 'Slide {current} de {total}',
-    prev: 'Anterior',
-    next: 'Proximo',
-    skip: 'Pular',
-    slide1: {
-      title: 'Bem-vindo ao Corgly!',
-      description: 'Sua jornada comeca aqui.',
-    },
-    slide2: {
-      title: 'O Metodo Corgly',
-      description: 'Baseado em 5 pilares.',
-      pillars: ['Compromisso', 'Time-boxed', 'Ciclos', 'Contexto', 'Feedback'],
-    },
-    slide3: {
-      title: 'Ciclo de Aprendizado',
-      description: 'Como funciona cada ciclo.',
-      steps: ['Agende', 'Estude', 'Pratique', 'Revise'],
-    },
-    slide4: {
-      title: 'Sua Primeira Aula',
-      description: 'Com desconto especial.',
-      price: '$12.50',
-      original_price: '$25.00',
-      cta: 'Comecar Agora',
-    },
-  },
-};
+/**
+ * Este teste renderizava com um objeto `messages` escrito a mao. Isso criava um
+ * segundo catalogo: o componente pedia `onboarding.completing` e
+ * `onboarding.later`, o fixture nao publicava, o next-intl devolvia o caminho
+ * cru como texto e o teste continuava verde — o defeito registrado em
+ * `message-fixtures.test.ts` (`DIVIDA_DE_FIXTURE`). Agora ele renderiza com o
+ * catalogo real de pt-BR, entao toda copy afirmada aqui e a copy que o usuario
+ * le, e a divida saiu do registro.
+ */
+const t = ptBR.onboarding;
 
 const defaultProps = {
   onComplete: vi.fn(),
   onSkip: vi.fn(),
 };
 
-function renderWithI18n(props = defaultProps) {
+function renderWithI18n(props: Partial<React.ComponentProps<typeof OnboardingSlides>> = {}) {
   return render(
-    <NextIntlClientProvider locale="pt-BR" messages={messages}>
-      <OnboardingSlides {...props} />
+    <NextIntlClientProvider locale="pt-BR" messages={ptBR}>
+      <OnboardingSlides {...defaultProps} {...props} />
     </NextIntlClientProvider>
   );
 }
 
+/** Avanca ate o ultimo slide pelo botao real de navegacao. */
+async function irAteOUltimoSlide(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByTestId('onboarding-next-button')); // slide 2
+  await user.click(screen.getByTestId('onboarding-next-button')); // slide 3
+  await user.click(screen.getByTestId('onboarding-next-button')); // slide 4
+}
+
 describe('OnboardingSlides', () => {
-  it('renderiza primeiro slide por padrao', () => {
+  it('renderiza primeiro slide por padrao com a copy do catalogo real', () => {
     renderWithI18n();
 
-    expect(screen.getByText('Bem-vindo ao Corgly!')).toBeInTheDocument();
-    expect(screen.getByText('Sua jornada comeca aqui.')).toBeInTheDocument();
+    expect(screen.getByText(t.slide1.title)).toBeInTheDocument();
+    expect(screen.getByText(t.slide1.description)).toBeInTheDocument();
   });
 
-  it('mostra botoes de navegacao', () => {
+  it('mostra botoes de navegacao com os rotulos do catalogo real', () => {
     renderWithI18n();
 
-    expect(screen.getByText('Anterior')).toBeInTheDocument();
-    expect(screen.getByText('Proximo')).toBeInTheDocument();
-    expect(screen.getByText('Pular')).toBeInTheDocument();
+    expect(screen.getByTestId('onboarding-prev-button')).toHaveTextContent(t.prev);
+    expect(screen.getByTestId('onboarding-next-button')).toHaveTextContent(t.next);
+    expect(screen.getByTestId('onboarding-skip-button')).toHaveTextContent(t.skip);
   });
 
   it('botao Anterior esta desabilitado no primeiro slide', () => {
     renderWithI18n();
 
-    const prevButton = screen.getByText('Anterior').closest('button');
-    expect(prevButton).toBeDisabled();
+    expect(screen.getByTestId('onboarding-prev-button')).toBeDisabled();
   });
 
   it('navega para segundo slide ao clicar Proximo', async () => {
     const user = userEvent.setup();
     renderWithI18n();
 
-    await user.click(screen.getByText('Proximo'));
+    await user.click(screen.getByTestId('onboarding-next-button'));
 
-    expect(screen.getByText('O Metodo Corgly')).toBeInTheDocument();
+    expect(screen.getByText(t.slide2.title)).toBeInTheDocument();
   });
 
   it('navega de volta ao clicar Anterior', async () => {
     const user = userEvent.setup();
     renderWithI18n();
 
-    // Go to slide 2
-    await user.click(screen.getByText('Proximo'));
-    expect(screen.getByText('O Metodo Corgly')).toBeInTheDocument();
+    await user.click(screen.getByTestId('onboarding-next-button'));
+    expect(screen.getByText(t.slide2.title)).toBeInTheDocument();
 
-    // Go back to slide 1
-    await user.click(screen.getByText('Anterior'));
-    expect(screen.getByText('Bem-vindo ao Corgly!')).toBeInTheDocument();
+    await user.click(screen.getByTestId('onboarding-prev-button'));
+    expect(screen.getByText(t.slide1.title)).toBeInTheDocument();
   });
 
   it('navega ate o ultimo slide', async () => {
     const user = userEvent.setup();
     renderWithI18n();
 
-    await user.click(screen.getByText('Proximo')); // slide 2
-    await user.click(screen.getByText('Proximo')); // slide 3
-    await user.click(screen.getByText('Proximo')); // slide 4
+    await irAteOUltimoSlide(user);
 
-    expect(screen.getByText('Sua Primeira Aula')).toBeInTheDocument();
-    expect(screen.getByText('Comecar Agora')).toBeInTheDocument();
+    expect(screen.getByText(t.slide4.title)).toBeInTheDocument();
+    expect(screen.getByTestId('onboarding-slide-cta-button')).toHaveTextContent(t.slide4.cta);
   });
 
-  it('botao Proximo desaparece no ultimo slide', async () => {
+  it('botao Proximo desaparece no ultimo slide e da lugar a "Depois"', async () => {
     const user = userEvent.setup();
     renderWithI18n();
 
-    await user.click(screen.getByText('Proximo')); // slide 2
-    await user.click(screen.getByText('Proximo')); // slide 3
-    await user.click(screen.getByText('Proximo')); // slide 4
+    await irAteOUltimoSlide(user);
 
-    expect(screen.queryByText('Proximo')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('onboarding-next-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('onboarding-later-button')).toHaveTextContent(t.later);
   });
 
   it('chama onComplete ao clicar CTA no ultimo slide', async () => {
     const onComplete = vi.fn();
     const user = userEvent.setup();
-    renderWithI18n({ ...defaultProps, onComplete });
+    renderWithI18n({ onComplete });
 
-    await user.click(screen.getByText('Proximo')); // slide 2
-    await user.click(screen.getByText('Proximo')); // slide 3
-    await user.click(screen.getByText('Proximo')); // slide 4
+    await irAteOUltimoSlide(user);
+    await user.click(screen.getByTestId('onboarding-slide-cta-button'));
 
-    await user.click(screen.getByText('Comecar Agora'));
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
   it('chama onSkip ao clicar Pular', async () => {
     const onSkip = vi.fn();
     const user = userEvent.setup();
-    renderWithI18n({ ...defaultProps, onSkip });
+    renderWithI18n({ onSkip });
 
-    await user.click(screen.getByText('Pular'));
+    await user.click(screen.getByTestId('onboarding-skip-button'));
     expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+
+  it('isCompleting trava as acoes e mostra o rotulo de conclusao em voo', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderWithI18n();
+
+    await irAteOUltimoSlide(user);
+
+    rerender(
+      <NextIntlClientProvider locale="pt-BR" messages={ptBR}>
+        <OnboardingSlides {...defaultProps} isCompleting />
+      </NextIntlClientProvider>
+    );
+
+    expect(screen.getByTestId('onboarding-slide-cta-button')).toHaveTextContent(t.completing);
+    expect(screen.getByTestId('onboarding-slide-cta-button')).toBeDisabled();
+    expect(screen.getByTestId('onboarding-later-button')).toHaveTextContent(t.completing);
+    expect(screen.getByTestId('onboarding-later-button')).toBeDisabled();
+    expect(screen.getByTestId('onboarding-skip-button')).toBeDisabled();
+  });
+
+  it('errorMessage aparece como alerta visivel', () => {
+    renderWithI18n({ errorMessage: ptBR.onboarding.complete_error });
+
+    const alerta = screen.getByTestId('onboarding-error');
+    expect(alerta).toHaveAttribute('role', 'alert');
+    expect(alerta).toHaveTextContent(ptBR.onboarding.complete_error);
   });
 
   it('navega com ArrowRight (teclado)', () => {
@@ -142,19 +150,17 @@ describe('OnboardingSlides', () => {
 
     fireEvent.keyDown(window, { key: 'ArrowRight' });
 
-    expect(screen.getByText('O Metodo Corgly')).toBeInTheDocument();
+    expect(screen.getByText(t.slide2.title)).toBeInTheDocument();
   });
 
   it('navega com ArrowLeft (teclado)', () => {
     renderWithI18n();
 
-    // Go to slide 2 first
     fireEvent.keyDown(window, { key: 'ArrowRight' });
-    expect(screen.getByText('O Metodo Corgly')).toBeInTheDocument();
+    expect(screen.getByText(t.slide2.title)).toBeInTheDocument();
 
-    // Go back
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    expect(screen.getByText('Bem-vindo ao Corgly!')).toBeInTheDocument();
+    expect(screen.getByText(t.slide1.title)).toBeInTheDocument();
   });
 
   it('ArrowLeft no primeiro slide nao quebra', () => {
@@ -162,20 +168,18 @@ describe('OnboardingSlides', () => {
 
     fireEvent.keyDown(window, { key: 'ArrowLeft' });
 
-    // Should still be on slide 1
-    expect(screen.getByText('Bem-vindo ao Corgly!')).toBeInTheDocument();
+    expect(screen.getByText(t.slide1.title)).toBeInTheDocument();
   });
 
   it('ArrowRight no ultimo slide nao quebra', () => {
     renderWithI18n();
 
-    // Navigate to last slide
     fireEvent.keyDown(window, { key: 'ArrowRight' }); // 2
     fireEvent.keyDown(window, { key: 'ArrowRight' }); // 3
     fireEvent.keyDown(window, { key: 'ArrowRight' }); // 4
-    fireEvent.keyDown(window, { key: 'ArrowRight' }); // still 4
+    fireEvent.keyDown(window, { key: 'ArrowRight' }); // continua no 4
 
-    expect(screen.getByText('Sua Primeira Aula')).toBeInTheDocument();
+    expect(screen.getByText(t.slide4.title)).toBeInTheDocument();
   });
 
   it('renderiza progress dots como tabs', () => {
@@ -189,34 +193,44 @@ describe('OnboardingSlides', () => {
     const user = userEvent.setup();
     renderWithI18n();
 
-    const tabs = screen.getAllByRole('tab');
-    await user.click(tabs[2]); // Go to slide 3
+    await user.click(screen.getByTestId('onboarding-progress-dot-2-button'));
 
-    expect(screen.getByText('Ciclo de Aprendizado')).toBeInTheDocument();
+    expect(screen.getByText(t.slide3.title)).toBeInTheDocument();
   });
 
-  it('slide 2 renderiza todos os 5 pilares', async () => {
+  it('slide 2 renderiza os 5 pilares do catalogo real', async () => {
     const user = userEvent.setup();
     renderWithI18n();
 
-    await user.click(screen.getByText('Proximo'));
+    await user.click(screen.getByTestId('onboarding-next-button'));
 
-    expect(screen.getByText('Compromisso')).toBeInTheDocument();
-    expect(screen.getByText('Time-boxed')).toBeInTheDocument();
-    expect(screen.getByText('Ciclos')).toBeInTheDocument();
-    expect(screen.getByText('Contexto')).toBeInTheDocument();
-    expect(screen.getByText('Feedback')).toBeInTheDocument();
+    const lista = screen.getByTestId('onboarding-slide-pillars-list');
+    for (const pilar of t.slide2.pillars) {
+      expect(within(lista).getByText(pilar)).toBeInTheDocument();
+    }
   });
 
-  it('slide 4 mostra preco original riscado e preco com desconto', async () => {
+  it('slide 3 renderiza os 4 passos do ciclo do catalogo real', async () => {
     const user = userEvent.setup();
     renderWithI18n();
 
-    await user.click(screen.getByText('Proximo')); // 2
-    await user.click(screen.getByText('Proximo')); // 3
-    await user.click(screen.getByText('Proximo')); // 4
+    await user.click(screen.getByTestId('onboarding-next-button'));
+    await user.click(screen.getByTestId('onboarding-next-button'));
 
-    expect(screen.getByText('$12.50')).toBeInTheDocument();
-    expect(screen.getByText('$25.00')).toBeInTheDocument();
+    const lista = screen.getByTestId('onboarding-slide-cycle-list');
+    for (const passo of t.slide3.steps) {
+      expect(within(lista).getByText(passo)).toBeInTheDocument();
+    }
+  });
+
+  it('slide 4 mostra preco com desconto e preco original riscado', async () => {
+    const user = userEvent.setup();
+    renderWithI18n();
+
+    await irAteOUltimoSlide(user);
+
+    const preco = screen.getByTestId('onboarding-slide-cta-price');
+    expect(within(preco).getByText(t.slide4.price)).toBeInTheDocument();
+    expect(within(preco).getByText(t.slide4.original_price)).toHaveClass('line-through');
   });
 });

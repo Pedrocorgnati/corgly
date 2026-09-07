@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { ROUTES } from '@/lib/constants/routes';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { missingMessage } from '@/lib/i18n/message-fallback';
 import { revalidateSupport } from '@/actions/support';
 import {
   ALLOWED_ATTACHMENT_MIME_TYPES,
@@ -38,6 +40,13 @@ import {
  * sizeBytes). O binário em si é resolvido pela camada de upload (Asset): a
  * linkagem durável Asset<->SupportMessage chega em T-067; aqui enviamos o
  * manifest, coerente com o que a rota POST aceita hoje.
+ *
+ * Copy: os toasts — unico feedback que o aluno recebe de anexo recusado, de
+ * chamado aberto e de falha no envio — saem do namespace `support.newTicket`.
+ * Estavam cravados em pt-BR, o que deixava 3 dos 4 publicos do app sem
+ * entender o proprio erro. O restante da tela (rotulos, placeholders e as
+ * mensagens do zod) continua em pt-BR fixo: esta registrado como pendencia,
+ * junto com o cabecalho em `page.tsx`, que pertence a outro dono.
  */
 
 const PRIORITY_OPTIONS: { value: (typeof SUPPORT_TICKET_PRIORITIES)[number]; label: string }[] = [
@@ -69,6 +78,9 @@ interface CreatedTicket {
 
 export function NewTicketForm() {
   const router = useRouter();
+  const t = useTranslations('support.newTicket');
+  const text = (key: string, values?: Record<string, string | number>): string =>
+    t.has(key) ? t(key, values) : missingMessage(`support.newTicket.${key}`, 'NewTicketForm');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
 
@@ -97,15 +109,20 @@ export function NewTicketForm() {
       const next = [...current];
       for (const file of incoming) {
         if (next.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
-          toast.error(`Máximo de ${MAX_ATTACHMENTS_PER_MESSAGE} anexos por chamado.`);
+          toast.error(text('attachmentsMax', { max: MAX_ATTACHMENTS_PER_MESSAGE }));
           break;
         }
         if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.type as never)) {
-          toast.error(`"${file.name}": tipo de arquivo não suportado.`);
+          toast.error(text('attachmentTypeRejected', { filename: file.name }));
           continue;
         }
         if (file.size > MAX_ATTACHMENT_BYTES) {
-          toast.error(`"${file.name}" excede o limite de 10 MiB.`);
+          toast.error(
+            text('attachmentTooLarge', {
+              filename: file.name,
+              limit: formatBytes(MAX_ATTACHMENT_BYTES),
+            }),
+          );
           continue;
         }
         if (next.some((f) => f.name === file.name && f.size === file.size)) {
@@ -143,7 +160,7 @@ export function NewTicketForm() {
       );
 
       await revalidateSupport();
-      toast.success('Chamado aberto! Nossa equipe vai responder por aqui.');
+      toast.success(text('createSuccess'));
       router.push(ROUTES.SUPPORT);
       router.refresh();
 
@@ -151,13 +168,13 @@ export function NewTicketForm() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === 'RATE_LIMITED') {
-          toast.error('Muitas solicitações. Tente novamente em alguns minutos.');
+          toast.error(text('rateLimited'));
         } else {
           toast.error(err.message);
         }
         return;
       }
-      toast.error('Não foi possível abrir o chamado. Tente novamente.');
+      toast.error(text('createFailed'));
     }
   };
 

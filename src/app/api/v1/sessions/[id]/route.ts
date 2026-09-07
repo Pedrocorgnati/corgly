@@ -123,7 +123,11 @@ export const PATCH = withApiHandler(async (
       if (session.studentId !== userId && role !== UserRole.ADMIN) {
         return NextResponse.json(apiResponse(null, 'Acesso negado.'), { status: 403 })
       }
-      if (![SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS].includes(session.status)) {
+      // O array literal inferia `("SCHEDULED" | "IN_PROGRESS")[]` e `.includes` passava a
+  // recusar qualquer outro `SessionStatus`. A anotacao explicita mantem o teste de
+  // pertinencia sobre o enum inteiro.
+  const ACTIVE_STATUSES: SessionStatus[] = [SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS]
+  if (!ACTIVE_STATUSES.includes(session.status)) {
         return NextResponse.json(
           apiResponse(null, 'Sessão não pode ser iniciada neste estado.'),
           { status: 409 },

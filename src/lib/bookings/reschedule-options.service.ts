@@ -126,7 +126,12 @@ export class RescheduleOptionsService {
     // Alternativas: slots livres a partir de hoje (serviço canônico, janela de 7
     // dias), excluindo o slot atual da sessão e quaisquer horários já passados.
     const fromKey = new Date(now).toISOString().slice(0, 10);
-    const available = await availabilityService.getAvailable(fromKey);
+    const untilKey = new Date(
+      new Date(`${fromKey}T00:00:00.000Z`).getTime() + 7 * 24 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .slice(0, 10);
+    const available = await availabilityService.getAvailable(fromKey, untilKey);
     const options: RescheduleOptionSlot[] = available
       .filter((s) => s.id !== session.availabilitySlotId)
       .filter((s) => new Date(s.startAt).getTime() > now)

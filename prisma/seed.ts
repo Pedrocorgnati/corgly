@@ -108,14 +108,16 @@ async function main() {
     for (let hour = 10; hour <= 17; hour++) {
       const startAt = setSeconds(setMinutes(setHours(date, hour), 0), 0)
       const endAt = setSeconds(setMinutes(setHours(date, hour + 1), 0), 0)
-      await prisma.availabilitySlot.create({
-        data: { startAt, endAt },
+      await prisma.availabilitySlot.upsert({
+        where: { startAt },
+        update: {},
+        create: { startAt, endAt },
       })
       slotsCreated++
     }
   }
   console.log(
-    `✅ Availability slots created: 7 days × 8 slots = ${slotsCreated} slots`,
+    `✅ Availability slots ensured: 7 days × 8 slots = ${slotsCreated} slots`,
   )
 
   // ─── Test credit batch for student ──────────────────────────────────
@@ -416,10 +418,16 @@ async function main() {
   const createdSessions: Record<string, any> = {}
 
   for (const def of sessionDefs) {
-    const upserted = await prisma.session.upsert({
+    // `availabilitySlotId` deixou de ser unico quando o slot passou a ser
+    // devolvido no cancelamento, entao `upsert` por ele nao compila mais.
+    // A idempotencia do seed e preservada explicitamente: uma sessao por slot
+    // semeado, qualquer que seja o status.
+    const existing = await prisma.session.findFirst({
       where: { availabilitySlotId: def.slot.id },
-      update: {},
-      create: {
+    })
+
+    const upserted = existing ?? (await prisma.session.create({
+      data: {
         studentId: student.id,
         availabilitySlotId: def.slot.id,
         startAt: def.slot.startAt,
@@ -436,7 +444,7 @@ async function main() {
         reminderSentAt: def.reminderSentAt as never,
         rescheduleRequestSlotId: def.rescheduleRequestSlotId,
       },
-    })
+    }))
     createdSessions[def.status] = upserted
   }
 

@@ -100,6 +100,34 @@ export const PRICING: PricingMap = {
   },
 };
 
+/**
+ * Taxas de conversao a partir do USD. E A TABELA DE CAMBIO DO PRODUTO, a mesma
+ * que gerou cada linha de `PRICING` acima (`Math.ceil(usdCents * taxa)`).
+ *
+ * Exportada porque existe preco que NAO sai de `PRICING`: o eixo legado por
+ * cadencia semanal (`calculateSubscriptionMonthlyAmountCents` em
+ * `src/lib/billing/subscription-pricing.ts`) deriva o valor de US$ 16/aula e
+ * precisa converter. Antes ele mantinha uma copia privada destas taxas — uma
+ * segunda tabela viva, exatamente o que `src/lib/billing/currency-policy.ts`
+ * (linha 10) proibe, e que deixava o EUR do plano legado divergir sem que
+ * teste nenhum reclamasse. Quem converte fora daqui usa `convertUsdCents`.
+ */
+export const FX_FROM_USD: Record<Currency, number> = {
+  USD: 1,
+  USDC: 1,
+  EUR: 0.92,
+  BRL: 5,
+};
+
+/**
+ * Converte centavos de USD para a moeda alvo pela tabela unica, arredondando
+ * para CIMA — a mesma regra usada para derivar `PRICING`, entao um preco
+ * calculado por aqui bate centavo a centavo com o preco de catalogo.
+ */
+export function convertUsdCents(usdCents: number, currency: Currency): number {
+  return Math.ceil(usdCents * FX_FROM_USD[currency]);
+}
+
 /** Volume mensal contratado -> pacote de assinatura correspondente. */
 export const MONTHLY_PACKAGE_BY_LESSONS: Record<10 | 20, MonthlyPackageType> = {
   10: 'MONTHLY_10',

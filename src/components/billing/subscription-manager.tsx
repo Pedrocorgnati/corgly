@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarClock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { CalendarClock, AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,14 +12,23 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { PriceDisplay } from '@/components/billing/PriceDisplay';
-import { ROUTES } from '@/lib/constants/routes';
+import { apiClient } from '@/lib/api-client';
+import { API, ROUTES } from '@/lib/constants/routes';
 import { SubscriptionStatus } from '@/lib/constants/enums';
 import {
+  normalizeMonthlyLessons,
   resolveMonthlyCredits,
   resolveSubscriptionMonthlyAmountCents,
+  stripeCurrencyToCurrency,
 } from '@/lib/billing/subscription-pricing';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useSubscription, type SubscriptionUpdatePayload } from '@/hooks/useSubscription';
+import type { Currency } from '@/lib/currency';
+import { missingMessage } from '@/lib/i18n/message-fallback';
 import { cn } from '@/lib/utils';
+// Contrato do preview importado como TIPO do proprio produtor, para nao existir
+// copia local que envelhece. `import type` some na compilacao, entao o
+// `server-only` do modulo nao chega ao bundle do cliente.
+import type { SubscriptionChangePreview } from '@/lib/billing/subscription-preview.service';
 
 type StatusVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
@@ -36,19 +45,39 @@ const STATUS_KEYS: Record<string, { key: string; variant: StatusVariant }> = {
   [SubscriptionStatus.PAUSED]: { key: 'paused', variant: 'outline' },
 };
 
+interface ApiResponse<T> {
+  data: T;
+}
+
+/** Estados distintos da resolucao da moeda de cobranca. Nunca implicito. */
+type ChargeCurrencyState = 'loading' | 'ready' | 'unavailable';
+
 /**
- * Traducao obrigatoria: chave ausente e DEFEITO, nao texto opcional.
- * Em desenvolvimento estoura no primeiro render; em producao devolve string
- * vazia — a chave crua NUNCA aparece para o usuario final.
- *
- * DUPLICADO nos outros arquivos deste work package: um modulo compartilhado
- * ficaria fora da lista de arquivos de propriedade.
+ * Desfecho de UMA consulta de moeda, carimbado com a consulta que o produziu.
+ * O carimbo e o que impede a resposta de uma assinatura (ou de uma tentativa)
+ * anterior de rotular o valor da atual: quando a chave muda, o desfecho antigo
+ * deixa de valer e o painel volta sozinho para `loading`.
  */
-function missingMessage(fullKey: string): string {
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error(`[i18n] chave de traducao ausente: ${fullKey}`);
-  }
-  return '';
+type ChargeCurrencyResult =
+  | { key: string; state: 'ready'; currency: Currency }
+  | { key: string; state: 'unavailable' };
+
+/**
+ * Corpo do preview do plano VIGENTE, no eixo em que a assinatura foi contratada.
+ *
+ * Pedir o proprio plano faz `previewSubscriptionChange` classificar a troca como
+ * `current_plan` e retornar cedo (`src/lib/billing/subscription-preview.service.ts`):
+ * uma unica `subscriptions.retrieve`, nenhuma `invoices.createPreview`, todos os
+ * valores zerados — e o campo `currency`, que e o unico que interessa aqui,
+ * vem do `subscriptionItem.price.currency`, a moeda em que o Stripe cobra.
+ */
+function currentPlanPreviewBody(subscription: {
+  monthlyLessons: number | null;
+  weeklyFrequency: number;
+}): SubscriptionUpdatePayload {
+  return subscription.monthlyLessons != null
+    ? { monthlyLessons: normalizeMonthlyLessons(subscription.monthlyLessons) }
+    : { weeklyFrequency: subscription.weeklyFrequency };
 }
 
 /**
@@ -63,10 +92,78 @@ export function SubscriptionManager() {
   const t = useTranslations('credits.subscription');
   const locale = useLocale();
   const text = (key: string, values?: Record<string, string | number>): string =>
-    t.has(key) ? t(key, values) : missingMessage(`credits.subscription.${key}`);
+    t.has(key) ? t(key, values) : missingMessage(`credits.subscription.${key}`, 'SubscriptionManager');
 
   const { subscription, isLoading, error, isCancelling, refetch, cancel } = useSubscription();
   const [showCancelModal, setShowCancelModal] = useState(false);
+
+  // Moeda REAL da cobranca. Nao existe coluna `currency` em `model Subscription`
+  // (`prisma/schema.prisma` linha 603) e `GET /api/v1/subscriptions` devolve o
+  // registro cru, entao o dado e buscado onde ele de fato existe: o item da
+  // assinatura no Stripe, exposto pelo preview do plano vigente. Enquanto ele
+  // nao chega o valor NAO e renderizado — imprimir dolar por omissao era o
+  // defeito: um europeu cobrado em 15640 centavos de euro lia "US$ 170,00".
+  const [currencyResult, setCurrencyResult] = useState<ChargeCurrencyResult | null>(null);
+  const [currencyAttempt, setCurrencyAttempt] = useState(0);
+
+  const subscriptionId = subscription?.id ?? null;
+  const subscriptionMonthlyLessons = subscription?.monthlyLessons ?? null;
+  const subscriptionWeeklyFrequency = subscription?.weeklyFrequency ?? null;
+
+  // Identidade da consulta em curso: assinatura, eixo contratado e tentativa.
+  // `null` quando ainda nao ha assinatura carregada — nao ha o que consultar.
+  const currencyKey =
+    subscriptionId === null || subscriptionWeeklyFrequency === null
+      ? null
+      : `${subscriptionId}|${subscriptionMonthlyLessons ?? 'legacy'}|${subscriptionWeeklyFrequency}|${currencyAttempt}`;
+
+  // Estado DERIVADO da consulta corrente: sem desfecho carimbado com a chave
+  // atual, o painel esta carregando. Nada de setState sincrono em efeito para
+  // "resetar" — o reset e consequencia da chave ter mudado.
+  const settled = currencyResult !== null && currencyResult.key === currencyKey ? currencyResult : null;
+  const currencyState: ChargeCurrencyState = settled?.state ?? 'loading';
+  const chargeCurrency: Currency | null = settled?.state === 'ready' ? settled.currency : null;
+
+  useEffect(() => {
+    // A chave nula ja cobre o caso "sem assinatura"; repetir o eixo legado aqui
+    // e o que garante ao TypeScript o `number` que o corpo da requisicao exige.
+    if (currencyKey === null || subscriptionWeeklyFrequency === null) return;
+
+    let cancelled = false;
+
+    apiClient
+      .post<ApiResponse<SubscriptionChangePreview>>(
+        API.BILLING_SUBSCRIPTION_PREVIEW_CHANGE,
+        currentPlanPreviewBody({
+          monthlyLessons: subscriptionMonthlyLessons,
+          weeklyFrequency: subscriptionWeeklyFrequency,
+        }),
+      )
+      .then((response) => {
+        if (cancelled) return;
+        setCurrencyResult({
+          key: currencyKey,
+          state: 'ready',
+          currency: stripeCurrencyToCurrency(response.data.currency),
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Assinatura PAST_DUE responde 404 (`PAYMENT_080`, que so aceita
+        // ACTIVE/TRIAL) e queda de rede responde outra coisa: nos dois casos o
+        // desfecho para o aluno e o mesmo — moeda desconhecida, valor oculto e
+        // um botao para tentar de novo. Nunca um numero em moeda adivinhada.
+        setCurrencyResult({ key: currencyKey, state: 'unavailable' });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currencyKey, subscriptionMonthlyLessons, subscriptionWeeklyFrequency]);
+
+  const retryCurrency = useCallback(() => {
+    setCurrencyAttempt((attempt) => attempt + 1);
+  }, []);
 
   const formatDate = (value: string): string => {
     const date = new Date(value);
@@ -124,9 +221,13 @@ export function SubscriptionManager() {
       : text('perWeek', { count: subscription.weeklyFrequency });
 
   // Tabela unica de precos (`src/lib/pricing/config.ts`) via subscription-pricing.
-  // A assinatura persistida nao guarda moeda de cobranca, entao o valor sai em
-  // USD e o texto abaixo diz explicitamente que e referencia.
-  const monthlyAmountCents = resolveSubscriptionMonthlyAmountCents(subscription, 'USD');
+  // Calculo e renderizacao usam a MESMA moeda resolvida do Stripe: o valor nunca
+  // e computado numa moeda e rotulado com outra, e so existe quando a moeda
+  // existe (`chargeCurrency` nulo => nada renderizado).
+  const monthlyAmountCents =
+    chargeCurrency !== null
+      ? resolveSubscriptionMonthlyAmountCents(subscription, chargeCurrency)
+      : null;
   const monthlyCredits = resolveMonthlyCredits(subscription);
   const isActive =
     subscription.status === SubscriptionStatus.ACTIVE && !subscription.cancelAtPeriodEnd;
@@ -139,15 +240,47 @@ export function SubscriptionManager() {
             <h3 data-testid="subscription-plan-title" className="text-base font-semibold text-foreground">
               {text('title')} — {planLabel}
             </h3>
-            <p className="text-sm text-muted-foreground mt-0.5 flex items-baseline gap-0.5">
-              <PriceDisplay
-                amountCents={monthlyAmountCents}
-                currency="USD"
-                locale={locale}
-                className="font-medium text-foreground"
-              />
-              <span>{text('perMonth')}</span>
-            </p>
+            {currencyState === 'loading' && (
+              <p
+                data-testid="subscription-price-loading"
+                className="mt-1 flex items-center gap-2"
+                aria-busy="true"
+              >
+                <Skeleton className="h-5 w-24" />
+                <span className="sr-only">{text('currencyLoading')}</span>
+              </p>
+            )}
+
+            {currencyState === 'ready' && chargeCurrency !== null && monthlyAmountCents !== null && (
+              <p className="text-sm text-muted-foreground mt-0.5 flex items-baseline gap-0.5">
+                <PriceDisplay
+                  amountCents={monthlyAmountCents}
+                  currency={chargeCurrency}
+                  locale={locale}
+                  className="font-medium text-foreground"
+                />
+                <span>{text('perMonth')}</span>
+              </p>
+            )}
+
+            {currencyState === 'unavailable' && (
+              <p
+                data-testid="subscription-price-unavailable"
+                role="alert"
+                className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+              >
+                <span>{text('currencyUnavailable')}</span>
+                <Button
+                  data-testid="subscription-price-retry-button"
+                  variant="outline"
+                  size="sm"
+                  onClick={retryCurrency}
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  {text('currencyRetry')}
+                </Button>
+              </p>
+            )}
           </div>
           <Badge data-testid="subscription-status-badge" variant={statusVariant}>
             {statusLabel}
@@ -178,9 +311,13 @@ export function SubscriptionManager() {
           </div>
         </div>
 
-        <p data-testid="subscription-price-note" className="mt-3 text-xs text-muted-foreground">
-          {text('priceNote')}
-        </p>
+        {currencyState === 'ready' && (
+          // A nota antiga (`priceNote`) dizia "valor de referencia em dolar":
+          // virou mentira agora que o valor sai na moeda real da cobranca.
+          <p data-testid="subscription-price-note" className="mt-3 text-xs text-muted-foreground">
+            {text('priceNoteCharged')}
+          </p>
+        )}
 
         {subscription.cancelAtPeriodEnd && (
           <div

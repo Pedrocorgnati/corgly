@@ -32,6 +32,22 @@ const DIMENSIONS: Array<{ key: keyof FeedbackScores; label: string }> = [
   { key: 'vocabulary', label: 'Vocabulário' },
 ];
 
+/** Recharts abre lacuna em `null`; nota invalida nunca vira vertice no radar. */
+function toPoint(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Nota ausente ou nao-finita vira travessao na leitura numerica — nunca `NaN`.
+ *
+ * Mesmo helper de src/components/progress/DimensionRadar.tsx: a API pode
+ * devolver `null` numa dimensao sem feedback e `FeedbackScores` nao garante
+ * finitude em tempo de execucao. Sem isto a legenda imprimia "NaN/5".
+ */
+function formatScore(value: unknown): string {
+  return typeof value === 'number' && Number.isFinite(value) ? `${value.toFixed(1)}/5` : '—';
+}
+
 interface CorglyCircleProps {
   scores: FeedbackScores | null;
   isLoading: boolean;
@@ -84,7 +100,7 @@ export function CorglyCircle({ scores, isLoading, className }: CorglyCircleProps
 
   const data = DIMENSIONS.map((dimension) => ({
     dimension: dimension.label,
-    value: scores[dimension.key],
+    value: toPoint(scores[dimension.key]),
   }));
 
   return (
@@ -129,7 +145,7 @@ export function CorglyCircle({ scores, isLoading, className }: CorglyCircleProps
           <li key={dimension.key} className="text-[12.5px] text-muted-foreground">
             {dimension.label}:{' '}
             <span className="font-semibold text-ink">
-              {scores[dimension.key].toFixed(1)}/5
+              {formatScore(scores[dimension.key])}
             </span>
           </li>
         ))}

@@ -21,6 +21,18 @@ interface AuthState {
   isLoading: boolean;
 }
 
+/**
+ * Envelope de TODA rota /api/v1/* (apiResponse em src/lib/auth.ts).
+ * O apiClient devolve o corpo cru — nao desembrulha. Guardar a resposta inteira
+ * em `state.user` fazia `user.id`, `user.name` e `user.role` sairem `undefined`
+ * em todo consumidor cliente do hook.
+ */
+interface ApiEnvelope<T> {
+  data: T | null;
+  error: string | null;
+  message?: string | null;
+}
+
 export interface UseAuthReturn {
   user: User | null;
   role: UserRole | null;
@@ -49,8 +61,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // nao expiracao. Sem skipAuthRedirect, o AuthProvider (montado no root
       // layout) jogava todo visitante anonimo de qualquer pagina publica em
       // /auth/login, e la o proprio login entrava em loop de redirect.
-      const user = await apiClient.get<User>(API.AUTH.ME, { skipAuthRedirect: true });
-      setState({ user, isLoading: false });
+      const envelope = await apiClient.get<ApiEnvelope<User>>(API.AUTH.ME, {
+        skipAuthRedirect: true,
+      });
+
+      // 200 com `error` preenchido (ou `data` nulo) e sessao invalida, nao usuario.
+      if (!envelope || envelope.error || !envelope.data) {
+        setState({ user: null, isLoading: false });
+        return;
+      }
+
+      setState({ user: envelope.data, isLoading: false });
     } catch {
       setState({ user: null, isLoading: false });
     }
@@ -72,10 +93,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('auth:expired', handleAuthExpired);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const user = await apiClient.post<User>(API.AUTH.LOGIN, { email, password });
-    setState({ user, isLoading: false });
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const envelope = await apiClient.post<
+        ApiEnvelope<{ user: { id: string }; token: string }>
+      >(API.AUTH.LOGIN, { email, password });
+
+      if (!envelope?.data?.user) {
+        setState({ user: null, isLoading: false });
+        throw new Error(envelope?.error ?? 'Nao foi possivel entrar. Tente novamente.');
+      }
+
+      // A rota de login devolve um SUBCONJUNTO do usuario (id, name, role,
+      // onboardingCompletedAt, isFirstPurchase). Recarregamos por /auth/me para
+      // o estado guardar o shape canonico de `User` em vez de um parcial
+      // disfarcado de completo.
+      await fetchUser();
+    },
+    [fetchUser],
+  );
 
   const logout = useCallback(async () => {
     try {

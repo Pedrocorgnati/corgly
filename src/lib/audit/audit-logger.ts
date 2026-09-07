@@ -6,6 +6,8 @@
  * Fallback para console.error se a escrita no DB falhar (nunca silenciar).
  */
 
+import type { Prisma } from '@prisma/client';
+
 import { prisma } from '@/lib/prisma';
 
 export interface AuditEntry {
@@ -38,7 +40,10 @@ export async function auditLog(
         resourceType: resource.type,
         resourceId: resource.id,
         adminId,
-        metadata: metadata ?? {},
+        // `Record<string, unknown>` nao e estruturalmente `InputJsonValue` (o valor
+        // pode ser `undefined`); o cast declara o contrato ja garantido pelo caller,
+        // que sempre passa objeto serializavel.
+        metadata: (metadata ?? {}) as Prisma.InputJsonObject,
       },
     });
   } catch (err) {

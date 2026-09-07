@@ -4,6 +4,24 @@ import { apiResponse } from '@/lib/auth';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 /**
+ * Falha desta rota: codigo de erro ESTAVEL, sem copy.
+ *
+ * A busca e consumida pelo `DocumentSearch`, montado na tela de historico do
+ * aluno, e o aluno le em pt-BR, en-US, es-ES ou it-IT. Como a mensagem autoral
+ * do servidor vence o catalogo no `api-client` (`body.error ?? catalogo`),
+ * qualquer texto cravado aqui seria entregue igual aos quatro publicos. Por isso
+ * `error` fica nulo de proposito: quem resolve a copy e `src/lib/errors/copy.ts`,
+ * no locale ativo, a partir do `code`.
+ *
+ * Os codigos sao os mesmos que o `api-client` sintetiza (`AUTH_001`,
+ * `RATE_LIMITED`, `INTERNAL_ERROR`), entao consumidor que ramifica por
+ * `err.code` continua enxergando o valor esperado.
+ */
+function errorResponse(code: string, status: number, headers?: HeadersInit) {
+  return NextResponse.json({ ...apiResponse(null), code }, { status, headers });
+}
+
+/**
  * GET /api/v1/documents/search?q=<term>&page=<n>&limit=<n>
  *
  * Busca por ocorrencias do termo no plainTextSnapshot de SessionDocuments
@@ -20,15 +38,15 @@ export async function GET(request: NextRequest) {
   const role = request.headers.get('x-user-role');
 
   if (!userId || !role) {
-    return NextResponse.json(apiResponse(null, 'Nao autenticado.'), { status: 401 });
+    return errorResponse('AUTH_001', 401);
   }
 
   const rl = await checkRateLimit(`docs-search:${userId}`, RATE_LIMITS.SESSIONS_CREATE);
   if (!rl.allowed) {
-    return NextResponse.json(
-      apiResponse(null, 'Muitas tentativas. Aguarde 1 minuto.'),
-      { status: 429 },
-    );
+    // `Retry-After` em segundos: diz QUANTO esperar sem depender de idioma
+    // nenhum, e substitui o "Aguarde 1 minuto." que estava cravado em pt-BR.
+    const retryAfter = Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000));
+    return errorResponse('RATE_LIMITED', 429, { 'Retry-After': String(retryAfter) });
   }
 
   const { searchParams } = request.nextUrl;
@@ -121,6 +139,6 @@ export async function GET(request: NextRequest) {
     // `like` nao utilizado porque Prisma `contains` ja cuida do LIKE seguro;
     // mantemos a sanitizacao acima caso uma futura migracao passe para $queryRaw.
     void like;
-    return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
+    return errorResponse('INTERNAL_ERROR', 500);
   }
 }

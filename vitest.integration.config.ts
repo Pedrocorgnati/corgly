@@ -26,6 +26,14 @@ export default defineConfig({
     reporters: ['verbose'],
   },
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      // `server-only` lanca fora de um React Server Component. Em producao (RSC)
+      // ele resolve para um no-op via condicao `react-server`; o vitest nao seta
+      // essa condicao, entao apontamos para o mesmo stub vazio usado pelo
+      // `vitest.config.ts` para permitir a coleta dos testes de integracao que
+      // atravessam `src/lib/prisma.ts`, `src/lib/auth-guard.ts` e afins.
+      'server-only': path.resolve(__dirname, './node_modules/server-only/empty.js'),
+    },
   },
 })

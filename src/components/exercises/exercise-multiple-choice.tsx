@@ -7,9 +7,17 @@
  *   escolher alternativa -> conferir -> ver o acerto/erro com a resposta certa
  *   -> avancar -> resumo final -> refazer.
  *
- * Uma questao por vez, e nao as oito de uma vez, porque o contrato de testid
- * usa `exercise-question` no singular e `exercise-option-<indice>` de 0 a 3:
- * renderizar as oito juntas repetiria os mesmos testids quatro vezes na tela.
+ * Uma questao por vez, e nao as oito de uma vez, e decisao de interface DESTA
+ * tela: o aluno confere cada resposta e ve o acerto ou o erro antes de seguir,
+ * o que so faz sentido com uma questao em foco. As regras da fonte
+ * (corgly-classes/rules/09-secao6-multipla-escolha.md) governam o CONTEUDO das
+ * questoes (R-MC-01 a R-MC-16) e nao dizem nada sobre apresentacao — trocar
+ * para lista unica seria decisao de produto, nao quebra de contrato.
+ *
+ * Efeito colateral do formato: os testids `exercise-question` (singular) e
+ * `exercise-option-0..3` sao unicos na tela porque so uma questao esta montada.
+ * Este componente e a origem desses nomes; passar a montar as oito de uma vez
+ * exige renomea-los para incluir o indice da questao.
  *
  * Zero Silencio: o botao de conferir NUNCA fica desabilitado. Clicar sem ter
  * escolhido alternativa mostra um aviso em `role="alert"` em vez de nao

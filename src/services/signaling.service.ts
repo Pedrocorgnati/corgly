@@ -1,5 +1,5 @@
 import { Redis } from '@upstash/redis'
-import type { SessionSignal, SignalType } from '@/types/sala-virtual'
+import type { SessionSignal } from '@/types/sala-virtual'
 
 const SIGNAL_TTL_SECONDS = 60 * 60 // 1h retenção máxima
 const MAX_SIGNALS_PER_KEY = 200    // hard cap por chave (sessão:usuário)
@@ -7,6 +7,18 @@ const KEY_PREFIX = '@corgly/sig'
 
 interface StoredSignal extends SessionSignal {
   expiresAt: number
+}
+
+function signalTs(signal: StoredSignal): number {
+  return new Date(signal.timestamp).getTime()
+}
+
+/**
+ * O cliente REST do Upstash desserializa a resposta quando reconhece JSON, entao
+ * o item da lista chega ora como string ora como objeto ja pronto.
+ */
+function parseStoredSignal(item: string | StoredSignal): StoredSignal {
+  return typeof item === 'string' ? (JSON.parse(item) as StoredSignal) : item
 }
 
 // ---------------------------------------------------------------------------
@@ -53,10 +65,13 @@ function memStoreSignal(k: string, signal: StoredSignal): void {
 function memGetSignals(k: string, afterTs: number): SessionSignal[] {
   const all = memStore.get(k) ?? []
   const now = Date.now()
-  const filtered = all.filter((s) => new Date(s.timestamp).getTime() > afterTs && s.expiresAt > now)
-  const remaining = all.filter((s) => new Date(s.timestamp).getTime() <= afterTs || s.expiresAt <= now)
-  if (remaining.length === 0) memStore.delete(k)
-  else memStore.set(k, remaining)
+  const filtered = all.filter((s) => signalTs(s) > afterTs && s.expiresAt > now)
+  // Retidos: os que o cliente ainda nao pediu (timestamp <= after) E continuam
+  // validos. Expirado nao volta para a fila — antes ele era reescrito a cada
+  // poll e sobrevivia para sempre.
+  const retained = all.filter((s) => signalTs(s) <= afterTs && s.expiresAt > now)
+  if (retained.length === 0) memStore.delete(k)
+  else memStore.set(k, retained)
   return filtered.map(({ expiresAt: _e, ...signal }) => signal)
 }
 
@@ -94,10 +109,15 @@ export class SignalingService {
     }
 
     const k = this.redisKey(sessionId, userId)
-    // RPUSH + LTRIM para hard cap + EXPIRE para TTL
-    await r.rpush(k, JSON.stringify(stored))
-    await r.ltrim(k, -MAX_SIGNALS_PER_KEY, -1)
-    await r.expire(k, SIGNAL_TTL_SECONDS)
+    // MULTI/EXEC de verdade: RPUSH + LTRIM (hard cap) + EXPIRE (TTL) viram uma
+    // transacao so. Em tres chamadas soltas, uma falha no meio deixava a fila
+    // sem cap ou a chave sem TTL — e custava tres round-trips HTTP no caminho
+    // quente do handshake.
+    await r.multi()
+      .rpush(k, JSON.stringify(stored))
+      .ltrim(k, -MAX_SIGNALS_PER_KEY, -1)
+      .expire(k, SIGNAL_TTL_SECONDS)
+      .exec()
   }
 
   /**
@@ -122,31 +142,26 @@ export class SignalingService {
     const k = this.redisKey(sessionId, peerUserId)
     const now = Date.now()
 
-    // Buscar todos os signals da lista
-    const raw = await r.lrange(k, 0, -1)
+    // LPOP com count drena a fila inteira numa unica operacao atomica. O par
+    // LRANGE + DEL que existia aqui apagava tambem o que o peer tivesse
+    // publicado entre a leitura e a escrita: um ICE candidate perdido assim nao
+    // reaparece em poll nenhum e a conexao simplesmente nao fecha.
+    const raw = await r.lpop<(string | StoredSignal)[]>(k, MAX_SIGNALS_PER_KEY)
     if (!raw || raw.length === 0) return []
 
-    const allSignals: StoredSignal[] = raw.map((item) =>
-      typeof item === 'string' ? JSON.parse(item) : item,
-    )
+    const allSignals: StoredSignal[] = raw.map(parseStoredSignal)
 
-    const filtered = allSignals.filter(
-      (s) => new Date(s.timestamp).getTime() > afterTs && s.expiresAt > now,
-    )
-    const remaining = allSignals.filter(
-      (s) => new Date(s.timestamp).getTime() <= afterTs || s.expiresAt <= now,
-    )
+    const filtered = allSignals.filter((s) => signalTs(s) > afterTs && s.expiresAt > now)
+    // Retidos: os que o cliente ainda nao pediu (timestamp <= after) E continuam
+    // validos. Expirado nao volta para a fila — antes ele era reescrito com
+    // EXPIRE renovado a cada poll e a chave nunca morria.
+    const retained = allSignals.filter((s) => signalTs(s) <= afterTs && s.expiresAt > now)
 
-    // Reescrever lista apenas com os não-consumidos
-    if (remaining.length === 0) {
-      await r.del(k)
-    } else {
-      // MULTI/pipeline para atomicidade
-      await r.del(k)
-      if (remaining.length > 0) {
-        await r.rpush(k, ...remaining.map((s) => JSON.stringify(s)))
-        await r.expire(k, SIGNAL_TTL_SECONDS)
-      }
+    if (retained.length > 0) {
+      // LPUSH em ordem reversa recoloca os retidos na cabeca preservando a ordem
+      // cronologica e deixando na cauda o que chegou durante o consumo.
+      const payload = retained.map((s) => JSON.stringify(s)).reverse()
+      await r.multi().lpush(k, ...payload).expire(k, SIGNAL_TTL_SECONDS).exec()
     }
 
     return filtered.map(({ expiresAt: _e, ...signal }) => signal)

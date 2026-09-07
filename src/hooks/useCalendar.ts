@@ -22,7 +22,18 @@ export interface UseCalendarReturn {
   refresh: () => void;
 }
 
-export function useCalendar(): UseCalendarReturn {
+export interface UseCalendarOptions {
+  /**
+   * Quando `false`, o hook nao busca nada e devolve lista vazia sem loading.
+   * Serve para quem monta um componente que ja recebe os slots de fora
+   * (`AdminCalendar` com a prop `calendar`), sem disparar um fetch publico
+   * redundante e sem quebrar a regra dos hooks.
+   */
+  enabled?: boolean;
+}
+
+export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
+  const enabled = options?.enabled ?? true;
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -33,6 +44,12 @@ export function useCalendar(): UseCalendarReturn {
   const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
   const fetchSlots = useCallback(async () => {
+    if (!enabled) {
+      setSlots([]);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -49,7 +66,7 @@ export function useCalendar(): UseCalendarReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [monthKey]);
+  }, [monthKey, enabled]);
 
   useEffect(() => {
     void fetchSlots();

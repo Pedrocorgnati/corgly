@@ -11,11 +11,60 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES, API } from '@/lib/constants/routes';
-import { UserRole } from '@/lib/constants/enums';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { resolvePostLoginDestination } from '@/lib/auth/post-login-destination';
+import { planSelectionQuery, readPlanSelection } from '@/lib/constants/landing';
 import { LoginSchema } from '@/schemas/auth.schema';
 
 type LoginFormData = { email: string; password: string };
+
+/**
+ * Le `?redirectTo=` da URL corrente.
+ *
+ * O proxy escreve esse parametro ao barrar usuario sem sessao vindo de /admin/*
+ * (src/proxy.ts). O formulario ignorava o valor: o admin logava e caia no
+ * destino padrao, perdendo a pagina que pediu.
+ *
+ * Lemos de `window.location` em vez de `useSearchParams()` de proposito: a
+ * pagina de login e estatica e o hook exigiria um <Suspense> em volta do
+ * formulario (arquivo de outro dono). Aqui o valor so e necessario no submit,
+ * que e sempre client-side.
+ *
+ * O valor cru NUNCA e usado: `resolvePostLoginDestination` o passa por
+ * `sanitizeAdminRedirectTo`, que rejeita host externo, `//`, barra invertida e
+ * qualquer path fora de /admin/* (anti open redirect).
+ */
+function readRedirectToParam(): string | null {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('redirectTo');
+}
+
+/**
+ * Ultimo elo faltante da ponte landing -> cadastro -> vitrine.
+ *
+ * Quem clica num plano da landing sem sessao vai para `/auth/register`, que
+ * guarda a escolha (`savePlanSelection`, em `register-form.tsx`) ja na abertura
+ * da pagina — inclusive para quem ja tem conta e desce ate "Entrar". Ate aqui a
+ * escolha so era recuperada se a pessoa, por conta propria, chegasse em
+ * `/credits`: quem ja tinha onboarding concluido caia no dashboard e a escolha
+ * ficava encalhada ate expirar. Agora o login leva essa pessoa para a vitrine
+ * com o plano na query, onde `PricingCards` aplica a selecao e apaga o registro.
+ *
+ * Nao toca nos outros destinos DE PROPOSITO: onboarding pendente continua
+ * vencendo (o funil do aluno novo ja termina em `/credits` pelo
+ * equipment-check) e admin nunca e desviado do `redirectTo` sanitizado.
+ *
+ * FICA DE FORA o callback de magic-link (`src/app/(public)/auth/magic-link/
+ * page.tsx`): ele e server component e resolve o destino antes de existir
+ * qualquer `window`, logo nao tem como ler o registro. Quem entra por link
+ * segue caindo no dashboard e recupera a escolha ao abrir `/credits`.
+ */
+function applyPlanSelectionDetour(destination: string): string {
+  if (destination !== ROUTES.DASHBOARD) return destination;
+  const saved = readPlanSelection();
+  if (!saved) return destination;
+  return `${ROUTES.CREDITS}?${planSelectionQuery(saved)}`;
+}
 
 export function LoginForm() {
   const router = useRouter();
@@ -47,17 +96,16 @@ export function LoginForm() {
 
       toast.success('Login realizado com sucesso!');
 
-      // Destino pos-login ramifica por papel ANTES de olhar o onboarding:
-      // o onboarding e um fluxo de aluno, admin nunca passa por ele.
+      // Ponto unico de decisao, compartilhado com o callback de magic-link:
+      // admin vai para o painel (honrando o redirectTo sanitizado), aluno sem
+      // onboarding vai para o onboarding, o resto vai para o dashboard.
       const { role, onboardingCompletedAt } = result.data.user;
 
-      if (role === UserRole.ADMIN) {
-        router.push(ROUTES.ADMIN_DASHBOARD);
-      } else if (!onboardingCompletedAt) {
-        router.push(ROUTES.ONBOARDING);
-      } else {
-        router.push(ROUTES.DASHBOARD);
-      }
+      router.push(
+        applyPlanSelectionDetour(
+          resolvePostLoginDestination({ role, onboardingCompletedAt }, readRedirectToParam()),
+        ),
+      );
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 403) {

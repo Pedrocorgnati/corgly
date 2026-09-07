@@ -6,7 +6,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Plus, Trash2, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GenerateSlotsSchema, type GenerateSlotsInput } from '@/schemas/availability.schema';
+import {
+  GenerateSlotsSchema,
+  type GenerateSlotsInput,
+  type GenerateSlotsFormValues,
+} from '@/schemas/availability.schema';
 import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
 
@@ -38,7 +42,7 @@ export function AvailabilityEditor({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<GenerateSlotsInput>({
+  } = useForm<GenerateSlotsFormValues, unknown, GenerateSlotsInput>({
     resolver: zodResolver(GenerateSlotsSchema),
     mode: 'onBlur',
     reValidateMode: 'onChange',
@@ -96,8 +100,9 @@ export function AvailabilityEditor({
   const handleBlockToggle = async (slot: ExistingSlot) => {
     setActionLoading(slot.id);
     const action = slot.isBlocked ? 'unblock' : 'block';
+    const url = slot.isBlocked ? API.AVAILABILITY_UNBLOCK(slot.id) : API.AVAILABILITY_BLOCK(slot.id);
     try {
-      await apiClient.patch(API.AVAILABILITY_BLOCK(slot.id).replace('block', action), {});
+      await apiClient.patch(url, {});
       toast.success(action === 'block' ? 'Slot bloqueado.' : 'Slot desbloqueado.');
       onSlotsGenerated?.();
     } catch (err) {

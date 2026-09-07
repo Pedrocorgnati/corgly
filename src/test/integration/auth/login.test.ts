@@ -63,7 +63,9 @@ describe('POST /api/v1/auth/login', () => {
     const cookie = response.headers.get('set-cookie') ?? ''
     expect(cookie).toContain('corgly_token=')
     expect(cookie).toContain('HttpOnly')
-    expect(cookie).toContain('SameSite=Lax')
+    // O serializador do Next emite `SameSite=lax` em minusculo; o atributo e
+    // case-insensitive por RFC 6265bis, entao a asserção normaliza a casing.
+    expect(cookie.toLowerCase()).toContain('samesite=lax')
   })
 
   it('atualiza lastLoginAt no banco após login bem-sucedido', async () => {

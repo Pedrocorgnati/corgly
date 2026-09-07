@@ -16,6 +16,20 @@ ok()   { echo -e "${GREEN}[ok]${NC} $*"; }
 warn() { echo -e "${YELLOW}[warn]${NC} $*"; }
 err()  { echo -e "${RED}[erro]${NC} $*" >&2; }
 
+# Conectividade com o banco que o `prisma migrate deploy` realmente alveja
+# (DATABASE_URL de .env), e nao com o servico `db` do docker-compose.
+# `prisma migrate status` sai != 0 tambem quando ha migration pendente, entao
+# aqui o criterio e apenas "o Prisma conseguiu falar com o servidor": qualquer
+# resposta que nao seja erro de conexao (P1001) conta como acessivel.
+db_reachable() {
+  local out
+  out="$(npx --no-install prisma migrate status 2>&1 || true)"
+  case "$out" in
+    *P1001*|*"Can't reach database server"*|*"Environment variable not found: DATABASE_URL"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 # === Pre-requisitos ===
 check_prereqs() {
   local missing=()
@@ -70,7 +84,7 @@ start_services() {
   local db_ready=false
 
   while [ $waited -lt $max_wait ]; do
-    if docker compose exec -T db mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root}" -e "SELECT 1;" >/dev/null 2>&1; then
+    if db_reachable; then
       db_ready=true
       break
     fi
@@ -130,11 +144,19 @@ check_health() {
     errors=$((errors + 1))
   fi
 
-  # DB connectivity
-  if docker compose exec -T db mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root}" -e "SELECT 1;" >/dev/null 2>&1; then
-    ok "Database acessivel"
+  # DB connectivity (banco de DATABASE_URL, alvo real do migrate deploy)
+  if db_reachable; then
+    ok "Database acessivel (DATABASE_URL)"
+
+    # Migrations aplicadas
+    if npx --no-install prisma migrate status >/dev/null 2>&1; then
+      ok "Migrations em dia"
+    else
+      warn "Migrations pendentes ou banco nao baselinado (npx prisma migrate status)"
+      errors=$((errors + 1))
+    fi
   else
-    warn "Database nao acessivel"
+    warn "Database nao acessivel via DATABASE_URL"
     errors=$((errors + 1))
   fi
 

@@ -1,18 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { CheckCircle, AlertTriangle, Clock, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/lib/api-client'
 
 import type { SessionPageState, IceServersConfig } from '@/types/sala-virtual'
 import type { SessionClientUser, SessionClientData } from '@/lib/sessions/session-client.types'
 import { useWebRTC } from '@/hooks/useWebRTC'
-import { useReconnect } from '@/hooks/useReconnect'
+import { useReconnect, type InterruptOutcome } from '@/hooks/useReconnect'
 import { useSessionAccess } from '@/hooks/useSessionAccess'
 import { SessionStatus, UserRole } from '@/lib/constants/enums'
 import { ROUTES, API } from '@/lib/constants/routes'
@@ -56,7 +54,6 @@ export function SessionPageClient({
   iceServers,
   hocuspocusUrl,
 }: SessionPageClientProps) {
-  const router = useRouter()
   const [pageState, setPageState] = useState<SessionPageState>(() => {
     if (session.status === SessionStatus.COMPLETED) return 'ENDED'
     if (session.status === SessionStatus.INTERRUPTED) return 'INTERRUPTED'
@@ -64,6 +61,8 @@ export function SessionPageClient({
   })
   const [totalExtended, setTotalExtended] = useState(session.extendedBy ?? 0)
   const hasAutoEndedRef = useRef(false)
+  /** O cronometro da aula so pode ser iniciado uma vez (ver efeito de ACTIVE). */
+  const hasStartedTimerRef = useRef(false)
 
   const isAdmin = currentUser.role === UserRole.ADMIN
   const userName = currentUser.name ?? (isAdmin ? 'Professor' : 'Aluno')
@@ -96,7 +95,6 @@ export function SessionPageClient({
       })
       .catch((err) => {
         if (!cancelled) {
-          // eslint-disable-next-line no-console
           console.error('[SessionPageClient] Falha ao obter token do caderno:', err)
         }
       })
@@ -126,8 +124,21 @@ export function SessionPageClient({
     toast.success('Conexão restabelecida!')
   }, [])
 
-  const handleInterrupted = useCallback(() => {
+  /**
+   * Desfecho do aviso de interrupcao ao servidor. `null` = a tela chegou em
+   * INTERRUPTED sem passar pelo hook (sessao que ja nasceu interrompida).
+   */
+  const [interruptSync, setInterruptSync] = useState<InterruptOutcome | null>(null)
+
+  const handleInterrupted = useCallback((outcome: InterruptOutcome) => {
+    setInterruptSync(outcome)
     setPageState('INTERRUPTED')
+    if (outcome === 'unconfirmed') {
+      // Zero Silencio: a falha das duas tentativas de PATCH morria num
+      // console.error e a tela seguia afirmando que o credito voltou. O aluno
+      // precisa saber que esse aviso nao foi confirmado.
+      toast.error('Não conseguimos confirmar o aviso de interrupção ao servidor.')
+    }
   }, [])
 
   const reconnect = useReconnect({
@@ -138,58 +149,60 @@ export function SessionPageClient({
     onInterrupted: handleInterrupted,
   })
 
-  // ── State transitions based on access ──────────────────────────────────────
+  // ── Transicoes de pageState (ajuste de estado durante o render) ────────────
+  //
+  // `pageState` e derivado do estado que os hooks acima expoem (acesso a sala,
+  // conexao WebRTC, reconexao). Fazer essa derivacao dentro de `useEffect` com
+  // `setState` custa um commit extra por transicao e e o que a regra
+  // `react-hooks/set-state-in-effect` acusa. O padrao suportado pelo React para
+  // isso e ajustar o estado DURANTE o render: cada bloco abaixo so dispara
+  // quando `pageState` ainda nao e o valor alvo, entao a condicao deixa de
+  // valer no render seguinte e nao ha laco. Efeitos colaterais (toast, start do
+  // cronometro) continuam em `useEffect`, porque render tem de ser puro.
+
+  if (pageState === 'WAITING' && sessionAccess.canEnterNow) {
+    setPageState('READY')
+  }
+
+  if (pageState === 'CONNECTING' && webrtc.connectionState === 'connected') {
+    setPageState('ACTIVE')
+  }
+
+  if (pageState === 'ACTIVE' && webrtc.isRemoteAudioOnly) {
+    setPageState('AUDIO_ONLY')
+  } else if (pageState === 'AUDIO_ONLY' && !webrtc.isRemoteAudioOnly) {
+    setPageState('ACTIVE')
+  }
+
+  if (
+    reconnect.isReconnecting &&
+    (pageState === 'ACTIVE' || pageState === 'AUDIO_ONLY')
+  ) {
+    setPageState('RECONNECTING')
+  }
+
+  // Sair de RECONNECTING e responsabilidade dos callbacks do hook
+  // (`handleReconnected` / `handleInterrupted`), que sabem o desfecho.
+
+  // ── Efeitos das transicoes (sem escrita de estado) ─────────────────────────
 
   useEffect(() => {
-    if (pageState !== 'WAITING') return
-    if (sessionAccess.canEnterNow) {
-      setPageState('READY')
-      toast.success('A sala está disponível!')
-    }
-  }, [sessionAccess.canEnterNow, pageState])
-
-  // ── State transitions based on WebRTC connection ───────────────────────────
+    if (pageState !== 'READY') return
+    toast.success('A sala está disponível!')
+  }, [pageState])
 
   useEffect(() => {
-    if (pageState !== 'CONNECTING') return
-    if (webrtc.connectionState === 'connected') {
-      setPageState('ACTIVE')
-      // Start the session timer
-      const endAtDate = new Date(
-        new Date(session.endAt).getTime() + totalExtended * 60 * 1000,
-      )
-      timer.start(endAtDate)
-    }
-  }, [webrtc.connectionState, pageState, session.endAt, totalExtended, timer])
-
-  // ── Audio-only transition ──────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (pageState !== 'ACTIVE' && pageState !== 'AUDIO_ONLY') return
-
-    if (webrtc.isRemoteAudioOnly && pageState === 'ACTIVE') {
-      setPageState('AUDIO_ONLY')
-    } else if (!webrtc.isRemoteAudioOnly && pageState === 'AUDIO_ONLY') {
-      setPageState('ACTIVE')
-    }
-  }, [webrtc.isRemoteAudioOnly, pageState])
-
-  // ── Reconnecting transition ────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (
-      pageState !== 'ACTIVE' &&
-      pageState !== 'AUDIO_ONLY' &&
-      pageState !== 'RECONNECTING'
+    if (pageState !== 'ACTIVE') return
+    // O cronometro comeca UMA vez por aula. Sem esta guarda, voltar de
+    // AUDIO_ONLY ou de RECONNECTING para ACTIVE reiniciaria a contagem e daria
+    // tempo extra de graca ao aluno.
+    if (hasStartedTimerRef.current) return
+    hasStartedTimerRef.current = true
+    const endAtDate = new Date(
+      new Date(session.endAt).getTime() + totalExtended * 60 * 1000,
     )
-      return
-
-    if (reconnect.isReconnecting && pageState !== 'RECONNECTING') {
-      setPageState('RECONNECTING')
-    } else if (!reconnect.isReconnecting && pageState === 'RECONNECTING') {
-      // Reconnected or interrupted — handled by callbacks
-    }
-  }, [reconnect.isReconnecting, pageState])
+    timer.start(endAtDate)
+  }, [pageState, session.endAt, totalExtended, timer])
 
   // ── Auto-encerramento (ST009) ──────────────────────────────────────────────
 
@@ -382,10 +395,25 @@ export function SessionPageClient({
           <h1 data-testid="session-interrupted-header" className="mt-4 text-2xl font-semibold text-foreground">
             Sessão interrompida
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sua sessão foi interrompida por problemas de conexão. 1 crédito foi
-            devolvido à sua conta.
-          </p>
+          {interruptSync === 'unconfirmed' ? (
+            <p
+              data-testid="session-interrupted-unconfirmed"
+              className="mt-2 text-sm text-muted-foreground"
+            >
+              Sua sessão foi interrompida por problemas de conexão. Não
+              conseguimos avisar o servidor: seu crédito ainda não está
+              confirmado como devolvido. Fale com o suporte com o código desta
+              aula que verificamos o estorno.
+            </p>
+          ) : (
+            <p
+              data-testid="session-interrupted-confirmed"
+              className="mt-2 text-sm text-muted-foreground"
+            >
+              Sua sessão foi interrompida por problemas de conexão. 1 crédito foi
+              devolvido à sua conta.
+            </p>
+          )}
           <div data-testid="session-interrupted-actions" className="mt-6 flex flex-col gap-3">
             <Link href={ROUTES.SUPPORT}>
               <Button data-testid="session-interrupted-support-button" className="w-full">Contato</Button>

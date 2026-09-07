@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES, API } from '@/lib/constants/routes';
+import { savePlanSelection, type PlanSelection } from '@/lib/constants/landing';
 import { COUNTRIES, TIMEZONES } from '@/lib/constants/geo';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { RegisterFormSchema, type RegisterFormInput } from '@/schemas/auth.schema';
@@ -19,7 +20,15 @@ import { LOCALE_COOKIE, localeToSupportedLanguage, locales, type Locale } from '
 import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter';
 import Link from 'next/link';
 
-export function RegisterForm() {
+export interface RegisterFormProps {
+  /**
+   * Escolha de plano trazida da vitrine publica (`?plan=` / `?lessons=`).
+   * `null` quando o visitante chegou ao cadastro por outro caminho.
+   */
+  planSelection?: PlanSelection | null;
+}
+
+export function RegisterForm({ planSelection = null }: RegisterFormProps) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -33,6 +42,31 @@ export function RegisterForm() {
   });
 
   const password = watch('password', '');
+
+  /**
+   * Guarda a escolha de plano feita na landing para ela sobreviver ao desvio de
+   * confirmacao de e-mail (o link chega por e-mail e costuma abrir OUTRA aba,
+   * onde query string e `sessionStorage` nao existem mais). Quem le e apaga o
+   * registro e a vitrine `/credits` (`src/components/student/pricing-cards.tsx`).
+   *
+   * Grava ao ABRIR a pagina, nao no sucesso do cadastro, de proposito: quem ja
+   * tem conta clica em "Entrar" no rodape desta mesma pagina e nunca chega ao
+   * submit — mesmo assim a escolha dele precisa chegar na vitrine. Se a pessoa
+   * desistir de tudo, o registro expira sozinho (`PLAN_SELECTION_TTL_MS`).
+   *
+   * Depende dos campos primitivos, nao do objeto: prop de server component
+   * chega com identidade nova a cada render e reexecutaria o efeito a toa.
+   */
+  const selectedPlan = planSelection?.plan ?? null;
+  const selectedMonthlyLessons = planSelection?.monthlyLessons ?? null;
+  useEffect(() => {
+    if (!selectedPlan) return;
+    savePlanSelection(
+      selectedPlan === 'MONTHLY' && selectedMonthlyLessons != null
+        ? { plan: selectedPlan, monthlyLessons: selectedMonthlyLessons }
+        : { plan: selectedPlan },
+    );
+  }, [selectedPlan, selectedMonthlyLessons]);
 
   // Auto-detect timezone
   useEffect(() => {

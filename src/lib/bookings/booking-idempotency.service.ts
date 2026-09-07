@@ -8,6 +8,7 @@ import {
   runSerializableCreditTransaction,
 } from '@/lib/credits/credit-consumption.service';
 import { SessionStatus } from '@/lib/constants/enums';
+import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
 import { emailService } from '@/services/email.service';
 import { EmailType, SupportedLanguage } from '@/types/enums';
 import { logger } from '@/lib/logger';
@@ -267,8 +268,14 @@ export class BookingIdempotencyService {
         throw new BookingConflictError('BOOKING_003', 'Horário não disponível. Selecione outro.', 409, alternatives);
       }
 
-      const existingSession = await tx.session.findUnique({
-        where: { availabilitySlotId: data.availabilitySlotId },
+      // `findFirst` + filtro de status: `availabilitySlotId` deixou de ser unico
+      // quando o slot passou a ser devolvido no cancelamento (ver
+      // SLOT_OCCUPYING_STATUSES). Sessao cancelada e historico, nao ocupacao.
+      const existingSession = await tx.session.findFirst({
+        where: {
+          availabilitySlotId: data.availabilitySlotId,
+          status: { in: [...SLOT_OCCUPYING_STATUSES] },
+        },
         select: { id: true },
       });
       if (existingSession) {
@@ -398,7 +405,9 @@ export class BookingIdempotencyService {
         AND s.isBlocked = 0
         AND s.startAt > NOW()
         AND NOT EXISTS (
-          SELECT 1 FROM sessions sess WHERE sess.availabilitySlotId = s.id
+          SELECT 1 FROM sessions sess
+          WHERE sess.availabilitySlotId = s.id
+            AND sess.status IN (${Prisma.join(SLOT_OCCUPYING_STATUSES.map((status) => Prisma.sql`${status}`))})
         )
       ORDER BY ABS(TIMESTAMPDIFF(SECOND, s.startAt, ${preferredStartAt})) ASC, s.startAt ASC
       LIMIT 3

@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { Prisma, EmailType, SupportedLanguage } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { signUnsubscribeToken } from '@/lib/email/unsubscribe-token';
+import { timeoutSignal } from '@/lib/timeout-signal';
 
 /**
  * Servico de logs de envio + comunicacao em massa (T-055 / AD-33).
@@ -79,7 +80,7 @@ export function createResendProvider(apiKey = process.env.RESEND_API_KEY): Email
         subject: params.subject,
         html: params.html,
       }),
-      signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
+      signal: timeoutSignal(RESEND_TIMEOUT_MS),
     });
 
     if (!response.ok) {

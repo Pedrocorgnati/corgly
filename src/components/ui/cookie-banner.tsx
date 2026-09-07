@@ -3,12 +3,14 @@
 import * as React from "react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
+import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { CookieCustomizeDialog } from "@/components/ui/cookie-customize-dialog"
 
 import { API, ROUTES } from "@/lib/constants/routes"
+import { timeoutSignal } from "@/lib/timeout-signal"
 import {
   getConsentCookie,
   setConsentCookie,
@@ -18,6 +20,9 @@ import {
 interface CookieBannerProps {
   className?: string
 }
+
+/** Teto de espera do POST de consentimento. */
+const CONSENT_SYNC_TIMEOUT_MS = 10_000
 
 function CookieBanner({ className }: CookieBannerProps) {
   const t = useTranslations("cookieBanner")
@@ -31,17 +36,33 @@ function CookieBanner({ className }: CookieBannerProps) {
     }
   }, [])
 
-  /** Fire-and-forget: persist consent to backend */
+  /**
+   * Registra a escolha no backend. O cookie ja foi gravado antes desta chamada
+   * e e a fonte primaria, entao a falha aqui nao desfaz a escolha do usuario —
+   * mas tambem nao pode sumir sem sinal: o POST e o registro de auditoria do
+   * consentimento, e um `catch` vazio significa que ninguem nunca descobre que
+   * esse registro parou de ser gravado. O usuario recebe o aviso de que a
+   * escolha valeu neste dispositivo mas nao chegou ao servidor.
+   */
   const syncConsentToApi = (analytics: boolean, marketing: boolean) => {
-    fetch(API.AUTH.COOKIE_CONSENT, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ analytics, marketing }),
-      signal: AbortSignal.timeout(10_000),
-    }).catch(() => {
-      // Silently ignore: cookie is the primary store
-    })
+    void (async () => {
+      try {
+        const response = await fetch(API.AUTH.COOKIE_CONSENT, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ analytics, marketing }),
+          signal: timeoutSignal(CONSENT_SYNC_TIMEOUT_MS),
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+      } catch {
+        toast.message(t("sync_failed_title"), {
+          description: t("sync_failed_description"),
+        })
+      }
+    })()
   }
 
   const handleAcceptAll = () => {

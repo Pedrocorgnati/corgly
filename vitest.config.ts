@@ -7,7 +7,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./vitest.setup.ts'],
+    // `vitest.env-setup.ts` PRECISA vir primeiro: ele popula process.env antes
+    // de qualquer import que atravesse `src/lib/env.ts` (que lanca na ausencia).
+    setupFiles: ['./vitest.env-setup.ts', './vitest.setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

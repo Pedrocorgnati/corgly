@@ -1,9 +1,10 @@
 'use client';
 import { UI_TIMING } from '@/lib/constants';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  AlertCircle,
   CheckCircle,
   BookOpen,
   BarChart3,
@@ -19,6 +20,10 @@ import { Button } from '@/components/ui/button';
 interface OnboardingSlidesProps {
   onComplete: () => void;
   onSkip: () => void;
+  /** Conclusao em voo (server action rodando): trava os botoes e mostra o estado. */
+  isCompleting?: boolean;
+  /** Mensagem de falha da conclusao. `null` = sem erro. */
+  errorMessage?: string | null;
 }
 
 // ── Constants ──
@@ -30,10 +35,21 @@ const STEP_ICONS = [Calendar, BookOpen, BarChart3, CheckCircle];
 
 // ── Component ──
 
-export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) {
+export function OnboardingSlides({
+  onComplete,
+  onSkip,
+  isCompleting = false,
+  errorMessage = null,
+}: OnboardingSlidesProps) {
   const t = useTranslations('onboarding');
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isSkipping, setIsSkipping] = useState(false);
+  // Janela de 300ms entre o clique em "Depois" e a chamada de onComplete
+  // (spec FE-007b). Antes ela nunca era desligada: numa falha o botao ficava
+  // travado em "..." para sempre. Agora ela se desliga ao disparar onComplete e
+  // o estado de espera passa a ser o `isCompleting` do pai.
+  const [isDelaying, setIsDelaying] = useState(false);
+  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isBusy = isDelaying || isCompleting;
 
   const goNext = useCallback(() => {
     setCurrentSlide((prev) => Math.min(prev + 1, TOTAL_SLIDES - 1));
@@ -41,6 +57,13 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
 
   const goPrev = useCallback(() => {
     setCurrentSlide((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  // Limpa o timer pendente se o componente sair da tela no meio da janela.
+  useEffect(() => {
+    return () => {
+      if (delayTimerRef.current) clearTimeout(delayTimerRef.current);
+    };
   }, []);
 
   // Keyboard navigation
@@ -70,7 +93,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
           {currentSlide === 0 && <SlideWelcome t={t} />}
           {currentSlide === 1 && <SlidePillars t={t} />}
           {currentSlide === 2 && <SlideCycle t={t} />}
-          {currentSlide === 3 && <SlideCTA t={t} onComplete={onComplete} />}
+          {currentSlide === 3 && <SlideCTA t={t} onComplete={onComplete} isBusy={isBusy} />}
         </div>
 
         {/* Progress dots */}
@@ -98,6 +121,18 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
           ))}
         </div>
 
+        {/* Falha ao concluir: estado visivel, nao so o botao voltando ao normal. */}
+        {errorMessage && (
+          <div
+            data-testid="onboarding-error"
+            role="alert"
+            className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
         {/* Navigation */}
         <div data-testid="onboarding-actions" className="flex items-center justify-between gap-3">
           <Button
@@ -115,6 +150,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
             data-testid="onboarding-skip-button"
             variant="ghost"
             onClick={onSkip}
+            disabled={isBusy}
             className="text-muted-foreground hover:text-foreground"
           >
             {t('skip')}
@@ -124,6 +160,7 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
             <Button
               data-testid="onboarding-next-button"
               onClick={goNext}
+              disabled={isBusy}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {t('next')}
@@ -136,14 +173,19 @@ export function OnboardingSlides({ onComplete, onSkip }: OnboardingSlidesProps) 
               data-testid="onboarding-later-button"
               variant="ghost"
               onClick={() => {
-                setIsSkipping(true);
-                // 300ms loading before completing (spec FE-007b)
-                setTimeout(() => onComplete(), UI_TIMING.ONBOARDING_TRANSITION);
+                if (isBusy) return;
+                setIsDelaying(true);
+                // 300ms de loading antes de concluir (spec FE-007b).
+                delayTimerRef.current = setTimeout(() => {
+                  delayTimerRef.current = null;
+                  setIsDelaying(false);
+                  onComplete();
+                }, UI_TIMING.ONBOARDING_TRANSITION);
               }}
-              disabled={isSkipping}
+              disabled={isBusy}
               className="text-muted-foreground hover:text-foreground"
             >
-              {isSkipping ? '...' : 'Depois'}
+              {isBusy ? t('completing') : t('later')}
             </Button>
           )}
         </div>
@@ -246,9 +288,11 @@ function SlideCycle({ t }: { t: ReturnType<typeof useTranslations<'onboarding'>>
 function SlideCTA({
   t,
   onComplete,
+  isBusy,
 }: {
   t: ReturnType<typeof useTranslations<'onboarding'>>;
   onComplete: () => void;
+  isBusy: boolean;
 }) {
   return (
     <>
@@ -270,10 +314,11 @@ function SlideCTA({
       <Button
         data-testid="onboarding-slide-cta-button"
         onClick={onComplete}
+        disabled={isBusy}
         size="lg"
         className="w-full max-w-xs bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-semibold"
       >
-        {t('slide4.cta')}
+        {isBusy ? t('completing') : t('slide4.cta')}
       </Button>
     </>
   );

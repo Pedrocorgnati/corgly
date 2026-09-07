@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { History } from 'lucide-react';
 import { SessionCard } from '@/components/ui/session-card';
 import { CancelConfirmDialog } from '@/components/calendar/CancelConfirmDialog';
@@ -9,7 +10,8 @@ import { RescheduleFlow } from '@/components/calendar/RescheduleFlow';
 import { RescheduleRequestBadge } from '@/components/calendar/RescheduleRequestBadge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
-import { SessionStatus, SESSION_STATUS_MAP } from '@/lib/constants/enums';
+import { SessionStatus, SESSION_STATUS_MAP, SESSION_STATUS_LABEL_KEY } from '@/lib/constants/enums';
+import { ROUTES } from '@/lib/constants/routes';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -50,6 +52,9 @@ export function HistoryClient({
   currentPage,
   currentStatus,
 }: HistoryClientProps) {
+  const t = useTranslations('history');
+  const tPagination = useTranslations('pagination');
+  const tStatus = useTranslations('sessionStatus');
   const router = useRouter();
   const [cancelSession, setCancelSession] = useState<SessionData | null>(null);
   const [rescheduleSession, setRescheduleSession] = useState<SessionData | null>(null);
@@ -58,14 +63,14 @@ export function HistoryClient({
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     params.set('page', '1');
-    router.push(`/history?${params.toString()}`);
+    router.push(`${ROUTES.HISTORY}?${params.toString()}`);
   };
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams();
     if (currentStatus) params.set('status', currentStatus);
     params.set('page', String(page));
-    router.push(`/history?${params.toString()}`);
+    router.push(`${ROUTES.HISTORY}?${params.toString()}`);
   };
 
   const handleCancelled = () => {
@@ -95,7 +100,7 @@ export function HistoryClient({
               : 'border-border text-muted-foreground hover:border-primary',
           )}
         >
-          Todas
+          {t('filterAll')}
         </button>
         {FILTER_STATUSES.map((status) => {
           const config = SESSION_STATUS_MAP[status];
@@ -111,7 +116,7 @@ export function HistoryClient({
                   : 'border-border text-muted-foreground hover:border-primary',
               )}
             >
-              {config.label}
+              {tStatus(SESSION_STATUS_LABEL_KEY[status])}
             </button>
           );
         })}
@@ -122,10 +127,10 @@ export function HistoryClient({
         <EmptyState
           data-testid="history-empty"
           icon={History}
-          title="Nenhuma aula no histórico"
-          description="Após concluir sua primeira aula, ela aparecerá aqui com o feedback da sessão."
-          actionLabel="Agendar primeira aula"
-          actionHref="/schedule"
+          title={t('emptyTitle')}
+          description={t('emptyDescription')}
+          actionLabel={t('emptyAction')}
+          actionHref={ROUTES.SCHEDULE}
         />
       ) : (
         <div data-testid="history-list" className="space-y-3">
@@ -154,13 +159,14 @@ export function HistoryClient({
       {totalPages > 1 && (
         <div data-testid="history-pagination" className="flex items-center justify-between mt-6">
           <p className="text-xs text-muted-foreground">
-            Página {currentPage} de {totalPages}
+            {t('pageStatus', { page: currentPage, totalPages })}
           </p>
           <div className="flex items-center gap-2">
             <Button
               data-testid="history-pagination-prev-button"
               variant="outline"
               size="sm"
+              aria-label={tPagination('prev')}
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage <= 1}
             >
@@ -171,6 +177,7 @@ export function HistoryClient({
               data-testid="history-pagination-next-button"
               variant="outline"
               size="sm"
+              aria-label={tPagination('next')}
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage >= totalPages}
             >

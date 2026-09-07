@@ -61,7 +61,11 @@ export function buildRequest(path: string, options: BuildRequestOptions = {}): N
     url = `${url}?${qs}`
   }
 
-  const init: RequestInit = { method, headers: { 'Content-Type': 'application/json', ...headers } }
+  // O `NextRequest` tem `RequestInit` proprio (`signal?: AbortSignal`, sem
+  // `null`), incompativel com o `RequestInit` do DOM. Derivar o tipo do proprio
+  // construtor evita o cast e acompanha mudancas do Next.
+  type NextRequestInit = NonNullable<ConstructorParameters<typeof NextRequest>[1]>
+  const init: NextRequestInit = { method, headers: { 'Content-Type': 'application/json', ...headers } }
   if (body !== undefined) {
     init.body = JSON.stringify(body)
   }

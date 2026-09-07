@@ -18,6 +18,12 @@ export default async function SchedulePage() {
           Horários em {Intl.DateTimeFormat().resolvedOptions().timeZone}
         </p>
       </div>
+      {/*
+        `creditBalance` vem validado de /api/v1/auth/me (CreditService.getBalance).
+        O `?? 0` cobre apenas o caso `user === null` (sem sessao), que o layout
+        de (student) ja intercepta com redirect para o login — nao e mais um
+        fallback para "campo ausente no contrato".
+      */}
       <CalendarSchedule creditBalance={user?.creditBalance ?? 0} />
     </PageWrapper>
   );

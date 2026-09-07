@@ -125,6 +125,7 @@ export const API = {
     ACCEPT: '/api/v1/referrals/accept',
   },
   ADMIN: {
+    AVAILABILITY: '/api/v1/admin/availability',
     DASHBOARD: '/api/v1/admin/dashboard',
     USERS: '/api/v1/admin/users',
     USER: (id: string) => `/api/v1/admin/users/${id}`,
