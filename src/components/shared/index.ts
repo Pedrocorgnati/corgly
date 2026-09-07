@@ -6,7 +6,7 @@ export { PublicFooter } from './public-footer';
 export { StudentSidebar } from './student-sidebar';
 export { AdminSidebar } from './admin-sidebar';
 export { ThemeToggle } from './theme-toggle';
-export { ThemeProvider } from './theme-provider';
+export { AppThemeProvider } from './app-theme-provider';
 export { LanguageSelector } from './language-selector';
 export { DashboardPageHeader, DashboardHeaderChip } from './dashboard-page-header';
 export { WidgetCard } from './widget-card';

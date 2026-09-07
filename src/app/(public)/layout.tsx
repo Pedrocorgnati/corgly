@@ -9,7 +9,6 @@ import { PublicHeader } from '@/components/shared/public-header';
 import { PublicFooter } from '@/components/shared/public-footer';
 import { detectLocale } from '@/lib/detect-locale';
 import { generateLandingMetadata } from '@/lib/seo/metadata';
-import { ThemeProvider } from '@/components/shared/theme-provider';
 
 export async function generateMetadata(): Promise<Metadata> {
   const cookieStore = await cookies();
@@ -19,14 +18,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" forcedTheme="light" enableSystem={false}>
-      <div className="pc-shell">
-        <PublicHeader />
-        <main id="main-content" data-testid="main-content" className="pc-main">
-          {children}
-        </main>
-        <PublicFooter />
-      </div>
-    </ThemeProvider>
+    <div className="pc-shell">
+      <PublicHeader />
+      <main id="main-content" data-testid="main-content" className="pc-main">
+        {children}
+      </main>
+      <PublicFooter />
+    </div>
   );
 }

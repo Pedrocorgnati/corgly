@@ -64,34 +64,31 @@
   box-sizing: border-box;
 }
 
-.lp h1,
-.lp h2,
-.lp h3,
-.lp p,
-.lp ul,
-.lp ol,
-.lp figure {
+/* Reset de elementos nus dentro da landing.
+   `:where()` zera a especificidade destas regras (0-0-0), senao `.lp a`
+   (0-1-1) venceria qualquer classe de componente como `.lp-btn--white` ou
+   `.lp-hero__cta-secondary` (0-1-0) e apagaria a cor e o sublinhado delas. */
+
+:where(.lp h1, .lp h2, .lp h3, .lp p, .lp ul, .lp ol, .lp figure) {
   margin: 0;
 }
 
-.lp ul,
-.lp ol {
+:where(.lp ul, .lp ol) {
   padding: 0;
   list-style: none;
 }
 
-.lp a {
+:where(.lp a) {
   color: inherit;
   text-decoration: none;
 }
 
-.lp img,
-.lp svg {
+:where(.lp img, .lp svg) {
   display: block;
   max-width: 100%;
 }
 
-.lp button {
+:where(.lp button) {
   font: inherit;
   color: inherit;
   margin: 0;

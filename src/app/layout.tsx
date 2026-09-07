@@ -5,7 +5,7 @@ import './globals.css';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { buildAlternates } from '@/lib/seo/metadata';
 import { SITE_URL } from '@/lib/constants/landing';
-import { ThemeProvider } from '@/components/shared/theme-provider';
+import { AppThemeProvider } from '@/components/shared/app-theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/hooks/useAuth';
@@ -105,7 +105,7 @@ export default async function RootLayout({
           {tSkip('label')}
         </a>
         <NextIntlClientProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AppThemeProvider>
             <AuthProvider>
               <TooltipProvider>
                 {children}
@@ -114,7 +114,7 @@ export default async function RootLayout({
             <Toaster position="top-right" richColors />
             <CookieBanner />
             <AnalyticsProvider />
-          </ThemeProvider>
+          </AppThemeProvider>
         </NextIntlClientProvider>
         {process.env.NODE_ENV === 'development' && <DevOverlayLoader />}
       </body>
