@@ -39,12 +39,20 @@ export function useAdminSchedule(): UseAdminScheduleReturn {
   const [adminSlots, setAdminSlots] = useState<AdminSlotDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Gemeo do `fatalError` de `useCalendar`: falha INESPERADA guardada para ser
+   * relancada durante o render. Este e o unico caminho pelo qual o `error.tsx`
+   * da rota admin chega a montar, porque na agenda do professor o `useCalendar`
+   * roda com `enabled: false` e nunca busca nada.
+   */
+  const [fatalError, setFatalError] = useState<Error | null>(null);
 
   const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
   const fetchSlots = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setFatalError(null);
     try {
       const result = await getAdminAvailability(monthKey);
       if (result.error) {
@@ -53,8 +61,8 @@ export function useAdminSchedule(): UseAdminScheduleReturn {
       } else {
         setAdminSlots(result.data ?? []);
       }
-    } catch {
-      setError('Erro ao carregar horários.');
+    } catch (err) {
+      setFatalError(err instanceof Error ? err : new Error(String(err)));
       setAdminSlots([]);
     } finally {
       setIsLoading(false);
@@ -120,6 +128,9 @@ export function useAdminSchedule(): UseAdminScheduleReturn {
       setCurrentMonth((m) => m + 1);
     }
   }, [currentMonth]);
+
+  // Relance durante o render: e o que faz o `error.tsx` da rota admin montar.
+  if (fatalError) throw fatalError;
 
   return {
     currentMonth,

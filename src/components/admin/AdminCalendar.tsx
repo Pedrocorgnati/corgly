@@ -41,8 +41,10 @@ export function AdminCalendar({ sessions = [], onSlotClick, calendar }: AdminCal
     currentYear,
     slotsByDate,
     isLoading,
+    error,
     prevMonth,
     nextMonth,
+    refresh,
   } = calendar ?? internal;
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -83,10 +85,18 @@ export function AdminCalendar({ sessions = [], onSlotClick, calendar }: AdminCal
         onPrevMonth={prevMonth}
         onNextMonth={nextMonth}
         isLoading={isLoading}
+        error={error}
+        onRetry={refresh}
       />
 
-      {/* Slot details for selected date */}
-      {selectedDate && (
+      {/* Slot details for selected date.
+          `!error` mata o falso negativo do dia quando a busca falhou.
+          `!isLoading` fecha a janela do retry: `useAdminSchedule` zera `error` e
+          liga `isLoading` no inicio de cada busca, entao sem este termo o painel
+          voltaria a exibir "Nenhum slot neste dia." por cima de uma busca em
+          andamento. Este painel e irmao do `CalendarView`, nao filho, entao a
+          precedencia resolvida la dentro nao alcanca esta subarvore. */}
+      {selectedDate && !error && !isLoading && (
         <div data-testid="admin-calendar-day-details" className="bg-card border border-border rounded-2xl p-4 shadow-sm">
           <h3 data-testid="admin-calendar-day-details-header" className="font-semibold text-foreground mb-3">
             Detalhes — {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', {

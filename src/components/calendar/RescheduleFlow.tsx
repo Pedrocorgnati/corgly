@@ -35,8 +35,10 @@ export function RescheduleFlow({
     currentYear,
     slotsByDate,
     isLoading,
+    error: loadError,
     prevMonth,
     nextMonth,
+    refresh,
   } = useCalendar();
   const { studentTz } = useTimezone();
 
@@ -123,48 +125,72 @@ export function RescheduleFlow({
               </div>
             )}
 
-            <div data-testid="modal-reschedule-picker" className="flex flex-col lg:flex-row gap-6 mb-6">
-              <CalendarView
-                currentMonth={currentMonth}
-                currentYear={currentYear}
-                slotsByDate={slotsByDate}
-                selectedDate={selectedDate}
-                onSelectDate={handleSelectDate}
-                onPrevMonth={prevMonth}
-                onNextMonth={nextMonth}
-                isLoading={isLoading}
-              />
-              <SlotPicker
-                slots={slotsForDate}
-                selectedSlotId={selectedSlot?.id ?? null}
-                onSelectSlot={handleSelectSlot}
-                studentTz={studentTz}
-                isLoading={isLoading}
-                selectedDate={selectedDate}
-              />
-            </div>
+            {loadError ? (
+              /* Falha de CARREGAR os horarios. Bloco e testid proprios: o
+                 `modal-reschedule-error` abaixo e a falha de REAGENDAR, com
+                 outra causa e outra recuperacao. Sem o picker montado, o
+                 `schedule-empty` do `SlotPicker` some do caminho de falha. */
+              <div
+                data-testid="modal-reschedule-load-error"
+                role="alert"
+                className="flex flex-col items-center justify-center py-10 text-center mb-6"
+              >
+                <p className="text-destructive font-medium mb-2">Erro ao carregar horários</p>
+                <p className="text-sm text-muted-foreground mb-4">{loadError}</p>
+                <Button data-testid="modal-reschedule-load-error-retry-button" onClick={refresh} variant="outline">
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div data-testid="modal-reschedule-picker" className="flex flex-col lg:flex-row gap-6 mb-6">
+                  <CalendarView
+                    currentMonth={currentMonth}
+                    currentYear={currentYear}
+                    slotsByDate={slotsByDate}
+                    selectedDate={selectedDate}
+                    onSelectDate={handleSelectDate}
+                    onPrevMonth={prevMonth}
+                    onNextMonth={nextMonth}
+                    isLoading={isLoading}
+                  />
+                  <SlotPicker
+                    slots={slotsForDate}
+                    selectedSlotId={selectedSlot?.id ?? null}
+                    onSelectSlot={handleSelectSlot}
+                    studentTz={studentTz}
+                    isLoading={isLoading}
+                    selectedDate={selectedDate}
+                  />
+                </div>
 
-            <Link
-              data-testid="modal-reschedule-suggestions-link"
-              href={ROUTES.RESCHEDULE_OPTIONS(session.id)}
-              className="mb-4 flex items-center gap-1.5 text-sm text-primary transition-colors hover:underline"
-            >
-              <Sparkles className="h-4 w-4" />
-              Ver horários alternativos sugeridos
-            </Link>
+                <Link
+                  data-testid="modal-reschedule-suggestions-link"
+                  href={ROUTES.RESCHEDULE_OPTIONS(session.id)}
+                  className="mb-4 flex items-center gap-1.5 text-sm text-primary transition-colors hover:underline"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Ver horários alternativos sugeridos
+                </Link>
+              </>
+            )}
 
+            {/* O cancelar fica montado tambem no erro: o usuario precisa
+                conseguir sair do modal com a busca quebrada. */}
             <div data-testid="modal-reschedule-actions" className="flex gap-3">
               <Button data-testid="modal-reschedule-cancel-button" variant="outline" onClick={handleClose} className="flex-1">
                 Cancelar
               </Button>
-              <Button
-                data-testid="modal-reschedule-confirm-button"
-                onClick={handleConfirm}
-                disabled={!selectedSlot}
-                className="flex-1"
-              >
-                {isLateReschedule ? 'Solicitar reagendamento' : 'Confirmar reagendamento'}
-              </Button>
+              {!loadError && (
+                <Button
+                  data-testid="modal-reschedule-confirm-button"
+                  onClick={handleConfirm}
+                  disabled={!selectedSlot}
+                  className="flex-1"
+                >
+                  {isLateReschedule ? 'Solicitar reagendamento' : 'Confirmar reagendamento'}
+                </Button>
+              )}
             </div>
           </>
         )}

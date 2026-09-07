@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 
@@ -19,6 +20,14 @@ interface CalendarViewProps {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   isLoading: boolean;
+  /**
+   * Falha ESPERADA de carregamento (a server action devolveu `{ error }`).
+   * Opcional porque o call site do aluno (`calendar-schedule.tsx`) ja faz o
+   * proprio early return de erro antes de montar este componente.
+   */
+  error?: string | null;
+  /** Repete a busca sem recarregar a rota; normalmente o `refresh` do hook. */
+  onRetry?: () => void;
 }
 
 export function CalendarView({
@@ -30,6 +39,8 @@ export function CalendarView({
   onPrevMonth,
   onNextMonth,
   isLoading,
+  error,
+  onRetry,
 }: CalendarViewProps) {
   const today = new Date();
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
@@ -46,6 +57,28 @@ export function CalendarView({
 
   const isToday = (day: number) =>
     day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+
+  // Precedencia explicita: o erro vence o carregamento. Os hooks so publicam
+  // `error` no `finally` que zera `isLoading`, entao na pratica os dois nunca
+  // sao verdadeiros ao mesmo tempo; deixar a ordem no codigo evita depender
+  // dessa coincidencia de ordem de `setState`.
+  if (error) {
+    return (
+      <div
+        data-testid="calendar-view-error"
+        role="alert"
+        className="flex-1 bg-card border border-border rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center py-12 text-center"
+      >
+        <p className="text-destructive font-medium mb-2">Erro ao carregar horários</p>
+        <p className="text-sm text-muted-foreground mb-4">{error}</p>
+        {onRetry && (
+          <Button data-testid="calendar-view-error-retry-button" onClick={onRetry} variant="outline">
+            Tentar novamente
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

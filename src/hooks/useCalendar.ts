@@ -40,6 +40,14 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Falha INESPERADA (excecao dentro do `try`): rede caida, resposta nao
+   * serializavel, defeito de codigo. Guardada aqui e relancada durante o
+   * render, unico caminho que a error boundary da rota observa - um `throw`
+   * dentro da promise de `fetchSlots` viraria unhandled rejection. Interno:
+   * `UseCalendarReturn` nao muda.
+   */
+  const [fatalError, setFatalError] = useState<Error | null>(null);
 
   const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
@@ -47,11 +55,13 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
     if (!enabled) {
       setSlots([]);
       setError(null);
+      setFatalError(null);
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     setError(null);
+    setFatalError(null);
     try {
       const result = await getAvailability(monthKey);
       if (result.error) {
@@ -60,8 +70,10 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
       } else {
         setSlots(result.data ?? []);
       }
-    } catch {
-      setError('Erro ao carregar horários.');
+    } catch (err) {
+      // Nao vira `error` inline: a string generica passa a ser exclusiva do que
+      // o servidor devolve em `result.error` (falha esperada, recuperavel).
+      setFatalError(err instanceof Error ? err : new Error(String(err)));
       setSlots([]);
     } finally {
       setIsLoading(false);
@@ -99,6 +111,9 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
       setCurrentMonth((m) => m + 1);
     }
   }, [currentMonth]);
+
+  // Relance durante o render: e o que faz o `error.tsx` da rota montar.
+  if (fatalError) throw fatalError;
 
   return {
     currentMonth,
