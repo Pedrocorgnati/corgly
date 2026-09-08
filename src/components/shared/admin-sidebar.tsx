@@ -86,6 +86,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations('nav');
   const tNav = useTranslations('sidebar.admin');
+  // Ate 2026-09-07 os aria-labels de navegacao eram portugues cravado e ignoravam
+  // o idioma escolhido pelo usuario, mesmo com o resto da barra ja traduzido.
+  const tA11y = useTranslations('a11y');
   const navItems = getAdminNavItems('sidebar');
   const { logout } = useAuth();
 
@@ -108,7 +111,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav data-testid="sidebar-nav" aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <nav data-testid="sidebar-nav" aria-label={tA11y('adminNav')} className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems.map(({ href, labelKey, icon: Icon }) => {
           const active = isAdminNavItemActive(href, pathname);
           return (

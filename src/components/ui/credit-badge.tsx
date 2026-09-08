@@ -1,4 +1,5 @@
 import { Coins } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 interface CreditBadgeProps {
@@ -9,6 +10,10 @@ interface CreditBadgeProps {
 }
 
 export function CreditBadge({ balance, className, showIcon = true, 'data-testid': testId }: CreditBadgeProps) {
+  // Ate 2026-09-07 este title era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno — inclusive a pluralizacao, que era montada com concatenacao de 's'
+  // e 'is'. Agora o plural vem do ICU do catalogo, que cada idioma resolve sozinho.
+  const t = useTranslations('creditBadge');
   const isLow = balance <= 2;
   const isEmpty = balance === 0;
 
@@ -24,7 +29,7 @@ export function CreditBadge({ balance, className, showIcon = true, 'data-testid'
           : 'bg-primary/10 text-primary',
         className
       )}
-      title={`${balance} crédito${balance !== 1 ? 's' : ''} disponível${balance !== 1 ? 'is' : ''}`}
+      title={t('title', { count: balance })}
     >
       {showIcon && <Coins className="h-3.5 w-3.5" />}
       <span>{balance}</span>

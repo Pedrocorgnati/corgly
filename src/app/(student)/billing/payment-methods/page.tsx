@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -69,6 +70,9 @@ function formatExpiration(paymentMethod: PaymentMethod) {
 }
 
 export default function BillingPaymentMethodsPage() {
+  // Idioma resolvido no servidor (i18n/request.ts). Ate 2026-09-07 esta pagina
+  // escrevia portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('pages.paymentMethods');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +100,7 @@ export default function BillingPaymentMethodsPage() {
       const payload = (await response.json().catch(() => ({}))) as ApiResponse<PaymentMethodsData>;
 
       if (!response.ok || !payload.data) {
-        const message = payload.error ?? 'Não foi possível carregar métodos de pagamento.';
+        const message = payload.error ?? t('loadError');
         setError(message);
         setSupportHref(supportHrefFrom(payload.data) ?? ROUTES.SUPPORT);
         return;
@@ -105,11 +109,11 @@ export default function BillingPaymentMethodsPage() {
       setPaymentMethods(payload.data.items);
       setDefaultPaymentMethodId(payload.data.defaultPaymentMethodId);
     } catch {
-      setError('Erro de conexão ao carregar métodos de pagamento.');
+      setError(t('loadConnectionError'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadPaymentMethods();
@@ -130,16 +134,16 @@ export default function BillingPaymentMethodsPage() {
       }>;
 
       if (!response.ok || !payload.data?.setupIntentId) {
-        const message = payload.error ?? 'Não foi possível preparar método de pagamento.';
+        const message = payload.error ?? t('prepareError');
         setError(message);
         setSupportHref(supportHrefFrom(payload.data) ?? ROUTES.SUPPORT);
         toast.error(message);
         return;
       }
 
-      toast.success('Método preparado com segurança pela Stripe.');
+      toast.success(t('prepareSuccess'));
     } catch {
-      const message = 'Erro de conexão ao preparar método de pagamento.';
+      const message = t('prepareConnectionError');
       setError(message);
       toast.error(message);
     } finally {
@@ -161,17 +165,17 @@ export default function BillingPaymentMethodsPage() {
       const payload = (await response.json().catch(() => ({}))) as ApiResponse<PortalSessionData>;
 
       if (!response.ok || !payload.data?.url) {
-        const message = payload.error ?? 'Não foi possível abrir o portal de pagamento.';
+        const message = payload.error ?? t('portalError');
         setError(message);
         setSupportHref(payload.data?.supportCta?.href ?? ROUTES.SUPPORT);
         toast.error(message);
         return;
       }
 
-      toast.success('Redirecionando para a Stripe.');
+      toast.success(t('portalRedirecting'));
       window.location.assign(payload.data.url);
     } catch {
-      const message = 'Erro de conexão ao abrir o portal de pagamento.';
+      const message = t('portalConnectionError');
       setError(message);
       toast.error(message);
     } finally {
@@ -193,7 +197,7 @@ export default function BillingPaymentMethodsPage() {
       const payload = (await response.json().catch(() => ({}))) as ApiResponse<PaymentMethodsData>;
 
       if (!response.ok || !payload.data) {
-        const message = payload.error ?? 'Não foi possível atualizar método padrão.';
+        const message = payload.error ?? t('defaultError');
         setError(message);
         toast.error(message);
         return;
@@ -201,9 +205,9 @@ export default function BillingPaymentMethodsPage() {
 
       setPaymentMethods(payload.data.items);
       setDefaultPaymentMethodId(payload.data.defaultPaymentMethodId);
-      toast.success('Método padrão atualizado.');
+      toast.success(t('defaultSuccess'));
     } catch {
-      const message = 'Erro de conexão ao atualizar método padrão.';
+      const message = t('defaultConnectionError');
       setError(message);
       toast.error(message);
     } finally {
@@ -217,10 +221,8 @@ export default function BillingPaymentMethodsPage() {
         <div className="flex items-start gap-3">
           <CreditCard className="mt-1 h-6 w-6 text-primary" aria-hidden="true" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Métodos de pagamento</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Cartões salvos, método padrão e portal financeiro da Stripe.
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">{t('subtitle')}</p>
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -237,7 +239,7 @@ export default function BillingPaymentMethodsPage() {
             ) : (
               <Plus className="h-4 w-4" aria-hidden="true" />
             )}
-            Preparar método
+            {t('prepare')}
           </Button>
           <Button
             data-testid="billing-payment-methods-portal-button"
@@ -251,7 +253,7 @@ export default function BillingPaymentMethodsPage() {
             ) : (
               <ExternalLink className="h-4 w-4" aria-hidden="true" />
             )}
-            Abrir portal
+            {t('openPortal')}
           </Button>
         </div>
       </div>
@@ -262,10 +264,13 @@ export default function BillingPaymentMethodsPage() {
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 h-5 w-5 text-primary" aria-hidden="true" />
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Método padrão</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t('defaultTitle')}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {formatBrand(defaultPaymentMethod.brand)} final {defaultPaymentMethod.last4}
-                  {' · '}expira em {formatExpiration(defaultPaymentMethod)}.
+                  {t('defaultLine', {
+                    brand: formatBrand(defaultPaymentMethod.brand),
+                    last4: defaultPaymentMethod.last4,
+                    expiry: formatExpiration(defaultPaymentMethod),
+                  })}
                 </p>
               </div>
             </div>
@@ -285,9 +290,7 @@ export default function BillingPaymentMethodsPage() {
                   aria-hidden="true"
                 />
                 <div>
-                  <h2 className="text-sm font-semibold text-foreground">
-                    Atenção no pagamento
-                  </h2>
+                  <h2 className="text-sm font-semibold text-foreground">{t('errorTitle')}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">{error}</p>
                 </div>
               </div>
@@ -297,22 +300,22 @@ export default function BillingPaymentMethodsPage() {
                 className="inline-flex min-h-[40px] items-center justify-center rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 <LifeBuoy className="mr-2 h-4 w-4" aria-hidden="true" />
-                Falar com suporte
+                {t('contactSupport')}
               </Link>
             </div>
           </section>
         )}
 
         {isLoading ? (
-          <LoadingState data-testid="billing-payment-methods-loading" variant="skeleton" message="Carregando métodos de pagamento" />
+          <LoadingState data-testid="billing-payment-methods-loading" variant="skeleton" message={t('loading')} />
         ) : !hasPaymentMethods && !error ? (
           <section className="rounded-lg border border-border bg-card">
             <EmptyState
               data-testid="billing-payment-methods-empty"
               icon={CreditCard}
-              title="Nenhum método salvo"
-              description="Abra o portal para adicionar ou revisar cartões vinculados à assinatura."
-              actionLabel="Abrir portal"
+              title={t('emptyTitle')}
+              description={t('emptyDesc')}
+              actionLabel={t('openPortal')}
               onAction={openCustomerPortal}
             />
           </section>
@@ -334,10 +337,13 @@ export default function BillingPaymentMethodsPage() {
                       </div>
                       <div className="min-w-0">
                         <CardTitle>
-                          {formatBrand(paymentMethod.brand)} final {paymentMethod.last4}
+                          {t('cardLabel', {
+                            brand: formatBrand(paymentMethod.brand),
+                            last4: paymentMethod.last4,
+                          })}
                         </CardTitle>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Expira em {formatExpiration(paymentMethod)}
+                          {t('expires', { expiry: formatExpiration(paymentMethod) })}
                           {paymentMethod.funding ? ` · ${paymentMethod.funding}` : ''}
                         </p>
                       </div>
@@ -345,7 +351,7 @@ export default function BillingPaymentMethodsPage() {
                     {paymentMethod.isDefault ? (
                       <Badge data-testid={`billing-payment-method-default-badge-${paymentMethod.id}`} variant="secondary" className="justify-self-start sm:justify-self-end">
                         <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-                        Padrão
+                        {t('defaultBadge')}
                       </Badge>
                     ) : (
                       <Button
@@ -361,13 +367,13 @@ export default function BillingPaymentMethodsPage() {
                         {isUpdating && (
                           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                         )}
-                        Definir padrão
+                        {t('setDefault')}
                       </Button>
                     )}
                   </CardHeader>
                   <CardContent>
                     <p className="text-xs text-muted-foreground">
-                      Identificador seguro: {paymentMethod.id}
+                      {t('secureId', { id: paymentMethod.id })}
                     </p>
                   </CardContent>
                 </Card>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -63,10 +64,13 @@ export function AudioOnlyOverlay({
   peerInitials,
   isAudioActive,
 }: AudioOnlyOverlayProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.audioOnly')
+
   return (
     <div
       className="flex h-full w-full flex-col items-center justify-center bg-card"
-      aria-label={`Modo apenas áudio. ${peerName} está conectado via áudio.`}
+      aria-label={t('aria', { name: peerName })}
     >
       {/* Avatar com iniciais */}
       <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary">
@@ -86,7 +90,7 @@ export function AudioOnlyOverlay({
       {/* Banner informativo */}
       <div className="mt-4 rounded-md bg-yellow-500/10 px-3 py-1.5">
         <p className="text-sm text-yellow-600">
-          Modo apenas áudio
+          {t('banner')}
         </p>
       </div>
     </div>

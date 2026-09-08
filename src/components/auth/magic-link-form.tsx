@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, CheckCircle2, MailCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,10 +13,6 @@ import { apiClient, ApiError } from '@/lib/api-client';
 import { MagicLinkRequestSchema } from '@/schemas/auth.schema';
 
 type FormData = { email: string };
-
-/** Mensagem uniforme — espelha a do backend (anti-enumeração, AC4). */
-const UNIFORM_MESSAGE =
-  'Se este email estiver cadastrado, você receberá um link de acesso.';
 
 /**
  * T-045 — Formulário de solicitação de magic-link (login sem senha).
@@ -28,6 +25,9 @@ const UNIFORM_MESSAGE =
  *   - error: erro genérico de conexão/servidor
  */
 export function MagicLinkForm() {
+  // Ate 2026-09-07 toda a copy deste formulario (inclusive a constante de modulo
+  // com a mensagem uniforme) era portugues cravado e ignorava o idioma do visitante.
+  const t = useTranslations('auth.magicLink');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'sent' | 'rate-limited' | 'error'>('idle');
 
@@ -61,9 +61,9 @@ export function MagicLinkForm() {
     return (
       <div data-testid="form-magic-link-success" className="text-center space-y-3 py-4" role="status">
         <MailCheck className="h-10 w-10 text-success mx-auto" />
-        <h2 className="text-base font-semibold text-foreground">Verifique seu email</h2>
+        <h2 className="text-base font-semibold text-foreground">{t('sentTitle')}</h2>
         <p className="text-sm text-muted-foreground">
-          {UNIFORM_MESSAGE} O link expira em 15 minutos. Verifique também sua pasta de spam.
+          {t('sentDesc')}
         </p>
       </div>
     );
@@ -73,9 +73,9 @@ export function MagicLinkForm() {
     return (
       <div data-testid="form-magic-link-rate-limited" className="text-center space-y-3 py-4" role="alert">
         <CheckCircle2 className="h-10 w-10 text-muted-foreground mx-auto" />
-        <h2 className="text-base font-semibold text-foreground">Muitas solicitações</h2>
+        <h2 className="text-base font-semibold text-foreground">{t('rateLimitTitle')}</h2>
         <p className="text-sm text-muted-foreground">
-          Você atingiu o limite de solicitações. Aguarde alguns minutos antes de tentar novamente.
+          {t('rateLimitDesc')}
         </p>
         <Button
           data-testid="form-magic-link-back-button"
@@ -84,7 +84,7 @@ export function MagicLinkForm() {
           className="w-full min-h-[44px]"
           onClick={() => setStatus('idle')}
         >
-          Voltar
+          {t('back')}
         </Button>
       </div>
     );
@@ -94,12 +94,12 @@ export function MagicLinkForm() {
     <form data-testid="form-magic-link" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {status === 'error' && (
         <p data-testid="form-magic-link-error" className="text-sm text-destructive text-center" role="alert">
-          Não foi possível enviar o link. Verifique sua conexão e tente novamente.
+          {t('sendError')}
         </p>
       )}
       <div className="space-y-1.5">
         <Label htmlFor="email" className="text-sm font-medium">
-          Email
+          {t('emailLabel')}
         </Label>
         <Input
           data-testid="form-magic-link-email-input"
@@ -122,10 +122,10 @@ export function MagicLinkForm() {
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Enviando...
+            {t('sending')}
           </>
         ) : (
-          'Enviar link de acesso'
+          t('submit')
         )}
       </Button>
     </form>

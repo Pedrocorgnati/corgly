@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   LineChart,
   Line,
@@ -40,19 +41,24 @@ interface TrendLineChartProps {
 type DimensionKey = keyof FeedbackScores;
 type Period = '5' | '10' | 'all';
 
-const DIMENSIONS: Array<{ key: DimensionKey; label: string; color: string }> = [
-  { key: 'listening',  label: 'Escuta',      color: '#4F46E5' },
-  { key: 'speaking',   label: 'Fala',        color: '#6366F1' },
-  { key: 'writing',    label: 'Escrita',     color: '#059669' },
-  { key: 'vocabulary', label: 'Vocabulário', color: '#D97706' },
+/**
+ * Ate 2026-09-07 o nome de cada dimensao e o rotulo de cada periodo moravam aqui
+ * em portugues cravado, fora do alcance do next-intl. Sobraram os dados sem
+ * idioma: a chave (que tambem indexa o catalogo) e a cor da serie.
+ */
+const DIMENSIONS: Array<{ key: DimensionKey; color: string }> = [
+  { key: 'listening',  color: '#4F46E5' },
+  { key: 'speaking',   color: '#6366F1' },
+  { key: 'writing',    color: '#059669' },
+  { key: 'vocabulary', color: '#D97706' },
 ];
 
 const ALL_DIMENSION_KEYS: DimensionKey[] = DIMENSIONS.map((d) => d.key);
 
-const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
-  { value: '5', label: 'Ultimas 5' },
-  { value: '10', label: 'Ultimas 10' },
-  { value: 'all', label: 'Todas' },
+const PERIOD_OPTIONS: Array<{ value: Period; messageKey: string }> = [
+  { value: '5', messageKey: 'trend.period5' },
+  { value: '10', messageKey: 'trend.period10' },
+  { value: 'all', messageKey: 'trend.periodAll' },
 ];
 
 /**
@@ -63,15 +69,21 @@ function toPoint(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function formatDate(dateStr: string): string {
+/**
+ * Ate 2026-09-07 o tick do eixo era montado a mao como `dia/mes`, ordem que nem
+ * todo idioma usa. `Intl` decide a ordem; a lacuna continua sendo travessao.
+ */
+function formatDate(dateStr: string, locale: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return '—';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}/${month}`;
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' }).format(d);
 }
 
 export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('progress');
+  const locale = useLocale();
   const [visibleDimensions, setVisibleDimensions] = useState<Set<DimensionKey>>(
     () => new Set(ALL_DIMENSION_KEYS)
   );
@@ -81,13 +93,13 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
     const limit = period === '5' ? 5 : period === '10' ? 10 : feedbacks.length;
     const sliced = feedbacks.slice(-limit);
     return sliced.map((f) => ({
-      date: formatDate(f.sessionDate),
+      date: formatDate(f.sessionDate, locale),
       listening: toPoint(f.scores?.listening),
       speaking: toPoint(f.scores?.speaking),
       writing: toPoint(f.scores?.writing),
       vocabulary: toPoint(f.scores?.vocabulary),
     }));
-  }, [feedbacks, period]);
+  }, [feedbacks, period, locale]);
 
   function toggleDimension(key: DimensionKey) {
     setVisibleDimensions((prev) => {
@@ -113,12 +125,12 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
   if (!feedbacks.length) {
     return (
       <div data-testid="progress-trend-chart-empty-wrapper" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <h2 className="font-semibold text-foreground mb-4">Tendencia por Dimensao</h2>
+        <h2 className="font-semibold text-foreground mb-4">{t('trend.title')}</h2>
         <EmptyState
           data-testid="progress-trend-chart-empty"
           icon={TrendingUp}
-          title="Historico insuficiente"
-          description="Historico insuficiente para exibir tendencias"
+          title={t('trend.empty')}
+          description={t('trend.emptyDesc')}
         />
       </div>
     );
@@ -130,10 +142,10 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
     <div
       data-testid="progress-trend-chart"
       className="bg-card border border-border rounded-2xl p-6 shadow-sm"
-      aria-label="Grafico de tendencia por dimensao"
+      aria-label={t('trend.chartAria')}
     >
       <div data-testid="progress-trend-chart-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h2 className="font-semibold text-foreground">Tendencia por Dimensao</h2>
+        <h2 className="font-semibold text-foreground">{t('trend.title')}</h2>
 
         {/* Period selector */}
         <div data-testid="progress-trend-chart-filter-bar" className="flex gap-1 bg-muted rounded-lg p-1">
@@ -148,7 +160,7 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {opt.label}
+              {t(opt.messageKey)}
             </button>
           ))}
         </div>
@@ -168,7 +180,7 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
               checked={visibleDimensions.has(d.key)}
               onChange={() => toggleDimension(d.key)}
               className="sr-only"
-              aria-label={`Mostrar/ocultar ${d.label}`}
+              aria-label={t('trend.toggleAria', { dimension: t(`dimensions.${d.key}`) })}
             />
             <span
               className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
@@ -189,14 +201,14 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
                 </svg>
               )}
             </span>
-            <span className="text-muted-foreground">{d.label}</span>
+            <span className="text-muted-foreground">{t(`dimensions.${d.key}`)}</span>
           </label>
         ))}
       </div>
 
       {noneSelected ? (
         <div data-testid="progress-trend-chart-none-selected" className="flex items-center justify-center h-[250px] text-sm text-muted-foreground">
-          Selecione ao menos uma dimensao
+          {t('trend.noneSelected')}
         </div>
       ) : (
         <div data-testid="progress-trend-chart-canvas">
@@ -226,7 +238,7 @@ export function TrendLineChart({ feedbacks, isLoading }: TrendLineChartProps) {
                   key={d.key}
                   type="monotone"
                   dataKey={d.key}
-                  name={d.label}
+                  name={t(`dimensions.${d.key}`)}
                   stroke={d.color}
                   strokeWidth={2}
                   dot={{ fill: d.color, r: 3 }}

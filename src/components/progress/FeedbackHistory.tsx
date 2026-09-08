@@ -3,6 +3,7 @@ import { PAGINATION } from '@/lib/constants';
 import { API } from '@/lib/constants/routes';
 
 import { useState, useCallback } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertCircle, Download, ChevronLeft, ChevronRight, Loader2, ClipboardList } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -42,18 +43,18 @@ interface FeedbackHistoryProps {
 
 type Period = '30d' | '90d' | 'all';
 
-const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
-  { value: '30d', label: 'Ultimo mes' },
-  { value: '90d', label: 'Ultimos 3 meses' },
-  { value: 'all', label: 'Todas' },
+/**
+ * Ate 2026-09-07 o rotulo de cada periodo e o nome de cada dimensao moravam aqui
+ * em portugues cravado, fora do alcance do next-intl. Sobrou o que nao tem
+ * idioma: o valor do filtro e a chave da dimensao, que ja indexa o catalogo.
+ */
+const PERIOD_OPTIONS: Array<{ value: Period; messageKey: string }> = [
+  { value: '30d', messageKey: 'history.period30d' },
+  { value: '90d', messageKey: 'history.period90d' },
+  { value: 'all', messageKey: 'history.periodAll' },
 ];
 
-const DIMENSION_LABELS: Record<keyof FeedbackScores, string> = {
-  listening:  'Escuta',
-  speaking:   'Fala',
-  writing:    'Escrita',
-  vocabulary: 'Vocabulário',
-};
+const DIMENSION_KEYS: (keyof FeedbackScores)[] = ['listening', 'speaking', 'writing', 'vocabulary'];
 
 function isScore(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -71,10 +72,12 @@ function scoreBadgeClass(score: unknown): string {
   return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
 }
 
-function formatDate(dateStr: string): string {
+// Ate 2026-09-07 a data saia sempre em 'pt-BR', mesmo para quem tinha escolhido
+// outro idioma.
+function formatDate(dateStr: string, locale: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('pt-BR', {
+  return d.toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -82,6 +85,10 @@ function formatDate(dateStr: string): string {
 }
 
 export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno — inclusive as duas mensagens de falha do filtro.
+  const t = useTranslations('progress');
+  const locale = useLocale();
   const [data, setData] = useState<HistoryData>(initialData);
   const [period, setPeriod] = useState<Period>('all');
   const [currentPage, setCurrentPage] = useState(initialData.page);
@@ -101,20 +108,20 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
         setCurrentPage(page);
       } else {
         // Zero Silencio: resposta sem `data` nao pode passar como sucesso.
-        setLoadError('Resposta do servidor fora do formato esperado.');
+        setLoadError(t('history.badFormat'));
       }
     } catch (error) {
       // Zero Silencio: os dados antigos continuam na tela, mas o usuario ve
       // que o filtro/pagina que ele pediu nao foi aplicado.
       setLoadError(
         error instanceof Error
-          ? `Nao foi possivel atualizar o historico: ${error.message}`
-          : 'Nao foi possivel atualizar o historico.',
+          ? t('history.refreshFailedDetail', { message: error.message })
+          : t('history.refreshFailed'),
       );
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   function handlePeriodChange(p: Period) {
     setPeriod(p);
@@ -131,7 +138,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
   return (
     <div data-testid="progress-feedback-history" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h2 className="font-semibold text-foreground">Historico de Avaliacoes</h2>
+        <h2 className="font-semibold text-foreground">{t('history.title')}</h2>
 
         <div className="flex items-center gap-3">
           {/* Period filter */}
@@ -147,7 +154,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {opt.label}
+                {t(opt.messageKey)}
               </button>
             ))}
           </div>
@@ -160,7 +167,7 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
             className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             <Download className="w-3.5 h-3.5" />
-            Exportar CSV
+            {t('history.export')}
           </a>
         </div>
       </div>
@@ -180,8 +187,8 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
         <EmptyState
           data-testid="progress-feedback-history-empty"
           icon={ClipboardList}
-          title="Sem avaliacoes"
-          description="Voce ainda nao tem avaliacoes registradas"
+          title={t('history.empty')}
+          description={t('history.emptyDesc')}
         />
       ) : (
         <>
@@ -196,24 +203,24 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table data-testid="progress-feedback-history-table" className="w-full text-sm">
-                <caption className="sr-only">Historico de avaliacoes</caption>
+                <caption className="sr-only">{t('history.tableCaption')}</caption>
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="pb-3 font-medium">Data</th>
-                    {(Object.keys(DIMENSION_LABELS) as (keyof FeedbackScores)[]).map((key) => (
+                    <th className="pb-3 font-medium">{t('history.columnDate')}</th>
+                    {DIMENSION_KEYS.map((key) => (
                       <th key={key} className="pb-3 font-medium text-center">
-                        {DIMENSION_LABELS[key]}
+                        {t(`dimensions.${key}`)}
                       </th>
                     ))}
-                    <th className="pb-3 font-medium text-center">Media</th>
-                    <th className="pb-3 font-medium">Comentario</th>
+                    <th className="pb-3 font-medium text-center">{t('history.columnAverage')}</th>
+                    <th className="pb-3 font-medium">{t('history.columnComment')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.items.map((item) => (
                     <tr key={item.id} data-testid={`progress-feedback-history-row-${item.id}`} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                      <td className="py-3 text-foreground">{formatDate(item.sessionDate)}</td>
-                      {(Object.keys(DIMENSION_LABELS) as (keyof FeedbackScores)[]).map((key) => (
+                      <td className="py-3 text-foreground">{formatDate(item.sessionDate, locale)}</td>
+                      {DIMENSION_KEYS.map((key) => (
                         <td key={key} className="py-3 text-center">
                           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${scoreBadgeClass(item.scores[key])}`}>
                             {formatScore(item.scores[key])}
@@ -240,16 +247,16 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
                 <div key={item.id} data-testid={`progress-feedback-history-row-${item.id}-mobile`} className="border border-border rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-foreground">
-                      {formatDate(item.sessionDate)}
+                      {formatDate(item.sessionDate, locale)}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${scoreBadgeClass(item.averageScore)}`}>
-                      Media: {formatScore(item.averageScore)}
+                      {t('history.average')}: {formatScore(item.averageScore)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    {(Object.keys(DIMENSION_LABELS) as (keyof FeedbackScores)[]).map((key) => (
+                    {DIMENSION_KEYS.map((key) => (
                       <div key={key} className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">{DIMENSION_LABELS[key]}</span>
+                        <span className="text-muted-foreground">{t(`dimensions.${key}`)}</span>
                         <span className={`px-1.5 py-0.5 rounded-full font-medium ${scoreBadgeClass(item.scores[key])}`}>
                           {formatScore(item.scores[key])}
                         </span>
@@ -270,7 +277,11 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
           {totalPages > 1 && (
             <div data-testid="progress-feedback-history-pagination" className="flex items-center justify-between mt-4 pt-4 border-t border-border">
               <p className="text-xs text-muted-foreground">
-                Pagina {currentPage} de {totalPages} ({data.total} avaliacoes)
+                {t('history.pageInfo', {
+                  page: currentPage,
+                  totalPages,
+                  total: data.total,
+                })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -279,10 +290,10 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
                   size="sm"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage <= 1 || isLoading}
-                  aria-label="Pagina anterior"
+                  aria-label={t('history.prevAria')}
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
-                  Anterior
+                  {t('history.prev')}
                 </Button>
                 <Button
                   data-testid="progress-feedback-history-next-button"
@@ -290,9 +301,9 @@ export function FeedbackHistory({ initialData }: FeedbackHistoryProps) {
                   size="sm"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= totalPages || isLoading}
-                  aria-label="Proxima pagina"
+                  aria-label={t('history.nextAria')}
                 >
-                  Proxima
+                  {t('history.next')}
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Button>
               </div>

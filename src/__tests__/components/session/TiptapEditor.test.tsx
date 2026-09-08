@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '@/test/utils'
 import { TiptapEditor } from '@/components/session/TiptapEditor'
 import * as Y from 'yjs'
 
@@ -72,9 +72,9 @@ describe('TiptapEditor', () => {
     render(<TiptapEditor {...defaultProps} />)
 
     expect(screen.getByTitle('Negrito (Ctrl+B)')).toBeInTheDocument()
-    expect(screen.getByTitle('Italico (Ctrl+I)')).toBeInTheDocument()
-    expect(screen.getByTitle('Titulo 1')).toBeInTheDocument()
-    expect(screen.getByTitle('Titulo 2')).toBeInTheDocument()
+    expect(screen.getByTitle('Itálico (Ctrl+I)')).toBeInTheDocument()
+    expect(screen.getByTitle('Título 1')).toBeInTheDocument()
+    expect(screen.getByTitle('Título 2')).toBeInTheDocument()
     expect(screen.getByTitle('Lista com marcadores')).toBeInTheDocument()
     expect(screen.getByTitle('Lista numerada')).toBeInTheDocument()
     expect(screen.getByTitle('Inserir link')).toBeInTheDocument()

@@ -246,6 +246,12 @@ enum AdminImpersonationEndReason {
   SYSTEM_REVOKED
 }
 
+enum BlockOrigin {
+  MANUAL
+  GOOGLE
+  BOTH
+}
+
 model User {
   id                          String            @id @default(uuid())
   email                       String            @unique
@@ -365,13 +371,14 @@ model CreditBatch {
 }
 
 model AvailabilitySlot {
-  id        String   @id @default(uuid())
-  startAt   DateTime @unique // UNIQUE_slot_startAt - um slot por horário
-  endAt     DateTime
-  isBlocked Boolean  @default(false)
-  version   Int      @default(0) // lock otimista CAS
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String       @id @default(uuid())
+  startAt     DateTime     @unique // UNIQUE_slot_startAt - um slot por horário
+  endAt       DateTime
+  isBlocked   Boolean      @default(false)
+  blockOrigin BlockOrigin? // NULL = sem bloqueio; BOTH = manual e Google simultaneos
+  version     Int          @default(0) // lock otimista CAS
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   sessions Session[]
 
@@ -400,7 +407,7 @@ model RecurringPattern {
 model Session {
   id                      String        @id @default(uuid())
   studentId               String
-  availabilitySlotId      String        // FK do slot; NAO-unico desde a devolucao de slot cancelado (varias Session historicas por slot, no maximo uma viva - garantia em SLOT_OCCUPYING_STATUSES + tx SERIALIZABLE/FOR UPDATE/CAS)
+  availabilitySlotId      String // FK do slot; NAO-unico desde a devolucao de slot cancelado (varias Session historicas por slot, no maximo uma viva - garantia em SLOT_OCCUPYING_STATUSES + tx SERIALIZABLE/FOR UPDATE/CAS)
   startAt                 DateTime
   endAt                   DateTime
   status                  SessionStatus @default(SCHEDULED)
@@ -417,10 +424,10 @@ model Session {
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
 
-  student          User              @relation(fields: [studentId], references: [id])
-  availabilitySlot AvailabilitySlot  @relation(fields: [availabilitySlotId], references: [id])
-  creditBatch      CreditBatch?      @relation(fields: [creditBatchId], references: [id])
-  recurringPattern RecurringPattern? @relation(fields: [recurringPatternId], references: [id])
+  student          User                  @relation(fields: [studentId], references: [id])
+  availabilitySlot AvailabilitySlot      @relation(fields: [availabilitySlotId], references: [id])
+  creditBatch      CreditBatch?          @relation(fields: [creditBatchId], references: [id])
+  recurringPattern RecurringPattern?     @relation(fields: [recurringPatternId], references: [id])
   feedback         Feedback?
   document         SessionDocument?
   noteSnapshots    SessionNoteSnapshot[]
@@ -568,8 +575,8 @@ model Payment {
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
-  user        User         @relation(fields: [userId], references: [id])
-  creditBatch CreditBatch? @relation(fields: [creditBatchId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+  creditBatch    CreditBatch?    @relation(fields: [creditBatchId], references: [id])
   refundRequests RefundRequest[]
 
   @@index([userId])
@@ -1661,9 +1668,9 @@ model ExerciseAttempt {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
-  exercise   Exercise            @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  student    User                @relation("ExerciseAttemptStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  assignment ExerciseAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  exercise   Exercise             @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  student    User                 @relation("ExerciseAttemptStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  assignment ExerciseAssignment?  @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
   answers    ExerciseItemAnswer[]
 
   @@index([studentId, status])

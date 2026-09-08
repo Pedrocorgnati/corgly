@@ -77,10 +77,20 @@ export function getPayloadFromRequest(request: NextRequest): JwtPayload | null {
   }
 }
 
+/**
+ * Envelope unico das respostas da API.
+ *
+ * `code` e um discriminante ESTAVEL e sem idioma: `error` carrega copy que muda
+ * com o dicionario, entao classificar falha por texto quebra assim que a
+ * mensagem e traduzida. Quem precisa ramificar por causa (o modal de
+ * agendamento, por exemplo) le `code`. Fica de fora do corpo quando ausente,
+ * para nao mudar a forma das respostas que nao classificam nada.
+ */
 export function apiResponse<T>(
   data: T | null,
   error: string | null = null,
   message: string | null = null,
-) {
-  return { data, error, message };
+  code?: string,
+): { data: T | null; error: string | null; message: string | null; code?: string } {
+  return code === undefined ? { data, error, message } : { data, error, message, code };
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -34,10 +35,12 @@ interface PastDueBannerProps {
   returnTo?: string;
 }
 
-function formatDate(value?: string | null) {
+// Ate 2026-09-07 a data do fim do periodo saia sempre em 'pt-BR', mesmo para quem
+// tinha escolhido outro idioma.
+function formatDate(value: string | null | undefined, locale: string) {
   if (!value) return null;
 
-  return new Intl.DateTimeFormat('pt-BR', {
+  return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -49,6 +52,10 @@ export function PastDueBanner({
   currentPeriodEnd,
   returnTo = CUSTOMER_PORTAL_RETURN_AFTER_PATH,
 }: PastDueBannerProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno — inclusive os toasts do portal da Stripe.
+  const t = useTranslations('billing.pastDue');
+  const locale = useLocale();
   const [resolvedStatus, setResolvedStatus] = useState(status ?? null);
   const [resolvedPeriodEnd, setResolvedPeriodEnd] = useState(currentPeriodEnd ?? null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(!status);
@@ -95,14 +102,14 @@ export function PastDueBanner({
       const payload = (await response.json().catch(() => ({}))) as PortalSessionResponse;
 
       if (!response.ok || !payload.data?.url) {
-        toast.error(payload.error ?? 'Não foi possível abrir o portal de cobrança.');
+        toast.error(payload.error ?? t('portalError'));
         return;
       }
 
-      toast.success('Redirecionando para o portal da Stripe.');
+      toast.success(t('redirecting'));
       window.location.assign(payload.data.url);
     } catch {
-      toast.error('Erro de conexão ao abrir o portal de cobrança.');
+      toast.error(t('connectionError'));
     } finally {
       setIsOpeningPortal(false);
     }
@@ -112,7 +119,7 @@ export function PastDueBanner({
     return null;
   }
 
-  const periodEndLabel = formatDate(resolvedPeriodEnd);
+  const periodEndLabel = formatDate(resolvedPeriodEnd, locale);
 
   return (
     <section
@@ -126,11 +133,17 @@ export function PastDueBanner({
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
           <div className="min-w-0">
             <h2 id="past-due-banner-title" className="text-sm font-semibold">
-              Pagamento da assinatura pendente
+              {t('title')}
             </h2>
+            {/*
+              A frase era montada por concatenacao (" antes de {data}" grudado no
+              fim). Cada idioma coloca a data num lugar diferente, entao a versao
+              com prazo virou uma mensagem inteira e propria no catalogo.
+            */}
             <p className="mt-1 text-sm leading-6">
-              Atualize o método de pagamento para manter a assinatura ativa
-              {periodEndLabel ? ` antes de ${periodEndLabel}` : ''}.
+              {periodEndLabel
+                ? t('descriptionUntil', { date: periodEndLabel })
+                : t('description')}
             </p>
           </div>
         </div>
@@ -147,12 +160,12 @@ export function PastDueBanner({
             {isOpeningPortal ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Abrindo portal
+                {t('opening')}
               </>
             ) : (
               <>
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                Atualizar pagamento
+                {t('updatePayment')}
               </>
             )}
           </Button>
@@ -161,7 +174,7 @@ export function PastDueBanner({
             href={ROUTES.SUPPORT}
             className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-amber-300 bg-white/70 px-3 text-sm font-medium text-amber-950 transition-colors hover:bg-white dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
           >
-            Falar com suporte
+            {t('contactSupport')}
           </Link>
         </div>
       </div>

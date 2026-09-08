@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -67,6 +68,9 @@ function applyPlanSelectionDetour(destination: string): string {
 }
 
 export function LoginForm() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo visitante.
+  const t = useTranslations('auth.login');
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +98,7 @@ export function LoginForm() {
         };
       }>(API.AUTH.LOGIN, { email: data.email, password: data.password });
 
-      toast.success('Login realizado com sucesso!');
+      toast.success(t('successToast'));
 
       // Ponto unico de decisao, compartilhado com o callback de magic-link:
       // admin vai para o painel (honrando o redirectTo sanitizado), aluno sem
@@ -109,14 +113,14 @@ export function LoginForm() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 403) {
-          setAuthError('Confirme seu email antes de fazer login.');
+          setAuthError(t('unconfirmedError'));
         } else if (err.status === 429) {
-          setAuthError('Muitas tentativas. Aguarde um momento e tente novamente.');
+          setAuthError(t('tooManyError'));
         } else {
-          setAuthError('Email ou senha incorretos. Verifique seus dados e tente novamente.');
+          setAuthError(t('invalidError'));
         }
       } else {
-        setAuthError('Erro de conexão. Verifique sua internet e tente novamente.');
+        setAuthError(t('connectionError'));
       }
     } finally {
       setIsLoading(false);
@@ -127,12 +131,12 @@ export function LoginForm() {
     <form data-testid="form-login" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {/* Email */}
       <div className="space-y-1.5">
-        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium">{t('emailLabel')}</Label>
         <Input
           data-testid="form-login-email-input"
           id="email"
           type="email"
-          placeholder="email@exemplo.com"
+          placeholder={t('emailPlaceholder')}
           autoComplete="email"
           disabled={isLoading}
           aria-invalid={!!errors.email}
@@ -147,13 +151,13 @@ export function LoginForm() {
       {/* Senha */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+          <Label htmlFor="password" className="text-sm font-medium">{t('passwordLabel')}</Label>
           <Link
             href={ROUTES.FORGOT_PASSWORD}
             data-testid="form-login-forgot-password-link"
             className="text-xs text-primary hover:underline"
           >
-            Esqueci minha senha
+            {t('forgotLink')}
           </Link>
         </div>
         <div className="relative">
@@ -173,7 +177,7 @@ export function LoginForm() {
             data-testid="form-login-toggle-password-button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            aria-label={showPassword ? t('hidePassword') : t('showPassword')}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -204,10 +208,10 @@ export function LoginForm() {
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Entrando...
+            {t('signingIn')}
           </>
         ) : (
-          'Entrar'
+          t('submit')
         )}
       </Button>
     </form>

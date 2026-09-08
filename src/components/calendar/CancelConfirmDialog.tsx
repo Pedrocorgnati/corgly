@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,6 +23,9 @@ export function CancelConfirmDialog({
   onOpenChange,
   onCancelled,
 }: CancelConfirmDialogProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('calendar.cancel');
   const [reason, setReason] = useState('');
   const [isPending, startTransition] = useTransition();
 
@@ -39,10 +43,10 @@ export function CancelConfirmDialog({
           toast.error(result.error);
           return;
         }
-        toast.success('Sessão cancelada com sucesso.');
+        toast.success(t('successToast'));
         onCancelled();
       } catch {
-        toast.error('Erro ao cancelar sessão. Tente novamente.');
+        toast.error(t('errorToast'));
       }
     });
   };
@@ -53,40 +57,40 @@ export function CancelConfirmDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
-      aria-label="Confirmar cancelamento"
+      aria-label={t('dialogLabel')}
     >
       <div className="bg-card border border-border rounded-2xl shadow-lg w-full max-w-md mx-4 p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">
-          Confirmar cancelamento
+          {t('title')}
         </h3>
 
         {isLateCancellation ? (
           <div data-testid="modal-cancel-session-late-warning" className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4">
             <p className="text-sm text-destructive font-medium">
-              Cancelamento tardio — crédito não será reembolsado
+              {t('lateTitle')}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              A sessão começa em menos de {LATE_CANCEL_HOURS} horas.
+              {t('lateDesc', { hours: LATE_CANCEL_HOURS })}
             </p>
           </div>
         ) : (
           <div data-testid="modal-cancel-session-refund-notice" className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-4">
             <p className="text-sm text-emerald-700 font-medium">
-              Seu crédito será reembolsado
+              {t('refundNotice')}
             </p>
           </div>
         )}
 
         <div className="mb-4">
           <label htmlFor="cancel-reason" className="text-sm font-medium text-foreground block mb-1">
-            Motivo (opcional)
+            {t('reasonLabel')}
           </label>
           <Textarea
             data-testid="modal-cancel-session-reason-input"
             id="cancel-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Informe o motivo do cancelamento..."
+            placeholder={t('reasonPlaceholder')}
             className="min-h-[80px] resize-none"
           />
         </div>
@@ -99,7 +103,7 @@ export function CancelConfirmDialog({
             disabled={isPending}
             className="flex-1"
           >
-            Voltar
+            {t('back')}
           </Button>
           <Button
             data-testid="modal-cancel-session-confirm-button"
@@ -111,10 +115,10 @@ export function CancelConfirmDialog({
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Cancelando...
+                {t('cancelling')}
               </>
             ) : (
-              'Confirmar cancelamento'
+              t('submit')
             )}
           </Button>
         </div>

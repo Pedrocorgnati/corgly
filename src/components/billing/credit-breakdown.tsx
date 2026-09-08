@@ -2,6 +2,7 @@
 import { API } from '@/lib/constants/routes';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -20,16 +21,16 @@ interface CreditBatch {
   createdAt: string;
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  PURCHASE: 'Compra',
-  SUBSCRIPTION: 'Assinatura',
-  PROMO: 'Promocional',
-  MANUAL: 'Ajuste manual',
-  REFUND: 'Reembolso',
-};
+/**
+ * Ate 2026-09-07 as origens de lote viviam num `SOURCE_LABELS` de modulo com o
+ * texto em portugues cravado, e `formatDate` formatava sempre em 'pt-BR'. Agora
+ * o mapa some: `source` ja e a chave do catalogo (`credits.breakdown.source.*`)
+ * e a data segue o locale do leitor.
+ */
+const SOURCE_KEYS = ['PURCHASE', 'SUBSCRIPTION', 'PROMO', 'MANUAL', 'REFUND'];
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('pt-BR', {
+function formatDate(dateStr: string, locale: string) {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -43,6 +44,10 @@ function getDaysUntilExpiry(expiresAt: string): number {
 }
 
 export function CreditBreakdown() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno — inclusive a pluralizacao de "credito(s)", montada na mao.
+  const t = useTranslations('credits.breakdown');
+  const locale = useLocale();
   const [balance, setBalance] = useState(0);
   const [breakdown, setBreakdown] = useState<CreditBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,13 +61,13 @@ export function CreditBreakdown() {
       setBalance(json.data.balance);
       setBreakdown(json.data.breakdown ?? []);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Erro ao carregar créditos';
+      const msg = err instanceof ApiError ? err.message : t('loadError');
       setError(msg);
       toast.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchCredits();
@@ -90,9 +95,9 @@ export function CreditBreakdown() {
     return (
       <EmptyState
         icon={Coins}
-        title="Sem créditos ativos"
-        description="Compre créditos para começar a agendar suas aulas."
-        actionLabel="Comprar créditos"
+        title={t('emptyActive')}
+        description={t('emptyActiveDesc')}
+        actionLabel={t('buyAction')}
         actionHref={ROUTES.CREDITS}
       />
     );
@@ -102,9 +107,9 @@ export function CreditBreakdown() {
     <div>
       {/* Balance summary */}
       <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-        <p className="text-sm text-muted-foreground">Saldo total</p>
+        <p className="text-sm text-muted-foreground">{t('balance')}</p>
         <p className="text-2xl font-bold text-foreground">
-          {balance} crédito{balance !== 1 ? 's' : ''}
+          {t('balanceCredits', { count: balance })}
         </p>
       </div>
 
@@ -124,14 +129,16 @@ export function CreditBreakdown() {
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-foreground">
-                    {remaining}/{batch.totalCredits} crédito{batch.totalCredits !== 1 ? 's' : ''}
+                    {t('batchCredits', { remaining, total: batch.totalCredits })}
                   </span>
                   <Badge variant="outline">
-                    {SOURCE_LABELS[batch.source] ?? batch.source}
+                    {SOURCE_KEYS.includes(batch.source)
+                      ? t(`source.${batch.source}`)
+                      : batch.source}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Adicionado em {formatDate(batch.createdAt)}
+                  {t('addedAt', { date: formatDate(batch.createdAt, locale) })}
                 </p>
               </div>
 
@@ -139,16 +146,16 @@ export function CreditBreakdown() {
                 {batch.expiresAt && (
                   <>
                     {isExpired && (
-                      <Badge variant="destructive">Expirado</Badge>
+                      <Badge variant="destructive">{t('expiredBadge')}</Badge>
                     )}
                     {isUrgent && !isExpired && (
                       <Badge className="bg-amber-500 text-white hover:bg-amber-600">
-                        Expira em {daysUntilExpiry} dia{daysUntilExpiry !== 1 ? 's' : ''}
+                        {t('expiresInDays', { count: daysUntilExpiry })}
                       </Badge>
                     )}
                     {!isUrgent && !isExpired && (
                       <span className="text-xs text-muted-foreground">
-                        Expira em {formatDate(batch.expiresAt)}
+                        {t('expiresAt', { date: formatDate(batch.expiresAt, locale) })}
                       </span>
                     )}
                   </>

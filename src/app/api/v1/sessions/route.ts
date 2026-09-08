@@ -155,7 +155,10 @@ export async function POST(request: NextRequest) {
     }
     if (err instanceof Error) {
       if (err.message === 'INSUFFICIENT_CREDITS')
-        return NextResponse.json(apiResponse(null, 'Créditos insuficientes.'), { status: 400 });
+        return NextResponse.json(
+          apiResponse(null, 'Créditos insuficientes.', null, 'INSUFFICIENT_CREDITS'),
+          { status: 400 },
+        );
       if (err.message === 'SLOT_UNAVAILABLE')
         return NextResponse.json(apiResponse(null, 'Horário não disponível. Selecione outro.'), { status: 409 });
       if (err.message === 'MAX_FUTURE_SESSIONS')

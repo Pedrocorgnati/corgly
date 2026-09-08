@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Target } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WidgetCard } from '@/components/shared/widget-card';
@@ -23,13 +24,17 @@ import type { FeedbackScores } from '@/actions/dashboard';
  * src/services/feedback.service.ts). As dimensoes antigas
  * (clarity/didactics/punctuality/engagement) NAO existem em lugar nenhum da
  * API: o grafico recebia `undefined` em todo raio, colapsava no centro e
- * sobrava so o rotulo. Rotulos iguais aos de src/components/progress/*.
+ * sobrava so o rotulo.
+ *
+ * So as CHAVES moram aqui. O rotulo sai do catalogo (`dashboard.circle.dimension.*`)
+ * dentro do componente: cravado no modulo ele escrevia portugues com o site em
+ * qualquer idioma, que era metade do bug de traducao do corpo do dashboard.
  */
-const DIMENSIONS: Array<{ key: keyof FeedbackScores; label: string }> = [
-  { key: 'listening', label: 'Escuta' },
-  { key: 'speaking', label: 'Fala' },
-  { key: 'writing', label: 'Escrita' },
-  { key: 'vocabulary', label: 'Vocabulário' },
+const DIMENSIONS: ReadonlyArray<keyof FeedbackScores> = [
+  'listening',
+  'speaking',
+  'writing',
+  'vocabulary',
 ];
 
 /** Recharts abre lacuna em `null`; nota invalida nunca vira vertice no radar. */
@@ -56,22 +61,26 @@ interface CorglyCircleProps {
 }
 
 function ProgressLink() {
+  const t = useTranslations('dashboard.circle');
+
   return (
     <Link
       href={ROUTES.PROGRESS}
       className="text-brand-500 text-[13.5px] font-semibold hover:underline"
     >
-      Ver progresso completo &rarr;
+      {t('fullProgress')} &rarr;
     </Link>
   );
 }
 
 export function CorglyCircle({ scores, isLoading, className }: CorglyCircleProps) {
+  const t = useTranslations('dashboard.circle');
+
   if (isLoading) {
     return (
       <WidgetCard
         data-testid="dashboard-corgly-circle"
-        title="Corgly Circle"
+        title={t('title')}
         icon={Target}
         className={className}
       >
@@ -84,30 +93,30 @@ export function CorglyCircle({ scores, isLoading, className }: CorglyCircleProps
     return (
       <WidgetCard
         data-testid="dashboard-corgly-circle"
-        title="Corgly Circle"
+        title={t('title')}
         icon={Target}
         className={className}
         footer={<ProgressLink />}
       >
         <div className="flex items-center justify-center h-[220px] border-2 border-dashed border-brand-200 rounded-lg">
           <p className="text-[13.5px] text-muted-foreground text-center px-6">
-            Complete suas primeiras sessoes para ver seu Corgly Circle
+            {t('empty')}
           </p>
         </div>
       </WidgetCard>
     );
   }
 
-  const data = DIMENSIONS.map((dimension) => ({
-    dimension: dimension.label,
-    value: toPoint(scores[dimension.key]),
+  const data = DIMENSIONS.map((key) => ({
+    dimension: t(`dimension.${key}`),
+    value: toPoint(scores[key]),
   }));
 
   return (
     <WidgetCard
       data-testid="dashboard-corgly-circle"
-      aria-label="Grafico de progresso por dimensao"
-      title="Corgly Circle"
+      aria-label={t('chartAria')}
+      title={t('title')}
       icon={Target}
       className={className}
       footer={<ProgressLink />}
@@ -141,12 +150,10 @@ export function CorglyCircle({ scores, isLoading, className }: CorglyCircleProps
       {/* Leitura numerica: o SVG do recharts nao e legivel por leitor de tela e
           o poligono sozinho nao diz o valor de cada dimensao. */}
       <ul className="mt-4 grid grid-cols-2 gap-2">
-        {DIMENSIONS.map((dimension) => (
-          <li key={dimension.key} className="text-[12.5px] text-muted-foreground">
-            {dimension.label}:{' '}
-            <span className="font-semibold text-ink">
-              {formatScore(scores[dimension.key])}
-            </span>
+        {DIMENSIONS.map((key) => (
+          <li key={key} className="text-[12.5px] text-muted-foreground">
+            {t(`dimension.${key}`)}:{' '}
+            <span className="font-semibold text-ink">{formatScore(scores[key])}</span>
           </li>
         ))}
       </ul>

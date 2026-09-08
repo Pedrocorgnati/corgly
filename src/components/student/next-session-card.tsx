@@ -108,8 +108,10 @@ function useAgora(ativo: boolean): number | null {
 
 /** Casca comum: mesmo cabecalho em qualquer estado do card. */
 function NextSessionShell({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('dashboard.nextSessionCard');
+
   return (
-    <WidgetCard data-testid="dashboard-kpi-next-session" title="Próxima aula" icon={Calendar}>
+    <WidgetCard data-testid="dashboard-kpi-next-session" title={t('title')} icon={Calendar}>
       {children}
     </WidgetCard>
   );
@@ -171,6 +173,8 @@ function NextSessionErrorState({ message }: { message: string }) {
 
 /** Agenda lida com sucesso e vazia — fato, nao suspeita. */
 function NextSessionEmptyState() {
+  const t = useTranslations('dashboard.nextSessionCard');
+
   return (
     <NextSessionShell>
       <div
@@ -180,14 +184,14 @@ function NextSessionEmptyState() {
         <span className="flex h-12 w-12 items-center justify-center rounded-full border border-brand-200 text-brand-500 mb-3">
           <Calendar className="h-5 w-5" aria-hidden="true" />
         </span>
-        <p className="text-[13.5px] text-center">Nenhuma aula agendada</p>
+        <p className="text-[13.5px] text-center">{t('empty')}</p>
       </div>
       <Link
         href={ROUTES.SCHEDULE}
         data-testid="dashboard-next-session-schedule-button"
         className={cn(buttonVariants(), 'w-full mt-auto h-11 min-h-[44px] rounded-lg font-semibold')}
       >
-        + Agendar nova aula
+        {t('schedule')}
       </Link>
     </NextSessionShell>
   );
@@ -199,6 +203,10 @@ function NextSessionEmptyState() {
  */
 function NextSessionContent({ session }: { session: NextSessionView }) {
   const t = useTranslations('dashboard.nextSession');
+  // Os textos proprios do card (fora dos blocos `error`/`ended`) moram em
+  // `dashboard.nextSessionCard`. Ate 2026-09-07 metade deles era portugues
+  // cravado no JSX e nao acompanhava o idioma escolhido pelo aluno.
+  const tCard = useTranslations('dashboard.nextSessionCard');
   const router = useRouter();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [isRefreshing, startRefresh] = useTransition();
@@ -237,10 +245,10 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
   return (
     <NextSessionShell>
       <p className="text-[1.15rem] font-semibold text-ink leading-tight">
-        {session.date ?? 'Data a confirmar'}
+        {session.date ?? tCard('dateTbd')}
       </p>
       <p className="text-[13px] text-muted-foreground mb-4">
-        {session.time ?? 'Horário a confirmar'}
+        {session.time ?? tCard('timeTbd')}
       </p>
 
       {fase === 'ilegivel' && (
@@ -250,7 +258,7 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
           className="flex items-center justify-center gap-1.5 text-center text-[13.5px] font-medium text-warning"
         >
           <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-          Horário indisponível
+          {tCard('timeUnavailable')}
         </p>
       )}
       {fase === 'medindo' && (
@@ -269,7 +277,7 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
           role="status"
           className="animate-pulse text-center font-semibold text-success"
         >
-          Sessão ao vivo!
+          {tCard('live')}
         </p>
       )}
       {fase === 'encerrada' && (
@@ -284,9 +292,9 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
 
       {fase === 'ilegivel' ? (
         <p className="text-[12px] text-muted-foreground text-center mt-1.5 mb-5">
-          Não conseguimos ler o horário desta aula.{' '}
+          {tCard('unreadable')}{' '}
           <Link href={ROUTES.HISTORY} className="font-semibold text-brand-500 hover:underline">
-            Conferir no histórico
+            {tCard('checkHistory')}
           </Link>
         </p>
       ) : fase === 'encerrada' ? (
@@ -295,10 +303,10 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
         </p>
       ) : fase === 'aovivo' ? (
         <p className="text-[12px] text-muted-foreground text-center mt-1.5 mb-5">
-          a aula já começou
+          {tCard('alreadyStarted')}
         </p>
       ) : (
-        <p className="text-[12px] text-muted-foreground text-center mt-1.5 mb-5">até a aula</p>
+        <p className="text-[12px] text-muted-foreground text-center mt-1.5 mb-5">{tCard('untilClass')}</p>
       )}
 
       {fase === 'encerrada' ? (
@@ -344,7 +352,7 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
             disabled={fase === 'ilegivel'}
             onClick={() => setCancelOpen(true)}
           >
-            Cancelar
+            {tCard('cancel')}
           </Button>
           {podeEntrar ? (
             <Link
@@ -352,7 +360,7 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
               data-testid="dashboard-next-session-enter-button"
               className={cn(buttonVariants({ size: 'sm' }), 'flex-1 rounded-lg font-semibold')}
             >
-              Entrar &rarr;
+              {tCard('enter')} &rarr;
             </Link>
           ) : (
             <span
@@ -360,8 +368,8 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
               aria-disabled="true"
               title={
                 fase === 'medindo'
-                  ? 'Verificando o horário de abertura da sala...'
-                  : 'A sala abre 5 minutos antes do início da aula.'
+                  ? tCard('roomCheckPending')
+                  : tCard('roomOpensBefore')
               }
               data-testid="dashboard-next-session-enter-button"
               className={cn(
@@ -369,7 +377,7 @@ function NextSessionContent({ session }: { session: NextSessionView }) {
                 'flex-1 rounded-lg font-semibold opacity-50 cursor-not-allowed pointer-events-none',
               )}
             >
-              Entrar &rarr;
+              {tCard('enter')} &rarr;
             </span>
           )}
         </div>

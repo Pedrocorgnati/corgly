@@ -38,6 +38,11 @@ export const RATE_LIMITS = {
   WEBHOOK:         { maxRequests: 100, windowMs: 60_000 },
   GENERAL:         { maxRequests: 100, windowMs: 60_000 },
   LEADS_SUBMIT:    { maxRequests: 5,   windowMs: 60_000 },  // T-053: captação pública 5 req / 1 min por (IP+UA)
+  // Envio de resposta de item de exercicio: 60 req / 1 min por userId (nao por IP).
+  // Chave em `exercise-answer:${userId}` porque a defesa aqui e contra flood de
+  // um aluno autenticado, nao contra bot anonimo; IP compartilhado (escola, NAT)
+  // puniria a turma inteira.
+  EXERCISE_ANSWER_SUBMIT: { maxRequests: 60, windowMs: 60_000 },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -68,14 +73,29 @@ function getRedis(): Redis | null {
   return redisClient;
 }
 
-// Cache de limiters por windowMs
-const limiterCache = new Map<number, Ratelimit>();
+/**
+ * Cache de limiters por (maxRequests, windowMs).
+ *
+ * A chave PRECISA carregar as duas dimensoes. Chaveado so por `windowMs`, os
+ * presets que compartilham a janela de 60_000ms (AUTH_LOGIN 10, AUTH_REGISTER 5,
+ * SESSIONS_CREATE 20, SIGNAL_POST 60, WEBHOOK 100, GENERAL 100, LEADS_SUBMIT 5,
+ * EXERCISE_ANSWER_SUBMIT 60) colidem: o primeiro a instanciar vence e passa a
+ * servir silenciosamente todos os outros com o SEU teto. `checkRateLimit` ja
+ * separa os buckets no `identifier`, entao a colisao nao mistura contadores —
+ * ela troca o LIMITE aplicado, que e pior porque nao aparece em log nenhum.
+ */
+const limiterCache = new Map<string, Ratelimit>();
+
+function limiterCacheKey(config: RateLimitConfig): string {
+  return `${config.maxRequests}:${config.windowMs}`;
+}
 
 function getLimiter(config: RateLimitConfig): Ratelimit | null {
   const r = getRedis();
   if (!r) return null;
 
-  const cached = limiterCache.get(config.windowMs);
+  const key = limiterCacheKey(config);
+  const cached = limiterCache.get(key);
   if (cached) return cached;
 
   const windowSeconds = Math.ceil(config.windowMs / 1000);
@@ -86,7 +106,7 @@ function getLimiter(config: RateLimitConfig): Ratelimit | null {
     prefix: '@corgly/rl',
   });
 
-  limiterCache.set(config.windowMs, limiter);
+  limiterCache.set(key, limiter);
   return limiter;
 }
 

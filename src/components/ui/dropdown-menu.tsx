@@ -53,7 +53,46 @@ function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
 }
 
+const LABEL_CLASS =
+  "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7"
+
+/**
+ * Rotulo AVULSO dentro do menu (o caso comum: cabecalho do popup com nome e
+ * e-mail de quem esta logado).
+ *
+ * NAO usa `MenuPrimitive.GroupLabel` de proposito. No Base UI o GroupLabel le
+ * `useMenuGroupRootContext()` e esse hook **lanca** quando nao existe um
+ * `<Menu.Group>` acima ("MenuGroupRootContext is missing"). Como o throw
+ * acontece durante o render do popup, quem clicava no gatilho caia direto no
+ * error boundary da rota ("Algo deu errado") em vez de ver o menu — foi
+ * exatamente o que derrubou o menu do usuario no header em 2026-09-07.
+ *
+ * Rotulo que de fato nomeia um grupo tem componente proprio:
+ * `DropdownMenuGroupLabel`, que so pode ser usado dentro de
+ * `DropdownMenuGroup`.
+ */
 function DropdownMenuLabel({
+  className,
+  inset,
+  ...props
+}: React.ComponentProps<"div"> & {
+  inset?: boolean
+}) {
+  return (
+    <div
+      data-slot="dropdown-menu-label"
+      data-inset={inset}
+      className={cn(LABEL_CLASS, className)}
+      {...props}
+    />
+  )
+}
+
+/**
+ * Rotulo ACESSIVEL de um grupo. So funciona dentro de `DropdownMenuGroup`:
+ * fora dele o Base UI lanca (ver a nota em `DropdownMenuLabel`).
+ */
+function DropdownMenuGroupLabel({
   className,
   inset,
   ...props
@@ -62,12 +101,9 @@ function DropdownMenuLabel({
 }) {
   return (
     <MenuPrimitive.GroupLabel
-      data-slot="dropdown-menu-label"
+      data-slot="dropdown-menu-group-label"
       data-inset={inset}
-      className={cn(
-        "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
-        className
-      )}
+      className={cn(LABEL_CLASS, className)}
       {...props}
     />
   )
@@ -255,6 +291,7 @@ export {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuGroupLabel,
   DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuCheckboxItem,

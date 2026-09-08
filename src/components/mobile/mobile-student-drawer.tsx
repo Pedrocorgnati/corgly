@@ -29,12 +29,15 @@ export function MobileStudentDrawer({ user, open, onClose }: MobileStudentDrawer
   const pathname = usePathname();
   const t = useTranslations('nav');
   const tNav = useTranslations('sidebar.student');
+  // Ate 2026-09-07 os aria-labels de navegacao eram portugues cravado e ignoravam
+  // o idioma escolhido pelo usuario, mesmo com o resto da barra ja traduzido.
+  const tA11y = useTranslations('a11y');
   const { logout } = useAuth();
 
   return (
     <Sheet open={open} onOpenChange={(o: boolean) => !o && onClose()}>
       <SheetContent data-testid="sidebar-mobile-drawer" side="left" className="w-72 p-0 flex flex-col lg:hidden">
-        <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+        <SheetTitle className="sr-only">{tA11y('mobileMenu')}</SheetTitle>
 
         {/* User info */}
         <div data-testid="sidebar-mobile-user-section" className="p-4 border-b border-border mt-10">
@@ -51,7 +54,7 @@ export function MobileStudentDrawer({ user, open, onClose }: MobileStudentDrawer
         </div>
 
         {/* Navigation */}
-        <nav data-testid="sidebar-mobile-nav" aria-label="Navegação do estudante" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        <nav data-testid="sidebar-mobile-nav" aria-label={tA11y('studentNav')} className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
             const active = isStudentNavItemActive(href, pathname);
             const slug = studentNavSlug(href);

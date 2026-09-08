@@ -8,7 +8,7 @@
  */
 
 import bcrypt from 'bcryptjs'
-import type { User, AvailabilitySlot, Session, CreditBatch } from '@prisma/client'
+import type { User, AvailabilitySlot, Session, CreditBatch, BlockOrigin } from '@prisma/client'
 import { testPrisma } from '../setup'
 
 // ── Senha padrão de teste (pré-hasheada para reutilização) ────────────────────
@@ -69,6 +69,7 @@ export async function createTestAdmin(options: Omit<CreateUserOptions, 'role'> =
 interface CreateSlotOptions {
   startAt?: Date
   isBlocked?: boolean
+  blockOrigin?: BlockOrigin | null
 }
 
 export async function createTestSlot(options: CreateSlotOptions = {}): Promise<AvailabilitySlot> {
@@ -79,6 +80,10 @@ export async function createTestSlot(options: CreateSlotOptions = {}): Promise<A
       startAt: start,
       endAt: end,
       isBlocked: options.isBlocked ?? false,
+      // Default derivado de `isBlocked` para manter o invariante do par: slot que nasce
+      // bloqueado sem origem declarada e bloqueio manual. Mantem verdes as chamadas
+      // existentes que passam `isBlocked: true` sem origem.
+      blockOrigin: options.blockOrigin ?? ((options.isBlocked ?? false) ? 'MANUAL' : null),
       version: 0,
     },
   })

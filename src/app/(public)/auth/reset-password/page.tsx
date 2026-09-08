@@ -1,10 +1,11 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Eye, EyeOff, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -17,29 +18,41 @@ import { ROUTES, API } from '@/lib/constants/routes';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { AuthPageWrapper } from '@/components/shared';
 
-const schema = z.object({
-  password: z
-    .string()
-    .min(8, 'A senha deve ter no mínimo 8 caracteres')
-    .regex(/[A-Z]/, 'A senha deve conter letra maiúscula, número e símbolo')
-    .regex(/[0-9]/, 'A senha deve conter letra maiúscula, número e símbolo')
-    .regex(/[^a-zA-Z0-9]/, 'A senha deve conter letra maiúscula, número e símbolo'),
-  confirmPassword: z.string(),
-}).refine((d) => d.password === d.confirmPassword, {
-  path: ['confirmPassword'],
-  message: 'As senhas não coincidem',
-});
+/**
+ * Ate 2026-09-07 as quatro mensagens de validacao eram portugues cravado numa
+ * constante de modulo — fora do alcance do next-intl. Agora o schema nasce
+ * dentro do componente, com o tradutor do leitor.
+ */
+const buildSchema = (t: (key: string) => string) =>
+  z
+    .object({
+      password: z
+        .string()
+        .min(8, t('passwordMin'))
+        .regex(/[A-Z]/, t('passwordComplexity'))
+        .regex(/[0-9]/, t('passwordComplexity'))
+        .regex(/[^a-zA-Z0-9]/, t('passwordComplexity')),
+      confirmPassword: z.string(),
+    })
+    .refine((d) => d.password === d.confirmPassword, {
+      path: ['confirmPassword'],
+      message: t('passwordMismatch'),
+    });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof buildSchema>>;
 
 function ResetPasswordContent() {
-  const router = useRouter();
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo usuario.
+  const t = useTranslations('pages.auth.resetPassword');
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [done, setDone] = useState(false);
+
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -53,11 +66,11 @@ function ResetPasswordContent() {
         <div data-testid="page-auth-reset-password" className="w-full max-w-[384px]">
           <div data-testid="auth-reset-password-no-token" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
-            <h1 className="text-xl font-bold text-foreground">Link inválido ou expirado</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('invalidTitle')}</h1>
             <p className="text-sm text-muted-foreground">
-              Este link de recuperação é inválido ou já expirou. Solicite um novo link.
+              {t('invalidDesc')}
             </p>
-            <Link data-testid="auth-reset-password-forgot-link" href={ROUTES.FORGOT_PASSWORD} className={cn(buttonVariants(), 'w-full')}>Solicitar novo link</Link>
+            <Link data-testid="auth-reset-password-forgot-link" href={ROUTES.FORGOT_PASSWORD} className={cn(buttonVariants(), 'w-full')}>{t('requestNew')}</Link>
           </div>
         </div>
       </AuthPageWrapper>
@@ -70,11 +83,11 @@ function ResetPasswordContent() {
         <div data-testid="page-auth-reset-password" className="w-full max-w-[384px]">
           <div data-testid="auth-reset-password-success" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
-            <h1 className="text-xl font-bold text-foreground">Senha redefinida!</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('successTitle')}</h1>
             <p className="text-sm text-muted-foreground">
-              Sua senha foi alterada com sucesso. Faça login com a nova senha.
+              {t('successDesc')}
             </p>
-            <Link data-testid="auth-reset-password-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>Ir para o login</Link>
+            <Link data-testid="auth-reset-password-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>{t('goToLogin')}</Link>
           </div>
         </div>
       </AuthPageWrapper>
@@ -88,13 +101,13 @@ function ResetPasswordContent() {
         token,
         password: data.password,
       });
-      toast.success('Senha redefinida com sucesso!');
+      toast.success(t('successToast'));
       setDone(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
-        toast.error('Token inválido ou expirado. Solicite um novo link.');
+        toast.error(t('invalidTokenToast'));
       } else {
-        toast.error('Ocorreu um erro. Tente novamente.');
+        toast.error(t('genericErrorToast'));
       }
     } finally {
       setIsLoading(false);
@@ -106,20 +119,20 @@ function ResetPasswordContent() {
       <div className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
           <div data-testid="auth-reset-password-header" className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Nova senha</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Crie uma senha forte para proteger sua conta.
+              {t('subtitle')}
             </p>
           </div>
           <form data-testid="form-reset-password" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-sm font-medium">Nova senha</Label>
+              <Label htmlFor="password" className="text-sm font-medium">{t('passwordLabel')}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   data-testid="form-reset-password-password-input"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder={t('passwordPlaceholder')}
                   autoComplete="new-password"
                   disabled={isLoading}
                   className="pr-10"
@@ -131,7 +144,7 @@ function ResetPasswordContent() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -142,13 +155,13 @@ function ResetPasswordContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar senha</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-medium">{t('confirmLabel')}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
                   data-testid="form-reset-password-confirm-password-input"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Digite a nova senha novamente"
+                  placeholder={t('confirmPlaceholder')}
                   autoComplete="new-password"
                   disabled={isLoading}
                   className="pr-10"
@@ -160,7 +173,7 @@ function ResetPasswordContent() {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-label={showConfirmPassword ? t('hidePassword') : t('showPassword')}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -172,16 +185,16 @@ function ResetPasswordContent() {
 
             <Button type="submit" data-testid="form-reset-password-submit-button" className="w-full min-h-[48px]" disabled={isLoading}>
               {isLoading ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</>
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t('saving')}</>
               ) : (
-                'Redefinir senha'
+                t('submit')
               )}
             </Button>
           </form>
         </div>
         <p className="text-center text-sm text-muted-foreground mt-4">
           <Link data-testid="auth-reset-password-login-link" href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
-            ← Voltar para o login
+            {t('backToLogin')}
           </Link>
         </p>
       </div>

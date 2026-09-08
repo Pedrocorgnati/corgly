@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertCircle, ArrowLeft, Ban, CheckCircle2, Loader2, Send } from 'lucide-react';
 import { PageWrapper } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -29,11 +30,16 @@ interface HistoryItem {
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 type SubmitState = 'idle' | 'submitting' | 'success' | 'already-requested';
 
-const STATUS_LABEL: Record<PaymentStatus, string> = {
-  PENDING: 'Pendente',
-  SUCCEEDED: 'Pago',
-  FAILED: 'Falhou',
-  REFUNDED: 'Reembolsado',
+/**
+ * Rotulo do status: so a chave de catalogo vive aqui. Ate 2026-09-07 esta pagina
+ * cravava portugues e ignorava o idioma escolhido pelo aluno. O bloco reaproveitado
+ * e o mesmo do extrato de creditos (`credits.history.status*`).
+ */
+const STATUS_LABEL_KEY: Record<PaymentStatus, string> = {
+  PENDING: 'statusPending',
+  SUCCEEDED: 'statusSucceeded',
+  FAILED: 'statusFailed',
+  REFUNDED: 'statusRefunded',
 };
 
 const STATUS_CLASS: Record<PaymentStatus, string> = {
@@ -45,6 +51,9 @@ const STATUS_CLASS: Record<PaymentStatus, string> = {
 
 
 export default function BillingPaymentDetailPage() {
+  const t = useTranslations('pages.paymentDetail');
+  const tStatus = useTranslations('credits.history');
+  const locale = useLocale();
   const params = useParams<{ paymentId: string }>();
   const paymentId = params.paymentId;
   const [payment, setPayment] = useState<HistoryItem | null>(null);
@@ -57,8 +66,8 @@ export default function BillingPaymentDetailPage() {
   const eligible = payment?.refundEligible ?? payment?.status === 'SUCCEEDED';
   const formattedAmount = useMemo(() => {
     if (!payment) return '';
-    return getRegionalDisplay(payment.amount, toCurrency(payment.currency), 'pt-BR').formatted;
-  }, [payment]);
+    return getRegionalDisplay(payment.amount, toCurrency(payment.currency), locale).formatted;
+  }, [payment, locale]);
 
   const loadPayment = useCallback(async () => {
     setLoadState('loading');
@@ -80,7 +89,7 @@ export default function BillingPaymentDetailPage() {
         const json = await response.json().catch(() => null);
 
         if (!response.ok) {
-          throw new Error(json?.error || 'Erro ao carregar pagamento.');
+          throw new Error(json?.error || t('errorLoad'));
         }
 
         const data = json.data as { items: HistoryItem[]; nextCursor: string | null };
@@ -102,7 +111,7 @@ export default function BillingPaymentDetailPage() {
               setSubmitState('already-requested');
             } else if (!refundResponse.ok) {
               setSubmitError(
-                refundJson?.error || 'Não foi possível verificar pedido de reembolso existente.',
+                refundJson?.error || t('errorCheckExisting'),
               );
             }
           }
@@ -112,7 +121,7 @@ export default function BillingPaymentDetailPage() {
 
         if (!data.nextCursor) break;
         if (seenCursors.has(data.nextCursor)) {
-          throw new Error('Paginação do extrato retornou cursor repetido.');
+          throw new Error(t('errorCursorRepeat'));
         }
         seenCursors.add(data.nextCursor);
         cursor = data.nextCursor;
@@ -121,10 +130,10 @@ export default function BillingPaymentDetailPage() {
       setPayment(null);
       setLoadState('not-found');
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : 'Erro desconhecido.');
+      setLoadError(error instanceof Error ? error.message : t('errorUnknown'));
       setLoadState('error');
     }
-  }, [paymentId]);
+  }, [paymentId, t]);
 
   useEffect(() => {
     loadPayment();
@@ -135,7 +144,7 @@ export default function BillingPaymentDetailPage() {
     setSubmitError(null);
 
     if (!reason.trim()) {
-      setSubmitError('Informe o motivo do pedido de reembolso.');
+      setSubmitError(t('errorReasonRequired'));
       return;
     }
 
@@ -151,13 +160,13 @@ export default function BillingPaymentDetailPage() {
       const json = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(json?.error || 'Não foi possível registrar o pedido.');
+        throw new Error(json?.error || t('errorRegister'));
       }
 
       setSubmitState(json?.data?.idempotentReplay ? 'already-requested' : 'success');
     } catch (error) {
       setSubmitState('idle');
-      setSubmitError(error instanceof Error ? error.message : 'Erro desconhecido.');
+      setSubmitError(error instanceof Error ? error.message : t('errorUnknown'));
     }
   }
 
@@ -166,16 +175,16 @@ export default function BillingPaymentDetailPage() {
       <div data-testid="billing-payment-detail-header" className="mb-6 flex items-center gap-3">
         <Link
           href="/billing/history"
-          aria-label="Voltar para extrato"
+          aria-label={t('backAria')}
           data-testid="billing-payment-detail-back-link"
           className={cn(buttonVariants({ variant: 'outline', size: 'icon' }))}
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Pedido de reembolso</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Pagamento {paymentId}
+            {t('subtitle', { id: paymentId })}
           </p>
         </div>
       </div>
@@ -183,7 +192,7 @@ export default function BillingPaymentDetailPage() {
       {loadState === 'loading' && (
         <div data-testid="billing-payment-detail-loading" className="flex items-center gap-2 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Carregando pagamento...
+          {t('loading')}
         </div>
       )}
 
@@ -194,7 +203,7 @@ export default function BillingPaymentDetailPage() {
             {loadError}
           </div>
           <Button data-testid="billing-payment-detail-retry-button" type="button" variant="outline" onClick={loadPayment}>
-            Tentar novamente
+            {t('retry')}
           </Button>
         </div>
       )}
@@ -202,8 +211,8 @@ export default function BillingPaymentDetailPage() {
       {loadState === 'not-found' && (
         <EmptyState
           data-testid="billing-payment-detail-empty"
-          title="Pagamento não encontrado"
-          description="Não encontramos esse pagamento no seu extrato."
+          title={t('notFoundTitle')}
+          description={t('notFoundDesc')}
         />
       )}
 
@@ -214,21 +223,21 @@ export default function BillingPaymentDetailPage() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">{payment.description}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {new Date(payment.createdAt).toLocaleDateString('pt-BR')}
+                  {new Date(payment.createdAt).toLocaleDateString(locale)}
                 </p>
               </div>
               <span className={`rounded-full border px-3 py-1 text-xs font-medium ${STATUS_CLASS[payment.status]}`}>
-                {STATUS_LABEL[payment.status]}
+                {tStatus(STATUS_LABEL_KEY[payment.status])}
               </span>
             </div>
 
             <dl className="mt-5 grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-medium uppercase text-muted-foreground">Valor</dt>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">{t('amount')}</dt>
                 <dd className="mt-1 text-base font-semibold text-foreground">{formattedAmount}</dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase text-muted-foreground">Moeda</dt>
+                <dt className="text-xs font-medium uppercase text-muted-foreground">{t('currency')}</dt>
                 <dd className="mt-1 text-base font-semibold uppercase text-foreground">
                   {payment.currency}
                 </dd>
@@ -240,10 +249,10 @@ export default function BillingPaymentDetailPage() {
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
               <div className="flex items-center gap-2 font-medium">
                 <Ban className="h-4 w-4" />
-                Este pagamento não está elegível para pedido de reembolso.
+                {t('notEligibleTitle')}
               </div>
               <p className="mt-1">
-                Apenas pagamentos concluídos podem iniciar análise de reembolso.
+                {t('notEligibleDesc')}
               </p>
             </div>
           )}
@@ -253,11 +262,11 @@ export default function BillingPaymentDetailPage() {
               <div className="flex items-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4" />
                 {submitState === 'already-requested'
-                  ? 'Pedido já registrado anteriormente.'
-                  : 'Pedido registrado com sucesso.'}
+                  ? t('alreadyRequested')
+                  : t('requestRegistered')}
               </div>
               <p className="mt-1">
-                O suporte financeiro revisará sua solicitação antes de qualquer ação no Stripe.
+                {t('reviewNotice')}
               </p>
             </div>
           )}
@@ -265,7 +274,7 @@ export default function BillingPaymentDetailPage() {
           {eligible && submitState !== 'success' && submitState !== 'already-requested' && (
             <form onSubmit={submitRefundRequest} className="rounded-lg border border-border bg-card p-5">
               <label htmlFor="refund-reason" className="text-sm font-medium text-foreground">
-                Motivo do reembolso
+                {t('reasonLabel')}
               </label>
               <Textarea
                 id="refund-reason"
@@ -274,7 +283,7 @@ export default function BillingPaymentDetailPage() {
                 disabled={submitState === 'submitting'}
                 maxLength={1000}
                 className="mt-2 min-h-32"
-                placeholder="Descreva por que você está solicitando o reembolso."
+                placeholder={t('reasonPlaceholder')}
               />
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <span className="text-xs text-muted-foreground">{reason.length}/1000</span>
@@ -284,7 +293,7 @@ export default function BillingPaymentDetailPage() {
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                  <span className="ml-2">Enviar pedido</span>
+                  <span className="ml-2">{t('submit')}</span>
                 </Button>
               </div>
               {submitError && (

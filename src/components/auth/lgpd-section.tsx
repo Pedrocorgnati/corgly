@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Download, Trash2, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
@@ -9,6 +10,9 @@ import { Button } from '@/components/ui/button';
 import { DeleteAccountModal } from '@/components/auth/delete-account-modal';
 
 export function LgpdSection() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo usuario.
+  const t = useTranslations('auth.lgpd');
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -16,12 +20,9 @@ export function LgpdSection() {
     setIsExporting(true);
     try {
       await apiClient.post(API.AUTH.EXPORT_DATA, {});
-      toast.success(
-        'Solicitação de exportação recebida. Você receberá um email com seus dados em breve.',
-        { duration: 6000 }
-      );
+      toast.success(t('exportRequestedToast'), { duration: 6000 });
     } catch {
-      toast.error('Erro ao solicitar exportação. Tente novamente.');
+      toast.error(t('exportErrorToast'));
     } finally {
       setIsExporting(false);
     }
@@ -31,19 +32,19 @@ export function LgpdSection() {
     <div data-testid="profile-lgpd-section" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <ShieldCheck className="h-5 w-5 text-primary" />
-        <h3 className="font-semibold text-foreground">Privacidade e dados (LGPD)</h3>
+        <h3 className="font-semibold text-foreground">{t('title')}</h3>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
-        Em conformidade com a LGPD e GDPR, você pode solicitar a exportação ou exclusão dos seus dados pessoais a qualquer momento.
+        {t('desc')}
       </p>
 
       <div className="space-y-4">
         {/* Export data */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-foreground">Exportar meus dados</p>
+            <p className="text-sm font-medium text-foreground">{t('exportTitle')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Receba uma cópia de todos os dados associados à sua conta
+              {t('exportDesc')}
             </p>
           </div>
           <Button
@@ -59,7 +60,7 @@ export function LgpdSection() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Exportar dados
+            {t('exportButton')}
           </Button>
         </div>
 
@@ -68,9 +69,9 @@ export function LgpdSection() {
         {/* Delete account */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-destructive">Excluir minha conta</p>
+            <p className="text-sm font-medium text-destructive">{t('deleteTitle')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Exclusão permanente com carência de 30 dias
+              {t('deleteDesc')}
             </p>
           </div>
           <Button
@@ -81,7 +82,7 @@ export function LgpdSection() {
             onClick={() => setIsDeleteModalOpen(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Excluir conta
+            {t('deleteButton')}
           </Button>
         </div>
       </div>

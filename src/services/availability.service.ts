@@ -2,8 +2,23 @@ import { prisma } from '@/lib/prisma';
 import { AppError } from '@/lib/errors';
 import { SessionStatus } from '@/lib/constants/enums';
 import type { GenerateSlotsInput } from '@/schemas/availability.schema';
+import type { BlockOrigin } from '@prisma/client';
 
 const SESSION_DURATION_MINUTES = 50;
+
+/**
+ * Origem que um chamador PODE pedir ao bloquear ou desbloquear.
+ *
+ * `BOTH` fica de fora de proposito: ele e estado derivado da linha (bloqueada pelas duas
+ * origens ao mesmo tempo), nunca um pedido. Tirar `BOTH` do tipo de entrada faz o
+ * compilador recusar `blockSlot(id, 'BOTH')` sem custar guarda de runtime.
+ */
+export type BlockRequestOrigin = Extract<BlockOrigin, 'MANUAL' | 'GOOGLE'>;
+
+/** A outra origem do par. Usada na transicao `BOTH` -> origem remanescente. */
+function outraOrigem(origin: BlockRequestOrigin): BlockRequestOrigin {
+  return origin === 'MANUAL' ? 'GOOGLE' : 'MANUAL';
+}
 
 /**
  * Status em que uma `Session` ainda OCUPA o `AvailabilitySlot`.
@@ -406,13 +421,13 @@ export class AvailabilityService {
    * caso para `AVAILABILITY_054` / 409, para que a rota não caia no catch genérico e devolva
    * `500` no caminho que esta transação existe para endurecer.
    */
-  async blockSlot(slotId: string): Promise<void> {
+  async blockSlot(slotId: string, origin: BlockRequestOrigin = 'MANUAL'): Promise<void> {
     await withContentionMapping(() =>
       prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<
-          Array<{ id: string; isBlocked: number; version: number }>
+          Array<{ id: string; isBlocked: number; version: number; blockOrigin: string | null }>
         >`
-          SELECT id, isBlocked, version
+          SELECT id, isBlocked, version, blockOrigin
           FROM availability_slots
           WHERE id = ${slotId}
           FOR UPDATE
@@ -422,31 +437,39 @@ export class AvailabilityService {
         if (!slot) {
           throw new AppError('AVAILABILITY_001', 'Slot não encontrado.', 404);
         }
-        if (slot.isBlocked) {
+        // A decisão é pela ORIGEM, não por `isBlocked`: bloquear um slot já bloqueado pela
+        // OUTRA origem é transição legítima (para `BOTH`), e não recusa.
+        if (slot.blockOrigin === origin || slot.blockOrigin === 'BOTH') {
           throw new AppError('AVAILABILITY_050', 'Slot já está bloqueado.', 409);
         }
+        const proximaOrigem: BlockOrigin = slot.blockOrigin === null ? origin : 'BOTH';
 
-        // Re-check de ocupação DENTRO da transação, sob o FOR UPDATE acima.
+        // Re-check de ocupação DENTRO da transação, sob o FOR UPDATE acima, SOMENTE quando o
+        // slot estava livre. Na transição de uma origem para `BOTH` o slot já estava
+        // bloqueado e nenhuma sessão nova pode ter entrado; rodar a re-checagem ali mudaria o
+        // comportamento de um caminho que já estava fechado.
         // Mantém os dois status literais do contrato atual da rota — alinhar com
         // SLOT_OCCUPYING_STATUSES (7 status) mudaria a resposta HTTP e é decisão de produto.
-        const ocupante = await tx.session.findFirst({
-          where: {
-            availabilitySlotId: slotId,
-            status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
-          },
-          select: { id: true },
-        });
-        if (ocupante) {
-          throw new AppError(
-            'AVAILABILITY_051',
-            'Não é possível bloquear slot com sessão ativa.',
-            409,
-          );
+        if (slot.blockOrigin === null) {
+          const ocupante = await tx.session.findFirst({
+            where: {
+              availabilitySlotId: slotId,
+              status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+            },
+            select: { id: true },
+          });
+          if (ocupante) {
+            throw new AppError(
+              'AVAILABILITY_051',
+              'Não é possível bloquear slot com sessão ativa.',
+              409,
+            );
+          }
         }
 
         const cas = await tx.$executeRaw`
           UPDATE availability_slots
-          SET isBlocked = true, version = version + 1
+          SET isBlocked = true, blockOrigin = ${proximaOrigem}, version = version + 1
           WHERE id = ${slotId} AND version = ${slot.version}
         `;
         if (cas === 0) {
@@ -468,13 +491,13 @@ export class AvailabilityService {
    * viva não cria dupla reserva. O mesmo `withContentionMapping` cobre o
    * desfecho de contenção (`AVAILABILITY_054` / 409).
    */
-  async unblockSlot(slotId: string): Promise<void> {
+  async unblockSlot(slotId: string, origin: BlockRequestOrigin = 'MANUAL'): Promise<void> {
     await withContentionMapping(() =>
       prisma.$transaction(async (tx) => {
         const rows = await tx.$queryRaw<
-          Array<{ id: string; isBlocked: number; version: number }>
+          Array<{ id: string; isBlocked: number; version: number; blockOrigin: string | null }>
         >`
-          SELECT id, isBlocked, version
+          SELECT id, isBlocked, version, blockOrigin
           FROM availability_slots
           WHERE id = ${slotId}
           FOR UPDATE
@@ -484,13 +507,25 @@ export class AvailabilityService {
         if (!slot) {
           throw new AppError('AVAILABILITY_001', 'Slot não encontrado.', 404);
         }
-        if (!slot.isBlocked) {
+        if (slot.blockOrigin === null) {
           throw new AppError('AVAILABILITY_052', 'Slot já está desbloqueado.', 409);
         }
+        // Origem divergente: o slot CONTINUA bloqueado, só não por esta origem. Mesmo código
+        // e mesmo status, mensagem própria — "já está desbloqueado" seria falso aqui.
+        if (slot.blockOrigin !== origin && slot.blockOrigin !== 'BOTH') {
+          throw new AppError('AVAILABILITY_052', 'Slot não possui bloqueio desta origem.', 409);
+        }
+
+        // `BOTH` perde uma origem e continua bloqueado pela outra; origem única vira slot
+        // livre. Os dois campos vão no MESMO `UPDATE` para que a linha nunca fique em estado
+        // inválido entre duas escritas.
+        const proximaOrigem: BlockOrigin | null =
+          slot.blockOrigin === 'BOTH' ? outraOrigem(origin) : null;
+        const proximoBloqueado = proximaOrigem !== null;
 
         const cas = await tx.$executeRaw`
           UPDATE availability_slots
-          SET isBlocked = false, version = version + 1
+          SET isBlocked = ${proximoBloqueado}, blockOrigin = ${proximaOrigem}, version = version + 1
           WHERE id = ${slotId} AND version = ${slot.version}
         `;
         if (cas === 0) {

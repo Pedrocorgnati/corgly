@@ -8,7 +8,15 @@ import { cookies } from 'next/headers';
 import { internalApiOrigin } from '@/lib/internal-api';
 import { logger } from '@/lib/logger';
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<{ data: T | null; error: string | null }> {
+/**
+ * `code` e o discriminante sem idioma do envelope (`src/lib/auth.ts`). Ate
+ * 2026-09-07 quem precisava saber POR QUE a chamada falhou lia o texto de
+ * `error` — classificacao que morre no instante em que a mensagem e traduzida.
+ */
+async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<{ data: T | null; error: string | null; code: string | null }> {
   const cookieStore = await cookies();
   const res = await fetch(`${await internalApiOrigin()}${path}`, {
     ...init,
@@ -20,9 +28,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<{ data: T 
     },
   });
 
-  let json: { data?: unknown; error?: string | null } | null = null;
+  let json: { data?: unknown; error?: string | null; code?: string | null } | null = null;
   try {
-    json = (await res.json()) as { data?: unknown; error?: string | null };
+    json = (await res.json()) as { data?: unknown; error?: string | null; code?: string | null };
   } catch (parseError) {
     // Corpo ilegivel: 405 sem corpo, HTML de gateway (502/504 do proxy),
     // resposta truncada. `apiFetch` devolve par em TODO caminho -- quem chama
@@ -41,17 +49,19 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<{ data: T 
     return {
       data: null,
       error: res.ok ? 'Resposta ilegível do servidor.' : `Erro ${res.status}`,
+      code: null,
     };
   }
 
   // O `!res.ok` fica DEPOIS da leitura de proposito: e o que preserva
-  // `json.error`, a mensagem que `apiResponse` embala em toda resposta de erro
-  // da API e que `BookingConfirmModal` le para entrar em `insufficient_credits`.
+  // `json.error` e `json.code`, o par que `apiResponse` embala em toda resposta
+  // de erro da API e que `BookingConfirmModal` le para entrar em
+  // `insufficient_credits`.
   if (!res.ok) {
-    return { data: null, error: json?.error ?? `Erro ${res.status}` };
+    return { data: null, error: json?.error ?? `Erro ${res.status}`, code: json?.code ?? null };
   }
 
-  return { data: (json?.data ?? null) as T, error: null };
+  return { data: (json?.data ?? null) as T, error: null, code: null };
 }
 
 /**
@@ -150,7 +160,7 @@ export async function rescheduleSession(id: string, newSlotId: string) {
 export async function getAvailability(month: string) {
   // 'use server': `month` e input externo, validado antes de qualquer fetch.
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
-    return { data: null, error: 'Mês inválido. Use formato YYYY-MM.' };
+    return { data: null, error: 'Mês inválido. Use formato YYYY-MM.', code: null };
   }
 
   const date = `${month}-01`;
@@ -175,7 +185,7 @@ export async function getAvailability(month: string) {
 export async function getAdminAvailability(month: string) {
   // 'use server': `month` e input externo, validado antes de qualquer fetch.
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
-    return { data: null, error: 'Mês inválido. Use formato YYYY-MM.' };
+    return { data: null, error: 'Mês inválido. Use formato YYYY-MM.', code: null };
   }
 
   const date = `${month}-01`;

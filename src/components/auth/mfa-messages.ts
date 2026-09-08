@@ -1,19 +1,21 @@
 import { ApiError } from '@/lib/api-client';
 
-export const TIMEOUT_MESSAGE =
-  'A solicitação demorou demais. Verifique sua conexão e tente novamente.';
-export const RATE_LIMIT_MESSAGE =
-  'Muitas tentativas. Aguarde um minuto e tente novamente.';
+/**
+ * Ate 2026-09-07 as duas mensagens abaixo eram constantes de modulo em portugues
+ * cravado — fora do alcance do next-intl. Agora o tradutor do chamador entra como
+ * parametro e so a decisao de QUAL mensagem usar mora aqui.
+ */
+type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /**
  * Traduz um erro da API de MFA para a mensagem exibida no formulario.
  * 429 chega do proxy com corpo em ingles ("Too many requests"): nunca exibir
  * o texto cru; timeout/abort tem mensagem propria; demais erros usam a
- * mensagem do servidor (ja em pt-BR) ou o fallback informado.
+ * mensagem do servidor ou o fallback informado.
  */
-export function describeMfaApiError(err: unknown, fallback: string): string {
+export function describeMfaApiError(err: unknown, fallback: string, t: Translator): string {
   if (!(err instanceof ApiError)) return fallback;
-  if (err.code === 'ABORTED') return TIMEOUT_MESSAGE;
-  if (err.status === 429 || err.code === 'RATE_LIMITED') return RATE_LIMIT_MESSAGE;
+  if (err.code === 'ABORTED') return t('timeout');
+  if (err.status === 429 || err.code === 'RATE_LIMITED') return t('rateLimit');
   return err.message || fallback;
 }

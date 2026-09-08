@@ -3,7 +3,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +19,11 @@ import { apiClient } from '@/lib/api-client';
 import { API } from '@/lib/constants/routes';
 import { TIMEZONES } from '@/lib/constants/geo';
 
+/**
+ * Endonimos: cada idioma se apresenta na propria lingua, entao esta lista NAO
+ * passa pelo catalogo — traduzi-la faria o menu mostrar "Portuguese" para quem
+ * ja escolheu ingles, escondendo justamente a opcao que a pessoa procura.
+ */
 const LANGUAGES = [
   { value: 'pt-BR', label: 'Português (Brasil)' },
   { value: 'en-US', label: 'English (US)' },
@@ -25,20 +31,31 @@ const LANGUAGES = [
   { value: 'it-IT', label: 'Italiano' },
 ];
 
-const schema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  timezone: z.string().min(1, 'Selecione um fuso horário'),
-  preferredLanguage: z.string().min(1, 'Selecione um idioma'),
-});
+/**
+ * Ate 2026-09-07 as tres mensagens de validacao eram portugues cravado numa
+ * constante de modulo — fora do alcance do next-intl. Agora o schema nasce
+ * dentro do componente, com o tradutor do leitor.
+ */
+const buildSchema = (t: (key: string) => string) =>
+  z.object({
+    name: z.string().min(2, t('nameMin')),
+    timezone: z.string().min(1, t('timezoneRequired')),
+    preferredLanguage: z.string().min(1, t('languageRequired')),
+  });
 
-type FormData = z.infer<typeof schema>;
+type FormData = z.infer<ReturnType<typeof buildSchema>>;
 
 export function ProfileForm() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo usuario — inclusive nesta tela, onde ele TROCA o idioma.
+  const t = useTranslations('auth.profile');
   const { user, isLoading: isAuthLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [isSavingOptIn, setIsSavingOptIn] = useState(false);
+
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -69,14 +86,10 @@ export function ProfileForm() {
     setIsSavingOptIn(true);
     try {
       await apiClient.put(API.PROFILE_MARKETING_OPT_IN, { optIn: next });
-      toast.success(
-        next
-          ? 'Você receberá emails de marketing.'
-          : 'Você não receberá mais emails de marketing.'
-      );
+      toast.success(next ? t('marketingOnToast') : t('marketingOffToast'));
     } catch {
       setMarketingOptIn(previous);
-      toast.error('Não foi possível salvar sua preferência. Tente novamente.');
+      toast.error(t('marketingErrorToast'));
     } finally {
       setIsSavingOptIn(false);
     }
@@ -86,9 +99,9 @@ export function ProfileForm() {
     setIsLoading(true);
     try {
       await apiClient.patch(API.PROFILE, data);
-      toast.success('Perfil atualizado com sucesso.');
+      toast.success(t('savedToast'));
     } catch {
-      toast.error('Erro ao salvar. Tente novamente.');
+      toast.error(t('saveErrorToast'));
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +136,7 @@ export function ProfileForm() {
 
         <form data-testid="form-profile" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="name">Nome completo</Label>
+            <Label htmlFor="name">{t('nameLabel')}</Label>
             <Input
               data-testid="form-profile-name-input"
               id="name"
@@ -136,13 +149,13 @@ export function ProfileForm() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('emailLabel')}</Label>
             <Input data-testid="form-profile-email-input" id="email" value={displayEmail} disabled readOnly className="opacity-60" />
-            <p className="text-xs text-muted-foreground">O email não pode ser alterado.</p>
+            <p className="text-xs text-muted-foreground">{t('emailLocked')}</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="profile-timezone">Fuso horário</Label>
+            <Label htmlFor="profile-timezone">{t('timezoneLabel')}</Label>
             <Select
               defaultValue={user?.timezone ?? 'America/Sao_Paulo'}
               onValueChange={(v) => setValue('timezone', v ?? '')}
@@ -160,9 +173,17 @@ export function ProfileForm() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="profile-language">Idioma preferido</Label>
+            <Label htmlFor="profile-language">{t('languageLabel')}</Label>
+            {/*
+              O default vinha cravado em 'pt-BR' e o menu exibia "Portugues (Brasil)"
+              mesmo para quem ja tinha salvo outro idioma. Como o componente so
+              chega aqui depois de `isAuthLoading`, o usuario ja esta carregado e o
+              valor real pode entrar no primeiro render.
+            */}
             <Select
-              defaultValue="pt-BR"
+              defaultValue={
+                (user as { preferredLanguage?: string } | null)?.preferredLanguage ?? 'pt-BR'
+              }
               onValueChange={(v) => setValue('preferredLanguage', v ?? '')}
               disabled={isLoading}
             >
@@ -178,7 +199,7 @@ export function ProfileForm() {
           </div>
 
           <Button data-testid="form-profile-submit-button" type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</> : 'Salvar alterações'}
+            {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t('saving')}</> : t('save')}
           </Button>
         </form>
 
@@ -186,10 +207,10 @@ export function ProfileForm() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <Label htmlFor="marketing-opt-in" className="text-sm font-medium">
-                Receber emails de marketing
+                {t('marketingLabel')}
               </Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Novidades, promoções e dicas. Você pode sair a qualquer momento.
+                {t('marketingDesc')}
               </p>
             </div>
             <Switch
@@ -198,7 +219,7 @@ export function ProfileForm() {
               checked={marketingOptIn}
               onCheckedChange={(value) => handleMarketingToggle(Boolean(value))}
               disabled={isSavingOptIn}
-              aria-label="Receber emails de marketing"
+              aria-label={t('marketingLabel')}
             />
           </div>
         </div>
@@ -206,10 +227,9 @@ export function ProfileForm() {
 
       {/* Danger zone */}
       <div data-testid="profile-danger-zone" className="bg-card border border-destructive/30 rounded-2xl p-6 shadow-sm">
-        <h3 className="font-semibold text-destructive mb-2">Zona de perigo</h3>
+        <h3 className="font-semibold text-destructive mb-2">{t('dangerTitle')}</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          A exclusão da conta é permanente e não pode ser desfeita.
-          Todos os seus dados e créditos restantes serão removidos.
+          {t('dangerDesc')}
         </p>
         <Button
           data-testid="profile-delete-account-button"
@@ -219,7 +239,7 @@ export function ProfileForm() {
           onClick={() => setIsDeleteModalOpen(true)}
         >
           <Trash2 className="h-4 w-4" />
-          Excluir minha conta
+          {t('deleteAccount')}
         </Button>
       </div>
 

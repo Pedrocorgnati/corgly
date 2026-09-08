@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -46,6 +47,11 @@ function Pagination({
   className,
   testId = "pagination",
 }: PaginationProps) {
+  // Ate 2026-09-07 os rotulos e os aria-labels desta paginacao eram portugues
+  // cravado e ignoravam o idioma escolhido pelo leitor — inclusive nas telas que
+  // ja estavam traduzidas em volta dela.
+  const t = useTranslations("pagination")
+
   if (totalPages <= 1) return null
 
   const pages = getPageNumbers(page, totalPages)
@@ -53,7 +59,7 @@ function Pagination({
   return (
     <nav
       data-testid={testId}
-      aria-label="Paginação"
+      aria-label={t("aria.nav")}
       className={cn("flex items-center justify-center gap-1", className)}
     >
       <Button
@@ -62,14 +68,14 @@ function Pagination({
         size="icon-sm"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        aria-label="Página anterior"
+        aria-label={t("aria.prev")}
       >
         <ChevronLeftIcon />
       </Button>
 
       {/* Mobile: simplified display */}
       <span data-testid={`${testId}-status`} className="text-sm text-muted-foreground sm:hidden px-2">
-        {page} de {totalPages}
+        {t("status", { page, totalPages })}
       </span>
 
       {/* Desktop: page number buttons */}
@@ -90,7 +96,7 @@ function Pagination({
               size="icon-sm"
               onClick={() => onPageChange(p)}
               aria-current={p === page ? "page" : undefined}
-              aria-label={`Página ${p}`}
+              aria-label={t("aria.page", { page: p })}
             >
               {p}
             </Button>
@@ -104,14 +110,18 @@ function Pagination({
         size="icon-sm"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        aria-label="Próxima página"
+        aria-label={t("aria.next")}
       >
         <ChevronRightIcon />
       </Button>
 
       {showInfo && total != null && limit != null && (
         <span data-testid={`${testId}-info`} className="ml-2 text-xs text-muted-foreground hidden sm:inline">
-          {(page - 1) * limit + 1}–{Math.min(page * limit, total)} de {total}
+          {t("info", {
+            from: (page - 1) * limit + 1,
+            to: Math.min(page * limit, total),
+            total,
+          })}
         </span>
       )}
     </nav>

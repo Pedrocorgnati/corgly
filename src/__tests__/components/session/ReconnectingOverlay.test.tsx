@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent } from '@/test/utils'
 import { describe, it, expect, vi } from 'vitest'
 import { ReconnectingOverlay } from '@/components/session/ReconnectingOverlay'
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import * as Y from 'yjs'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -22,10 +23,12 @@ export interface UseYjsDocReturn {
 
 // ── Banner mappings ────────────────────────────────────────────────────────────
 
-const BANNER_TEXT: Record<SyncStatus, string> = {
-  syncing: 'Sincronizando...',
-  saved: 'Salvo',
-  offline: 'Offline \u2014 altera\u00e7\u00f5es salvas localmente',
+// Ate 2026-09-07 o texto do banner era portugues cravado neste modulo e ignorava
+// o idioma escolhido pelo aluno. Agora so a CHAVE mora aqui; a copy vem do catalogo.
+const BANNER_KEY: Record<SyncStatus, 'syncing' | 'saved' | 'offline'> = {
+  syncing: 'syncing',
+  saved: 'saved',
+  offline: 'offline',
 }
 
 const BANNER_VARIANT: Record<SyncStatus, 'info' | 'success' | 'warning'> = {
@@ -41,6 +44,7 @@ export function useYjsDoc({
   isConnected,
   isSynced,
 }: UseYjsDocOptions): UseYjsDocReturn {
+  const t = useTranslations('sessionRoom.editor')
   const docRef = useRef<Y.Doc | null>(null)
   const persistenceRef = useRef<{ destroy: () => void } | null>(null)
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
@@ -117,7 +121,7 @@ export function useYjsDoc({
   return {
     doc,
     syncStatus,
-    syncBannerText: BANNER_TEXT[syncStatus],
+    syncBannerText: t(BANNER_KEY[syncStatus]),
     syncBannerVariant: BANNER_VARIANT[syncStatus],
   }
 }

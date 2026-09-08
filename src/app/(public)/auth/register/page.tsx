@@ -11,11 +11,16 @@ import {
 } from '@/lib/constants/landing';
 import { logger } from '@/lib/logger';
 
-export const metadata: Metadata = {
-  title: 'Criar Conta',
-  description: 'Crie sua conta no Corgly e comece a aprender português hoje.',
-  robots: { index: false, follow: false },
-};
+// Ate 2026-09-07 titulo, descricao e a copy da pagina eram portugues cravado e
+// ignoravam o idioma escolhido pelo visitante.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pages.auth.register');
+  return {
+    title: t('metaTitle'),
+    description: t('metaDesc'),
+    robots: { index: false, follow: false },
+  };
+}
 
 interface RegisterPageProps {
   /** Next 16: `searchParams` e Promise e precisa ser aguardado. */
@@ -43,9 +48,8 @@ const PLAN_NAME_KEYS: Record<LandingPlanId, string> = {
  * precisa VER que a escolha nao se perdeu — e entrega a selecao ao formulario,
  * que a guarda para atravessar a confirmacao de e-mail.
  *
- * O aviso de plano usa next-intl (chaves `auth.register.*`) mesmo com o resto
- * da pagina ainda em pt-BR fixo: copy nova nasce traduzida; migrar o restante
- * do cadastro para next-intl e trabalho separado.
+ * O aviso de plano usa `auth.register.*` (mesmo dicionario do formulario); o
+ * restante da casca da pagina usa `pages.auth.register.*`.
  */
 export default async function RegisterPage({ searchParams }: RegisterPageProps) {
   const params = await searchParams;
@@ -54,9 +58,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
     firstValue(params.lessons),
   );
 
-  const [tPricing, tRegister] = await Promise.all([
+  const [tPricing, tRegister, tPage] = await Promise.all([
     getTranslations('landing.pricing'),
     getTranslations('auth.register'),
+    getTranslations('pages.auth.register'),
   ]);
 
   let planLabel: string | null = null;
@@ -96,10 +101,10 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
           <div data-testid="auth-register-header" className="mb-6">
             <h1 className="text-2xl md:text-[26px] font-bold text-foreground">
-              Criar Conta
+              {tPage('title')}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Junte-se ao Corgly e comece a aprender português
+              {tPage('subtitle')}
             </p>
           </div>
 
@@ -120,9 +125,9 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
 
         {/* Link to login */}
         <p className="text-center text-sm text-muted-foreground mt-4">
-          Já tem uma conta?{' '}
+          {tPage('hasAccount')}{' '}
           <Link href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
-            Entrar
+            {tPage('signIn')}
           </Link>
         </p>
       </div>

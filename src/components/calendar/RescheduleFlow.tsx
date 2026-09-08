@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Loader2, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { CalendarView } from '@/components/calendar/CalendarView';
@@ -30,6 +31,9 @@ export function RescheduleFlow({
   onOpenChange,
   onRescheduled,
 }: RescheduleFlowProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('calendar.reschedule');
   const {
     currentMonth,
     currentYear,
@@ -76,12 +80,12 @@ export function RescheduleFlow({
       }
       setFlowState('success');
       if (isLateReschedule) {
-        toast.success('Pedido de reagendamento enviado para aprovação.');
+        toast.success(t('requestToast'));
       } else {
-        toast.success('Sessão reagendada com sucesso!');
+        toast.success(t('doneToast'));
       }
     } catch {
-      setErrorMessage('Erro ao reagendar. Tente novamente.');
+      setErrorMessage(t('genericError'));
       setFlowState('error');
     }
   };
@@ -105,22 +109,22 @@ export function RescheduleFlow({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
-      aria-label="Reagendar sessão"
+      aria-label={t('dialogLabel')}
     >
       <div className="bg-card border border-border rounded-2xl shadow-lg w-full max-w-3xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
         {flowState === 'selecting' && (
           <>
             <h3 data-testid="modal-reschedule-header" className="text-lg font-semibold text-foreground mb-4">
-              Reagendar sessão
+              {t('title')}
             </h3>
 
             {isLateReschedule && (
               <div data-testid="modal-reschedule-late-warning" className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
                 <p className="text-sm text-amber-700 font-medium">
-                  Seu pedido será enviado para aprovação do professor
+                  {t('approvalTitle')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  A sessão original começa em menos de {LATE_RESCHEDULE_HOURS} horas.
+                  {t('approvalDesc', { hours: LATE_RESCHEDULE_HOURS })}
                 </p>
               </div>
             )}
@@ -135,10 +139,10 @@ export function RescheduleFlow({
                 role="alert"
                 className="flex flex-col items-center justify-center py-10 text-center mb-6"
               >
-                <p className="text-destructive font-medium mb-2">Erro ao carregar horários</p>
+                <p className="text-destructive font-medium mb-2">{t('loadErrorTitle')}</p>
                 <p className="text-sm text-muted-foreground mb-4">{loadError}</p>
                 <Button data-testid="modal-reschedule-load-error-retry-button" onClick={refresh} variant="outline">
-                  Tentar novamente
+                  {t('retry')}
                 </Button>
               </div>
             ) : (
@@ -170,7 +174,7 @@ export function RescheduleFlow({
                   className="mb-4 flex items-center gap-1.5 text-sm text-primary transition-colors hover:underline"
                 >
                   <Sparkles className="h-4 w-4" />
-                  Ver horários alternativos sugeridos
+                  {t('suggestionsLink')}
                 </Link>
               </>
             )}
@@ -179,7 +183,7 @@ export function RescheduleFlow({
                 conseguir sair do modal com a busca quebrada. */}
             <div data-testid="modal-reschedule-actions" className="flex gap-3">
               <Button data-testid="modal-reschedule-cancel-button" variant="outline" onClick={handleClose} className="flex-1">
-                Cancelar
+                {t('cancel')}
               </Button>
               {!loadError && (
                 <Button
@@ -188,7 +192,7 @@ export function RescheduleFlow({
                   disabled={!selectedSlot}
                   className="flex-1"
                 >
-                  {isLateReschedule ? 'Solicitar reagendamento' : 'Confirmar reagendamento'}
+                  {isLateReschedule ? t('requestSubmit') : t('confirmSubmit')}
                 </Button>
               )}
             </div>
@@ -198,7 +202,7 @@ export function RescheduleFlow({
         {flowState === 'confirming' && (
           <div data-testid="modal-reschedule-loading" className="flex flex-col items-center py-8">
             <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-            <p className="text-foreground font-medium">Reagendando...</p>
+            <p className="text-foreground font-medium">{t('rescheduling')}</p>
           </div>
         )}
 
@@ -206,15 +210,13 @@ export function RescheduleFlow({
           <div data-testid="modal-reschedule-success" className="flex flex-col items-center py-8">
             <CheckCircle2 className="h-10 w-10 text-emerald-500 mb-4" />
             <p className="text-foreground font-medium">
-              {isLateReschedule ? 'Pedido enviado!' : 'Sessão reagendada!'}
+              {isLateReschedule ? t('requestSentTitle') : t('doneTitle')}
             </p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
-              {isLateReschedule
-                ? 'Seu pedido foi enviado para aprovação do professor.'
-                : 'Sua sessão foi reagendada com sucesso.'}
+              {isLateReschedule ? t('requestSentDesc') : t('doneDesc')}
             </p>
             <Button data-testid="modal-reschedule-success-close-button" onClick={handleSuccessClose} className="mt-6">
-              Fechar
+              {t('close')}
             </Button>
           </div>
         )}
@@ -222,20 +224,19 @@ export function RescheduleFlow({
         {flowState === 'error' && (
           <div data-testid="modal-reschedule-error" className="flex flex-col items-center py-8">
             <XCircle className="h-10 w-10 text-destructive mb-4" />
-            <p className="text-foreground font-medium">Erro ao reagendar</p>
+            <p className="text-foreground font-medium">{t('errorTitle')}</p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
               {errorMessage}
             </p>
             <p className="text-sm text-muted-foreground mt-3 text-center">
-              O horário escolhido pode não estar mais disponível. Veja as
-              alternativas sugeridas dentro da política de reagendamento.
+              {t('slotGoneHint')}
             </p>
             <div data-testid="modal-reschedule-error-actions" className="flex flex-wrap items-center justify-center gap-3 mt-6">
               <Button data-testid="modal-reschedule-error-close-button" variant="outline" onClick={handleClose}>
-                Fechar
+                {t('close')}
               </Button>
               <Button data-testid="modal-reschedule-error-retry-button" variant="outline" onClick={() => setFlowState('selecting')}>
-                Tentar novamente
+                {t('retry')}
               </Button>
               <Link
                 data-testid="modal-reschedule-error-alternatives-link"
@@ -243,7 +244,7 @@ export function RescheduleFlow({
                 className={buttonVariants()}
               >
                 <Sparkles className="mr-1.5 h-4 w-4" />
-                Ver alternativas
+                {t('alternativesLink')}
               </Link>
             </div>
           </div>

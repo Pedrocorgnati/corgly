@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { getSession } from '@/lib/auth/session';
 import { sessionNotesService } from '@/lib/sessions/session-notes.service';
 import {
@@ -10,10 +11,10 @@ import { PageWrapper } from '@/components/shared';
 import { ROUTES } from '@/lib/constants/routes';
 import { logger } from '@/lib/logger';
 
-export const metadata: Metadata = {
-  title: 'Caderno da Aula',
-  robots: 'noindex',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pages.historyNotes');
+  return { title: t('metaTitle'), robots: 'noindex' };
+}
 
 interface Props {
   params: Promise<{ bookingId: string }>;
@@ -30,6 +31,8 @@ interface Props {
  */
 export default async function NotesPage({ params }: Props) {
   const { bookingId } = await params;
+  const t = await getTranslations('pages.historyNotes');
+  const tA11y = await getTranslations('a11y');
 
   let viewer: ReadOnlyNotesViewerProps;
 
@@ -74,23 +77,21 @@ export default async function NotesPage({ params }: Props) {
   return (
     <PageWrapper data-testid="page-history-notes-detail" className="max-w-3xl">
       <nav
-        aria-label="Breadcrumb"
+        aria-label={tA11y('breadcrumb')}
         className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground"
       >
         <Link href={ROUTES.HISTORY} className="transition-colors hover:text-foreground">
-          ← Histórico de aulas
+          &larr; {t('backHistory')}
         </Link>
         <span>/</span>
         <span className="text-foreground" aria-current="page">
-          Caderno da aula
+          {t('current')}
         </span>
       </nav>
 
       <header data-testid="history-notes-detail-header" className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Caderno da aula</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Anotacoes registradas durante a sessao, em modo somente leitura.
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">{t('subtitle')}</p>
       </header>
 
       <ReadOnlyNotesViewer data-testid="history-notes-detail-content" {...viewer} />

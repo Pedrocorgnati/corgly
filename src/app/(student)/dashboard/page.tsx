@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import Link from 'next/link';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { AlertTriangle, Calendar, Coins, GraduationCap, ShoppingCart, Zap } from 'lucide-react';
 import { DEFAULT_TIMEZONE } from '@/lib/constants';
 import { ROUTES } from '@/lib/constants/routes';
@@ -86,6 +87,13 @@ function instanteDaRenderizacao(): number {
 }
 
 export default async function DashboardPage() {
+  // Idioma resolvido no servidor (i18n/request.ts: JWT -> preferredLanguage do
+  // banco -> header -> cookie). O `t` alimenta TODO texto desta pagina e o
+  // `locale` alimenta a formatacao de data/hora — ate 2026-09-07 os dois eram
+  // portugues cravado no codigo, entao trocar de idioma so mexia na sidebar.
+  const t = await getTranslations('dashboard');
+  const locale = await getLocale();
+
   const [userResult, creditsResult, nextSessionResult, progressResult, recentResult] =
     await Promise.all([
       getDashboardUser(),
@@ -110,11 +118,11 @@ export default async function DashboardPage() {
   // Cada fetcher devolve `{ data, error }` (src/actions/dashboard.ts) e o erro
   // vira uma faixa nomeando o que nao carregou.
   const failedPanels = [
-    { label: 'seu perfil', failed: Boolean(userResult.error) },
-    { label: 'créditos', failed: Boolean(creditsResult.error) },
-    { label: 'próxima aula', failed: Boolean(nextSessionResult.error) },
-    { label: 'progresso', failed: Boolean(progressResult.error) },
-    { label: 'avaliações recentes', failed: Boolean(recentResult.error) },
+    { label: t('loadError.panel.profile'), failed: Boolean(userResult.error) },
+    { label: t('loadError.panel.credits'), failed: Boolean(creditsResult.error) },
+    { label: t('loadError.panel.nextSession'), failed: Boolean(nextSessionResult.error) },
+    { label: t('loadError.panel.progress'), failed: Boolean(progressResult.error) },
+    { label: t('loadError.panel.feedbacks'), failed: Boolean(recentResult.error) },
   ]
     .filter((panel) => panel.failed)
     .map((panel) => panel.label);
@@ -142,7 +150,7 @@ export default async function DashboardPage() {
         endAt: nextSession.endAt,
         status: nextSession.status,
         date: hasReadableStart
-          ? new Date(nextSessionStartMs).toLocaleDateString('pt-BR', {
+          ? new Date(nextSessionStartMs).toLocaleDateString(locale, {
               timeZone: DISPLAY_TIMEZONE,
               weekday: 'long',
               day: '2-digit',
@@ -150,7 +158,7 @@ export default async function DashboardPage() {
             })
           : null,
         time: hasReadableStart
-          ? new Date(nextSessionStartMs).toLocaleTimeString('pt-BR', {
+          ? new Date(nextSessionStartMs).toLocaleTimeString(locale, {
               timeZone: DISPLAY_TIMEZONE,
               hour: '2-digit',
               minute: '2-digit',
@@ -214,16 +222,16 @@ export default async function DashboardPage() {
 
   // Chips do cabecalho: "nao consegui saber" nunca vira um numero.
   const creditsChipLabel = creditsUnavailable
-    ? 'Créditos indisponíveis'
-    : `${credits.balance} credito${credits.balance === 1 ? '' : 's'}`;
+    ? t('header.creditsUnavailable')
+    : t('header.creditsChip', { count: credits.balance });
 
   const nextSessionChipLabel = nextSessionError
-    ? 'Agenda indisponível'
+    ? t('header.scheduleUnavailable')
     : nextSessionForCard
       ? nextSessionForCard.time
-        ? `Próxima: ${nextSessionForCard.time}`
-        : 'Horário a confirmar'
-      : 'Sem aula agendada';
+        ? t('header.nextAt', { time: nextSessionForCard.time })
+        : t('header.nextTimePending')
+      : t('header.noSession');
 
   return (
     <PageWrapper data-testid="page-dashboard">
@@ -237,9 +245,9 @@ export default async function DashboardPage() {
       {/* Saudacao na faixa lilas do hero da landing */}
       <DashboardPageHeader
         data-testid="dashboard-header"
-        eyebrow="Sua jornada Corgly"
-        title={`Ola, ${user?.name ?? 'Estudante'}!`}
-        subtitle="Bem-vinda de volta a sua jornada de aprendizado."
+        eyebrow={t('header.eyebrow')}
+        title={t('header.greeting', { name: user?.name ?? t('header.guest') })}
+        subtitle={t('header.subtitle')}
         chips={
           <>
             <DashboardHeaderChip icon={Coins} data-testid="dashboard-header-chip-credits">
@@ -249,7 +257,7 @@ export default async function DashboardPage() {
               {nextSessionChipLabel}
             </DashboardHeaderChip>
             <DashboardHeaderChip icon={GraduationCap} data-testid="dashboard-header-chip-sessions">
-              {completedSessions} aula{completedSessions === 1 ? '' : 's'} concluida{completedSessions === 1 ? '' : 's'}
+              {t('header.sessionsChip', { count: completedSessions })}
             </DashboardHeaderChip>
           </>
         }
@@ -260,7 +268,7 @@ export default async function DashboardPage() {
             className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-lg bg-white px-5 text-[14.5px] font-semibold text-[#5b4a9a] shadow-[0_8px_24px_rgba(80,50,130,0.18)] transition-colors hover:bg-white/90"
           >
             <Calendar className="h-4 w-4" />
-            Agendar aula
+            {t('header.scheduleAction')}
           </Link>
         }
       />
@@ -273,14 +281,13 @@ export default async function DashboardPage() {
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" aria-hidden="true" />
           <p className="text-[13.5px] text-ink">
-            Não conseguimos carregar {failedPanels.join(', ')}. Os cartões abaixo podem estar
-            incompletos.{' '}
+            {t('loadError.message', { panels: failedPanels.join(', ') })}{' '}
             <a
               href={ROUTES.DASHBOARD}
               data-testid="dashboard-data-error-retry-button"
               className="font-semibold text-brand-500 hover:underline"
             >
-              Tentar de novo
+              {t('loadError.retry')}
             </a>
           </p>
         </div>
@@ -297,16 +304,16 @@ export default async function DashboardPage() {
             // as duas saidas reais: recarregar ou abrir a pagina de creditos.
             <WidgetCard
               data-testid="dashboard-kpi-credits-unavailable"
-              title="Créditos"
+              title={t('credits.unavailable.title')}
               icon={Coins}
               accent="amber"
             >
               <div role="alert" className="flex-1">
                 <p className="text-[13.5px] font-semibold text-ink">
-                  Não foi possível ler seu saldo
+                  {t('credits.unavailable.heading')}
                 </p>
                 <p className="mt-1.5 text-[12.5px] text-muted-foreground">
-                  {creditsResult.error ?? 'Tente de novo em instantes.'}
+                  {creditsResult.error ?? t('credits.unavailable.fallback')}
                 </p>
               </div>
               <div className="mt-4 flex gap-2">
@@ -318,14 +325,14 @@ export default async function DashboardPage() {
                     'flex-1 h-11 min-h-[44px] rounded-lg font-semibold',
                   )}
                 >
-                  Tentar de novo
+                  {t('credits.unavailable.retry')}
                 </a>
                 <Link
                   href={ROUTES.CREDITS}
                   data-testid="dashboard-kpi-credits-open-button"
                   className={cn(buttonVariants(), 'flex-1 h-11 min-h-[44px] rounded-lg font-semibold')}
                 >
-                  Ver créditos
+                  {t('credits.unavailable.open')}
                 </Link>
               </div>
             </WidgetCard>
@@ -346,7 +353,7 @@ export default async function DashboardPage() {
         {/* 3. Acoes rapidas */}
         <WidgetCard
           data-testid="dashboard-quick-actions"
-          title="Ações rápidas"
+          title={t('quickActions.title')}
           icon={Zap}
           className={SPAN.wideThird}
         >
@@ -357,7 +364,7 @@ export default async function DashboardPage() {
               className={cn(buttonVariants(), 'w-full h-11 min-h-[44px] rounded-lg justify-start font-semibold')}
             >
               <Calendar className="h-4 w-4 mr-2" />
-              Agendar aula
+              {t('quickActions.schedule')}
             </Link>
             <Link
               href={ROUTES.CREDITS}
@@ -368,7 +375,7 @@ export default async function DashboardPage() {
               )}
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
-              Comprar creditos
+              {t('quickActions.buyCredits')}
             </Link>
           </div>
         </WidgetCard>

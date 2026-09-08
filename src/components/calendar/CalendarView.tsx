@@ -1,15 +1,36 @@
 'use client';
 
+import { useMemo } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
+/**
+ * Ate 2026-09-07 os nomes de mes e de dia da semana eram duas constantes de
+ * modulo em portugues — fora do alcance do next-intl. Agora saem do `Intl` no
+ * idioma do leitor: dicionario nao precisa carregar o que o runtime ja sabe, e
+ * um idioma novo passa a funcionar sem catalogo novo.
+ *
+ * O `Intl` devolve "janeiro"/"dom." em pt-BR; a tela sempre mostrou
+ * "Janeiro"/"Dom". `capitalizar` e a ponte entre os dois.
+ */
+function capitalizar(texto: string): string {
+  const limpo = texto.replace(/\.$/, '');
+  return limpo.charAt(0).toLocaleUpperCase() + limpo.slice(1);
+}
+
+/**
+ * Domingo a sabado. 2023-01-01 foi um domingo em UTC; formatar em UTC evita que
+ * o fuso do navegador empurre a lista um dia para tras.
+ */
+function nomesDosDias(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+  return Array.from({ length: 7 }, (_, i) =>
+    capitalizar(fmt.format(new Date(Date.UTC(2023, 0, 1 + i)))),
+  );
+}
 
 interface CalendarViewProps {
   currentMonth: number;
@@ -42,6 +63,26 @@ export function CalendarView({
   error,
   onRetry,
 }: CalendarViewProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('calendar.view');
+  const locale = useLocale();
+
+  const weekdays = useMemo(() => nomesDosDias(locale), [locale]);
+  const monthLabel = useMemo(
+    () =>
+      capitalizar(
+        new Intl.DateTimeFormat(locale, { month: 'long' }).format(
+          new Date(currentYear, currentMonth, 1),
+        ),
+      ),
+    [locale, currentMonth, currentYear],
+  );
+  const dayFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' }),
+    [locale],
+  );
+
   const today = new Date();
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -69,11 +110,11 @@ export function CalendarView({
         role="alert"
         className="flex-1 bg-card border border-border rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center py-12 text-center"
       >
-        <p className="text-destructive font-medium mb-2">Erro ao carregar horários</p>
+        <p className="text-destructive font-medium mb-2">{t('loadErrorTitle')}</p>
         <p className="text-sm text-muted-foreground mb-4">{error}</p>
         {onRetry && (
           <Button data-testid="calendar-view-error-retry-button" onClick={onRetry} variant="outline">
-            Tentar novamente
+            {t('retry')}
           </Button>
         )}
       </div>
@@ -100,30 +141,30 @@ export function CalendarView({
           data-testid="calendar-view-prev-month-button"
           onClick={onPrevMonth}
           className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
-          aria-label="Mês anterior"
+          aria-label={t('prevMonth')}
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <h2 data-testid="calendar-view-month-label" className="font-semibold text-foreground">
-          {MONTHS[currentMonth]} {currentYear}
+          {monthLabel} {currentYear}
         </h2>
         <button
           data-testid="calendar-view-next-month-button"
           onClick={onNextMonth}
           className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
-          aria-label="Próximo mês"
+          aria-label={t('nextMonth')}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
       <div className="grid grid-cols-7 text-xs text-muted-foreground font-medium py-2 text-center">
-        {WEEKDAYS.map((d) => (
+        {weekdays.map((d) => (
           <span key={d}>{d}</span>
         ))}
       </div>
 
-      <div data-testid="calendar-view-grid" className="grid grid-cols-7 gap-1" role="grid" aria-label="Calendário">
+      <div data-testid="calendar-view-grid" className="grid grid-cols-7 gap-1" role="grid" aria-label={t('gridLabel')}>
         {Array.from({ length: firstDayOfMonth }).map((_, i) => (
           <div key={`empty-${i}`} role="gridcell" />
         ))}
@@ -133,6 +174,15 @@ export function CalendarView({
           const todayMark = isToday(day);
           const hasSlots = !past && (slotsByDate[dateKey]?.length ?? 0) > 0;
           const isSelected = selectedDate === dateKey;
+          // Montado por juncao em vez de uma chave unica com tres buracos: cada
+          // pedaco e opcional, e o separador some junto com ele.
+          const ariaLabel = [
+            todayMark ? t('today') : null,
+            dayFormatter.format(new Date(currentYear, currentMonth, day)),
+            hasSlots ? t('slotsAvailableShort') : null,
+          ]
+            .filter(Boolean)
+            .join(', ');
 
           return (
             <button
@@ -142,7 +192,7 @@ export function CalendarView({
               disabled={past}
               role="gridcell"
               aria-selected={isSelected}
-              aria-label={`${todayMark ? 'Hoje, ' : ''}${day} de ${MONTHS[currentMonth]}${hasSlots ? ', horários disponíveis' : ''}`}
+              aria-label={ariaLabel}
               className={cn(
                 'flex flex-col items-center justify-center h-10 w-full rounded-full text-sm transition-colors',
                 past && 'text-muted-foreground/40 cursor-not-allowed pointer-events-none',
@@ -167,7 +217,7 @@ export function CalendarView({
 
       <p className="text-xs text-muted-foreground mt-4 text-center flex items-center justify-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-        Dias com horários disponíveis
+        {t('legend')}
       </p>
     </div>
   );

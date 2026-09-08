@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,6 +18,9 @@ import { ResendConfirmationSchema } from '@/schemas/auth.schema';
 type FormData = { email: string };
 
 export default function ResendConfirmationPage() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo visitante.
+  const t = useTranslations('pages.auth.resendConfirmation');
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -33,7 +37,7 @@ export default function ResendConfirmationPage() {
       setSent(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
-        toast.error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+        toast.error(t('tooManyToast'));
       } else {
         // Always show success to prevent user enumeration
         setSent(true);
@@ -49,17 +53,16 @@ export default function ResendConfirmationPage() {
         <div data-testid="page-auth-resend-confirmation" className="w-full max-w-[384px]">
           <div data-testid="auth-resend-confirmation-success" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
-            <h2 className="text-base font-semibold text-foreground">Verifique seu email</h2>
+            <h2 className="text-base font-semibold text-foreground">{t('sentTitle')}</h2>
             <p className="text-sm text-muted-foreground">
-              Se este email estiver cadastrado e não confirmado, um novo link de confirmação foi enviado.
-              Verifique também sua pasta de spam.
+              {t('sentDesc')}
             </p>
             <Link
               data-testid="auth-resend-confirmation-back-login-link"
               href={ROUTES.LOGIN}
               className="block text-sm text-primary font-medium hover:underline mt-4"
             >
-              Voltar para o login
+              {t('backToLogin')}
             </Link>
           </div>
         </div>
@@ -72,14 +75,14 @@ export default function ResendConfirmationPage() {
       <div className="w-full max-w-[384px]">
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg">
           <div data-testid="auth-resend-confirmation-header" className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Reenviar confirmação</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Informe seu email para receber um novo link de confirmação.
+              {t('subtitle')}
             </p>
           </div>
           <form data-testid="form-resend-confirmation" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">{t('emailLabel')}</Label>
               <Input
                 id="email"
                 data-testid="form-resend-confirmation-email-input"
@@ -96,12 +99,12 @@ export default function ResendConfirmationPage() {
               )}
             </div>
             <Button type="submit" data-testid="form-resend-confirmation-submit-button" className="w-full min-h-[44px]" disabled={isLoading}>
-              {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Enviando...</> : 'Reenviar link de confirmação'}
+              {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t('sending')}</> : t('submit')}
             </Button>
           </form>
           <p className="text-center text-sm text-muted-foreground mt-4">
             <Link data-testid="auth-resend-confirmation-back-login-link-2" href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
-              Voltar para o login
+              {t('backToLogin')}
             </Link>
           </p>
         </div>

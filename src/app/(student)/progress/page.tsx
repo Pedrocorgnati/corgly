@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { AlertCircle, BarChart3, ChevronRight, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,10 +13,10 @@ import { TrendLineChart } from '@/components/progress/TrendLineChart';
 import { FeedbackHistory } from '@/components/progress/FeedbackHistory';
 import { PageWrapper } from '@/components/shared';
 
-export const metadata: Metadata = {
-  title: 'Meu Progresso | Corgly',
-  robots: 'noindex',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pages.progress');
+  return { title: t('metaTitle'), robots: 'noindex' };
+}
 
 /**
  * Vocabulario canonico das notas por dimensao. Fonte da verdade:
@@ -47,6 +48,8 @@ function ChartSkeleton({ height = 'h-[300px]' }: { height?: string }) {
 }
 
 async function ProgressWidgets() {
+  const t = await getTranslations('pages.progress');
+
   const [progressResult, historyResult] = await Promise.all([
     getProgressData(),
     getFeedbackHistory(1, 'all'),
@@ -109,9 +112,7 @@ async function ProgressWidgets() {
         >
           <AlertCircle className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
           <div>
-            <p className="text-sm font-medium text-foreground">
-              Nao foi possivel carregar todos os dados do seu progresso
-            </p>
+            <p className="text-sm font-medium text-foreground">{t('loadErrorTitle')}</p>
             <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
               {loadErrors.map((message) => (
                 <li key={message}>{message}</li>
@@ -125,27 +126,27 @@ async function ProgressWidgets() {
       <div data-testid="progress-kpis" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-card border border-border rounded-xl p-4 text-center shadow-sm">
           <p className="text-2xl font-bold text-primary">{progress?.completedSessions ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">Aulas concluidas</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('kpiCompleted')}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4 text-center shadow-sm">
           <p className="text-2xl font-bold text-success">{progress?.totalSessions ?? 0}</p>
-          <p className="text-xs text-muted-foreground mt-1">Total de sessoes</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('kpiTotal')}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4 text-center shadow-sm">
           <p data-testid="progress-kpi-average-score" className="text-2xl font-bold text-secondary">
             {averageScore === null ? '—' : averageScore.toFixed(1)}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">Nota media</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('kpiAverage')}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4 text-center shadow-sm">
           <p className="text-2xl font-bold text-warning capitalize">
             {progress?.trend === 'improving'
-              ? 'Subindo'
+              ? t('trendUp')
               : progress?.trend === 'declining'
-                ? 'Caindo'
-                : 'Estavel'}
+                ? t('trendDown')
+                : t('trendStable')}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">Tendencia</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('kpiTrend')}</p>
         </div>
       </div>
 
@@ -170,21 +171,25 @@ async function ProgressWidgets() {
   );
 }
 
-export default function ProgressPage() {
+export default async function ProgressPage() {
+  const t = await getTranslations('pages.progress');
+  const tNav = await getTranslations('nav');
+  const tA11y = await getTranslations('a11y');
+
   return (
     <PageWrapper data-testid="page-progress">
       {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
+      <nav aria-label={tA11y('breadcrumb')} className="mb-4 text-sm text-muted-foreground">
         <ol className="flex items-center gap-1.5">
           <li>
             <Link href={ROUTES.DASHBOARD} className="hover:text-foreground transition-colors">
-              Dashboard
+              {tNav('dashboard')}
             </Link>
           </li>
           <li>
             <ChevronRight className="w-3.5 h-3.5 inline" />
           </li>
-          <li className="text-foreground font-medium">Meu Progresso</li>
+          <li className="text-foreground font-medium">{t('title')}</li>
         </ol>
       </nav>
 
@@ -193,10 +198,8 @@ export default function ProgressPage() {
         <div className="flex items-center gap-3">
           <BarChart3 className="h-6 w-6 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Meu Progresso</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Acompanhe sua evolucao em portugues
-            </p>
+            <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{t('subtitle')}</p>
           </div>
         </div>
         <a
@@ -206,7 +209,7 @@ export default function ProgressPage() {
           className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/20 rounded-lg hover:bg-primary/5 transition-colors"
         >
           <Download className="w-3.5 h-3.5" />
-          Exportar CSV
+          {t('exportCsv')}
         </a>
       </div>
 

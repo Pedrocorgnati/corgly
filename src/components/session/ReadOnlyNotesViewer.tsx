@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { AlertTriangle, FileText, Lock, SearchX, NotebookText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -12,8 +13,10 @@ export interface ReadOnlyNotesViewerProps {
   'data-testid'?: string;
 }
 
-function formatUpdatedAt(updatedAt: Date): string {
-  return new Intl.DateTimeFormat('pt-BR', {
+// Ate 2026-09-07 o formatador estava cravado em 'pt-BR' no escopo do modulo e a
+// data saia em portugues mesmo com o aluno em outro idioma.
+function formatUpdatedAt(updatedAt: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'long',
     timeStyle: 'short',
   }).format(new Date(updatedAt));
@@ -31,12 +34,15 @@ export function ReadOnlyNotesViewer({
   errorKind,
   'data-testid': testId,
 }: ReadOnlyNotesViewerProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.notes');
+  const locale = useLocale();
   const router = useRouter();
 
   if (state === 'loading') {
     return (
       <div data-testid={testId} className="animate-pulse space-y-4" aria-busy="true" aria-live="polite">
-        <span className="sr-only">Carregando anotacoes da aula</span>
+        <span className="sr-only">{t('loading')}</span>
         <div className="h-5 w-40 rounded bg-muted" />
         <div className="space-y-3 rounded-xl border border-border p-5">
           <div className="h-4 w-full rounded bg-muted" />
@@ -53,7 +59,7 @@ export function ReadOnlyNotesViewer({
       <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
         <NotebookText className="h-9 w-9 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm text-muted-foreground max-w-sm">
-          Nenhuma anotacao registrada nesta sessao.
+          {t('empty')}
         </p>
       </div>
     );
@@ -66,9 +72,9 @@ export function ReadOnlyNotesViewer({
       return (
         <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
           <Lock className="h-9 w-9 text-destructive" aria-hidden="true" />
-          <h2 className="text-base font-semibold text-foreground">Acesso negado</h2>
+          <h2 className="text-base font-semibold text-foreground">{t('forbiddenTitle')}</h2>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Voce nao tem permissao para visualizar o caderno desta aula.
+            {t('forbiddenDesc')}
           </p>
         </div>
       );
@@ -78,9 +84,9 @@ export function ReadOnlyNotesViewer({
       return (
         <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
           <SearchX className="h-9 w-9 text-muted-foreground" aria-hidden="true" />
-          <h2 className="text-base font-semibold text-foreground">Sessao nao encontrada</h2>
+          <h2 className="text-base font-semibold text-foreground">{t('notFoundTitle')}</h2>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Nao localizamos a aula solicitada. Verifique o link e tente novamente.
+            {t('notFoundDesc')}
           </p>
         </div>
       );
@@ -89,11 +95,11 @@ export function ReadOnlyNotesViewer({
     return (
       <div data-testid={testId} className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border py-12 text-center">
         <AlertTriangle className="h-9 w-9 text-destructive" aria-hidden="true" />
-        <h2 className="text-base font-semibold text-foreground">Algo deu errado</h2>
+        <h2 className="text-base font-semibold text-foreground">{t('errorTitle')}</h2>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Nao foi possivel carregar as anotacoes desta aula.
+          {t('errorDesc')}
         </p>
-        <Button onClick={() => router.refresh()}>Tentar novamente</Button>
+        <Button onClick={() => router.refresh()}>{t('retry')}</Button>
       </div>
     );
   }
@@ -104,14 +110,14 @@ export function ReadOnlyNotesViewer({
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <FileText className="h-4 w-4 text-primary" aria-hidden="true" />
-          Anotacoes da aula
+          {t('header')}
         </div>
         {updatedAt ? (
           <time
             dateTime={new Date(updatedAt).toISOString()}
             className="text-xs text-muted-foreground"
           >
-            Atualizado em {formatUpdatedAt(updatedAt)}
+            {t('updatedAt', { date: formatUpdatedAt(updatedAt, locale) })}
           </time>
         ) : null}
       </header>

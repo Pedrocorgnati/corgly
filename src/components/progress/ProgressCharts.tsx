@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+import { useLocale, useTranslations } from 'next-intl';
 import { TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,14 +37,11 @@ interface ProgressChartsProps {
   isLoading?: boolean;
 }
 
-const DIMENSION_LABELS: Record<keyof FeedbackScores, string> = {
-  listening:  'Escuta',
-  speaking:   'Fala',
-  writing:    'Escrita',
-  vocabulary: 'Vocabulário',
-};
-
-const DIMENSION_KEYS = Object.keys(DIMENSION_LABELS) as (keyof FeedbackScores)[];
+/**
+ * Ate 2026-09-07 o nome de cada dimensao morava num `DIMENSION_LABELS` de modulo
+ * em portugues cravado. A chave sozinha ja indexa `progress.dimensions.*`.
+ */
+const DIMENSION_KEYS: (keyof FeedbackScores)[] = ['listening', 'speaking', 'writing', 'vocabulary'];
 
 /** Nota ausente ou nao-finita vira travessao — nunca `NaN` nem TypeError. */
 function formatScore(value: unknown): string {
@@ -55,18 +53,21 @@ function toPoint(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function formatDate(dateStr: string): string {
+/**
+ * Ate 2026-09-07 o tick do eixo era montado a mao como `dia/mes` e a data cheia
+ * saia sempre em 'pt-BR'. Ambas passam a seguir o locale do leitor; a data
+ * invalida vira uma frase do catalogo, entregue pelo chamador.
+ */
+function formatDate(dateStr: string, locale: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return '—';
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}/${month}`;
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' }).format(d);
 }
 
-function formatFullDate(dateStr: string): string {
+function formatFullDate(dateStr: string, locale: string): string | null {
   const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return 'Data indisponivel';
-  return d.toLocaleDateString('pt-BR');
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(locale);
 }
 
 /**
@@ -91,6 +92,11 @@ function CustomTooltip({
   active?: boolean;
   payload?: TooltipPayloadItem[];
 }) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno. O recharts renderiza o tooltip como elemento React de verdade,
+  // entao ele pode usar hook como qualquer outro componente cliente.
+  const t = useTranslations('progress');
+
   if (!active || !payload?.length) return null;
   const data = payload[0]?.payload;
   if (!data) return null;
@@ -102,14 +108,14 @@ function CustomTooltip({
       data-testid="progress-charts-tooltip"
       className="bg-card border border-border rounded-lg p-3 shadow-md text-sm"
     >
-      <p className="font-medium text-foreground mb-1">{data.fullDate ?? 'Data indisponivel'}</p>
+      <p className="font-medium text-foreground mb-1">{data.fullDate ?? t('charts.noDate')}</p>
       <p className="text-primary font-semibold">
-        Media: {formatScore(data.averageScore)}/5
+        {t('charts.average')}: {formatScore(data.averageScore)}/5
       </p>
       <div className="mt-1 space-y-0.5 text-muted-foreground">
         {DIMENSION_KEYS.map((key) => (
           <p key={key}>
-            {DIMENSION_LABELS[key]}: {formatScore(scores[key])}
+            {t(`dimensions.${key}`)}: {formatScore(scores[key])}
           </p>
         ))}
       </div>
@@ -118,6 +124,11 @@ function CustomTooltip({
 }
 
 export function ProgressCharts({ feedbacks, isLoading }: ProgressChartsProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('progress');
+  const locale = useLocale();
+
   if (isLoading) {
     return (
       <div data-testid="progress-charts-loading" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
@@ -130,20 +141,20 @@ export function ProgressCharts({ feedbacks, isLoading }: ProgressChartsProps) {
   if (!feedbacks.length) {
     return (
       <div data-testid="progress-charts-empty-wrapper" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <h2 className="font-semibold text-foreground mb-4">Evolucao da Media</h2>
+        <h2 className="font-semibold text-foreground mb-4">{t('charts.title')}</h2>
         <EmptyState
           data-testid="progress-charts-empty"
           icon={TrendingUp}
-          title="Sem dados de progresso"
-          description="Faca suas primeiras avaliacoes para ver o progresso"
+          title={t('charts.empty')}
+          description={t('charts.emptyDesc')}
         />
       </div>
     );
   }
 
   const chartData = feedbacks.map((f) => ({
-    date: formatDate(f.sessionDate),
-    fullDate: formatFullDate(f.sessionDate),
+    date: formatDate(f.sessionDate, locale),
+    fullDate: formatFullDate(f.sessionDate, locale) ?? t('charts.noDate'),
     averageScore: toPoint(f.averageScore),
     scores: f.scores,
   }));
@@ -151,9 +162,9 @@ export function ProgressCharts({ feedbacks, isLoading }: ProgressChartsProps) {
   return (
     <div
       className="bg-card border border-border rounded-2xl p-6 shadow-sm"
-      aria-label="Grafico de evolucao da media"
+      aria-label={t('charts.chartAria')}
     >
-      <h2 className="font-semibold text-foreground mb-4">Evolucao da Media</h2>
+      <h2 className="font-semibold text-foreground mb-4">{t('charts.title')}</h2>
       <div data-testid="progress-charts-canvas">
         <ResponsiveContainer width="100%" height={300} className="hidden md:block">
           <LineChart data={chartData}>

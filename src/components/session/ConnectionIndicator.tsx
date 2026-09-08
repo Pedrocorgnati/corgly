@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { RTCConnectionState } from '@/hooks/useWebRTC'
 
@@ -15,6 +16,13 @@ export interface ConnectionIndicatorProps {
 // ── Quality helpers ───────────────────────────────────────────────────────────
 
 type QualityLevel = 'good' | 'unstable' | 'bad' | 'unknown'
+
+/**
+ * Ate 2026-09-07 as duas funcoes abaixo montavam a copy em portugues cravado no
+ * escopo do modulo, fora do alcance do next-intl. Agora recebem o tradutor do
+ * componente: a logica de qualidade continua pura e a copy vem do catalogo.
+ */
+type Translator = (key: string, values?: Record<string, string | number>) => string
 
 function getQuality(
   connectionState: RTCConnectionState,
@@ -60,52 +68,54 @@ function getDotClass(quality: QualityLevel): string {
   }
 }
 
+const QUALITY_HEADLINE_KEY: Record<'good' | 'unstable' | 'bad', string> = {
+  good: 'qualityGood',
+  unstable: 'qualityUnstable',
+  bad: 'qualityBad',
+}
+
+const QUALITY_LEVEL_KEY: Record<QualityLevel, string> = {
+  good: 'levelGood',
+  unstable: 'levelUnstable',
+  bad: 'levelBad',
+  unknown: 'levelUnknown',
+}
+
 function getTooltipText(
+  t: Translator,
   quality: QualityLevel,
   connectionState: RTCConnectionState,
   rtt?: number,
   packetLoss?: number,
 ): string {
-  if (connectionState === 'connecting') return 'Conectando...'
-  if (connectionState === 'new') return 'Aguardando conexão'
-  if (connectionState === 'failed') return 'Falha na conexão'
-  if (connectionState === 'disconnected') return 'Desconectado'
+  if (connectionState === 'connecting') return t('connecting')
+  if (connectionState === 'new') return t('waiting')
+  if (connectionState === 'failed') return t('failed')
+  if (connectionState === 'disconnected') return t('disconnected')
 
-  if (quality === 'good') {
-    const parts = ['Conexão: Boa']
-    if (rtt !== undefined) parts.push(`RTT: ${rtt}ms`)
-    if (packetLoss !== undefined) parts.push(`Perda: ${packetLoss.toFixed(1)}%`)
-    return parts.join(' | ')
-  }
-  if (quality === 'unstable') {
-    const parts = ['Conexão: Instável']
-    if (rtt !== undefined) parts.push(`RTT: ${rtt}ms`)
-    if (packetLoss !== undefined) parts.push(`Perda: ${packetLoss.toFixed(1)}%`)
-    return parts.join(' | ')
-  }
-  if (quality === 'bad') {
-    const parts = ['Conexão: Ruim']
-    if (rtt !== undefined) parts.push(`RTT: ${rtt}ms`)
-    if (packetLoss !== undefined) parts.push(`Perda: ${packetLoss.toFixed(1)}%`)
-    return parts.join(' | ')
-  }
-  return 'Monitorando conexão...'
+  if (quality === 'unknown') return t('monitoring')
+
+  const parts = [t(QUALITY_HEADLINE_KEY[quality])]
+  if (rtt !== undefined) parts.push(t('rtt', { rtt }))
+  if (packetLoss !== undefined) parts.push(t('loss', { loss: packetLoss.toFixed(1) }))
+  return parts.join(' | ')
 }
 
 function getAriaLabel(
+  t: Translator,
   quality: QualityLevel,
   connectionState: RTCConnectionState,
   rtt?: number,
 ): string {
-  if (connectionState === 'connecting') return 'Indicador de conexão: conectando'
-  if (connectionState === 'new') return 'Indicador de conexão: aguardando'
-  if (connectionState === 'failed') return 'Indicador de conexão: falha'
-  if (connectionState === 'disconnected') return 'Indicador de conexão: desconectado'
+  if (connectionState === 'connecting') return t('ariaConnecting')
+  if (connectionState === 'new') return t('ariaWaiting')
+  if (connectionState === 'failed') return t('ariaFailed')
+  if (connectionState === 'disconnected') return t('ariaDisconnected')
 
-  const qualityLabel =
-    quality === 'good' ? 'boa' : quality === 'unstable' ? 'instável' : quality === 'bad' ? 'ruim' : 'desconhecida'
-  const rttLabel = rtt !== undefined ? `, latência ${rtt} milissegundos` : ''
-  return `Indicador de conexão: qualidade ${qualityLabel}${rttLabel}`
+  const qualityLabel = t(QUALITY_LEVEL_KEY[quality])
+  return rtt !== undefined
+    ? t('ariaQualityRtt', { quality: qualityLabel, rtt })
+    : t('ariaQuality', { quality: qualityLabel })
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -116,10 +126,12 @@ export function ConnectionIndicator({
   packetLoss,
   className,
 }: ConnectionIndicatorProps) {
+  const t = useTranslations('sessionRoom.connection')
+
   const quality = getQuality(connectionState, rtt, packetLoss)
   const dotClass = getDotClass(quality)
-  const tooltipText = getTooltipText(quality, connectionState, rtt, packetLoss)
-  const ariaLabel = getAriaLabel(quality, connectionState, rtt)
+  const tooltipText = getTooltipText(t, quality, connectionState, rtt, packetLoss)
+  const ariaLabel = getAriaLabel(t, quality, connectionState, rtt)
 
   return (
     <div

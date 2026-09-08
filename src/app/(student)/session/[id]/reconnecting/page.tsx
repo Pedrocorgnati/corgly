@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -31,6 +32,9 @@ import { SessionFallbackControls } from '@/components/session/SessionFallbackCon
  * acontece. Esgotada a janela, a sessão é interrompida (crédito reembolsado).
  */
 export default function SessionReconnectingPage() {
+  // Idioma resolvido no servidor (i18n/request.ts). Ate 2026-09-07 esta tela
+  // escrevia portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('pages.reconnecting')
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { role, isLoading } = useAuth()
@@ -60,11 +64,11 @@ export default function SessionReconnectingPage() {
     }).then((ok) => {
       if (!ok) {
         setHealthNotice(
-          'Não foi possível registrar a tentativa de reconexão, mas seguimos tentando.',
+          t('healthNotice'),
         )
       }
     })
-  }, [sessionId, role, isLoading])
+  }, [sessionId, role, isLoading, t])
 
   // ── Finalização (interrupção manual OU expiração da janela) ────────────────
   const finalizeInterrupt = useCallback(
@@ -88,7 +92,7 @@ export default function SessionReconnectingPage() {
         })
       } catch (err) {
         console.error('[reconnecting] Falha ao interromper sessão:', err)
-        toast.error('Não foi possível encerrar a sessão no servidor. Tente novamente.')
+        toast.error(t('interruptError'))
         finalizedRef.current = false
         setIsBusy(false)
         return
@@ -97,7 +101,7 @@ export default function SessionReconnectingPage() {
       // A rota da sessão renderiza o estado INTERRUPTED (com reembolso do crédito).
       router.push(ROUTES.SESSION(sessionId))
     },
-    [sessionId, role, router],
+    [sessionId, role, router, t],
   )
 
   // ── Countdown de 2 minutos ─────────────────────────────────────────────────
@@ -158,17 +162,15 @@ export default function SessionReconnectingPage() {
         <div data-testid="session-reconnecting-error" className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
           <h1 className="mt-4 text-xl font-semibold text-foreground">
-            Sessão não identificada
+            {t('errorTitle')}
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Não foi possível localizar esta aula. Volte ao painel e tente novamente.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{t('errorDesc')}</p>
           <Link
             href={ROUTES.DASHBOARD}
             data-testid="session-reconnecting-dashboard-link"
             className="mt-6 inline-flex rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Voltar ao Dashboard
+            {t('backDashboard')}
           </Link>
         </div>
       </main>
@@ -180,7 +182,7 @@ export default function SessionReconnectingPage() {
       <main data-testid="page-session-reconnecting" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div data-testid="session-reconnecting-loading" className="flex flex-col items-center gap-3" aria-live="polite">
           <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Verificando sua conexão...</p>
+          <p className="text-sm text-muted-foreground">{t('loading')}</p>
         </div>
       </main>
     )
@@ -200,11 +202,8 @@ export default function SessionReconnectingPage() {
       >
         <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" aria-hidden="true" />
 
-        <h1 data-testid="session-reconnecting-header" className="mt-4 text-xl font-semibold text-foreground">Reconectando...</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Sua conexão caiu. Vamos tentar restabelecer a aula automaticamente nos
-          próximos 2 minutos.
-        </p>
+        <h1 data-testid="session-reconnecting-header" className="mt-4 text-xl font-semibold text-foreground">{t('title')}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t('subtitle')}</p>
 
         <p
           data-testid="session-reconnecting-countdown"
@@ -216,7 +215,7 @@ export default function SessionReconnectingPage() {
           {formatted}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Tentativa {attemptCount} dentro da janela de reconexão
+          {t('attempt', { count: attemptCount })}
         </p>
 
         {healthNotice && (
@@ -230,7 +229,7 @@ export default function SessionReconnectingPage() {
             onRetryConnection={handleRetryConnection}
             onSupport={handleSupport}
             onInterrupt={handleInterrupt}
-            interruptLabel="Interromper sessão"
+            interruptLabel={t('interruptLabel')}
             isBusy={isBusy}
             retryConnectionTestId="session-reconnecting-retry-button"
             supportTestId="session-reconnecting-support-button"
@@ -239,8 +238,7 @@ export default function SessionReconnectingPage() {
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">
-          Se a conexão não voltar, sua sessão será interrompida e 1 crédito será
-          devolvido à sua conta.
+          {t('footerNote')}
         </p>
       </section>
     </main>

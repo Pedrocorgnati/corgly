@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { AlertCircle, Loader2, MicOff, RefreshCw, Video, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ConnectionIndicator } from './ConnectionIndicator'
@@ -25,7 +26,7 @@ export interface VideoPanelProps {
 
 // ── AudioOnlyOverlay ──────────────────────────────────────────────────────────
 
-function AudioOnlyOverlay({ name }: { name?: string }) {
+function AudioOnlyOverlay({ name, label }: { name?: string; label: string }) {
   return (
     <div data-testid="session-video-audio-only" className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-700">
@@ -34,7 +35,7 @@ function AudioOnlyOverlay({ name }: { name?: string }) {
       {name && (
         <p className="mt-3 text-sm font-medium text-gray-300">{name}</p>
       )}
-      <p className="mt-1 text-xs text-gray-500">Apenas áudio</p>
+      <p className="mt-1 text-xs text-gray-500">{label}</p>
     </div>
   )
 }
@@ -59,13 +60,21 @@ export function VideoPanel({
   isAudioOnly,
   isMuted,
   isVideoOff,
-  localName = 'Você',
-  remoteName = 'Professor',
+  localName,
+  remoteName,
   rtt,
   packetLoss,
   onRetry,
   className,
 }: VideoPanelProps) {
+  // Ate 2026-09-07 esta copy (e os defaults 'Você'/'Professor') era portugues
+  // cravado e ignorava o idioma escolhido pelo aluno. Os defaults sairam da
+  // desestruturacao porque `t` so existe no corpo do componente.
+  const t = useTranslations('sessionRoom.video')
+
+  const resolvedLocalName = localName ?? t('localNameDefault')
+  const resolvedRemoteName = remoteName ?? t('remoteNameDefault')
+
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const [remoteVideoActive, setRemoteVideoActive] = useState(false)
@@ -98,12 +107,12 @@ export function VideoPanel({
           className,
         )}
         data-testid="session-video-connecting"
-        aria-label="Painel de vídeo: conectando"
+        aria-label={t('ariaConnecting')}
       >
         <div className="flex flex-col items-center gap-3 text-gray-400">
           <Loader2 className="h-10 w-10 animate-spin" aria-hidden="true" />
-          <p className="text-sm font-medium">Conectando...</p>
-          <p className="text-xs text-gray-500">Estabelecendo conexão segura</p>
+          <p className="text-sm font-medium">{t('connecting')}</p>
+          <p className="text-xs text-gray-500">{t('connectingDesc')}</p>
         </div>
       </div>
     )
@@ -119,14 +128,14 @@ export function VideoPanel({
           className,
         )}
         data-testid="session-video-failed"
-        aria-label="Painel de vídeo: falha na conexão"
+        aria-label={t('ariaFailed')}
       >
         <div className="flex flex-col items-center gap-4 text-center">
           <AlertCircle className="h-10 w-10 text-red-400" aria-hidden="true" />
           <div>
-            <p className="text-sm font-medium text-gray-50">Falha na conexão</p>
+            <p className="text-sm font-medium text-gray-50">{t('failedTitle')}</p>
             <p className="mt-1 text-xs text-gray-400">
-              Não foi possível estabelecer a conexão de vídeo.
+              {t('failedDesc')}
             </p>
           </div>
           {onRetry && (
@@ -137,10 +146,10 @@ export function VideoPanel({
                 'flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground',
                 'hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
               )}
-              aria-label="Tentar reconectar"
+              aria-label={t('retryAria')}
             >
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              Tentar novamente
+              {t('retry')}
             </button>
           )}
         </div>
@@ -158,13 +167,13 @@ export function VideoPanel({
           className,
         )}
         data-testid="session-video-disconnected"
-        aria-label="Painel de vídeo: desconectado"
+        aria-label={t('ariaDisconnected')}
       >
         <div className="flex flex-col items-center gap-4 text-center">
           <AlertCircle className="h-10 w-10 text-yellow-400" aria-hidden="true" />
           <div>
-            <p className="text-sm font-medium text-gray-50">Conexão interrompida</p>
-            <p className="mt-1 text-xs text-gray-400">Aguardando reconexão automática...</p>
+            <p className="text-sm font-medium text-gray-50">{t('disconnectedTitle')}</p>
+            <p className="mt-1 text-xs text-gray-400">{t('disconnectedDesc')}</p>
           </div>
           {onRetry && (
             <button
@@ -174,10 +183,10 @@ export function VideoPanel({
                 'flex items-center gap-2 rounded-lg bg-muted px-4 py-2 text-sm font-medium text-foreground',
                 'hover:bg-muted/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               )}
-              aria-label="Reconectar manualmente"
+              aria-label={t('reconnectAria')}
             >
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
-              Reconectar
+              {t('reconnect')}
             </button>
           )}
         </div>
@@ -196,17 +205,17 @@ export function VideoPanel({
         className,
       )}
       data-testid="session-video-panel"
-      aria-label="Painel de vídeo da sessão"
+      aria-label={t('ariaPanel')}
     >
       {/* ── Tile principal: vídeo remoto (80% da área) ────────────────────────── */}
       <div className="absolute inset-0">
         {isAudioOnly ? (
-          <AudioOnlyOverlay name={remoteName} />
+          <AudioOnlyOverlay name={resolvedRemoteName} label={t('audioOnly')} />
         ) : (
           <>
             {/* Placeholder quando stream remoto ainda não chegou */}
             {!remoteVideoActive && (
-              <VideoPlaceholder label="Aguardando vídeo do professor..." />
+              <VideoPlaceholder label={t('waitingRemote')} />
             )}
             <video
               data-testid="session-video-remote"
@@ -218,7 +227,7 @@ export function VideoPanel({
                 'h-full w-full object-cover',
                 !remoteVideoActive && 'invisible',
               )}
-              aria-label={`Vídeo de ${remoteName}`}
+              aria-label={t('ariaRemoteVideo', { name: resolvedRemoteName })}
             />
           </>
         )}
@@ -236,7 +245,7 @@ export function VideoPanel({
       {/* ── Nome do peer remoto (canto inferior esquerdo do tile principal) ────── */}
       <div data-testid="session-video-remote-name" className="absolute bottom-3 left-3 z-10">
         <div className="flex items-center gap-1.5 rounded-lg bg-black/50 px-2 py-1 backdrop-blur-sm">
-          <span className="text-xs font-medium text-white">{remoteName}</span>
+          <span className="text-xs font-medium text-white">{resolvedRemoteName}</span>
         </div>
       </div>
 
@@ -252,7 +261,7 @@ export function VideoPanel({
           'aspect-video',
         )}
         data-testid="session-video-self-view"
-        aria-label="Seu vídeo (self-view)"
+        aria-label={t('ariaSelfView')}
       >
         {isVideoOff || !localStream ? (
           <VideoPlaceholder label="" />
@@ -264,15 +273,15 @@ export function VideoPanel({
             muted // OBRIGATÓRIO: evitar eco
             playsInline
             className="h-full w-full object-cover"
-            aria-label="Seu próprio vídeo"
+            aria-label={t('ariaLocalVideo')}
           />
         )}
 
         {/* Overlay com nome e status de mudo */}
         <div className="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/50 px-1 py-0.5">
-          <span className="text-[10px] font-medium text-white">{localName}</span>
+          <span className="text-[10px] font-medium text-white">{resolvedLocalName}</span>
           {isMuted && (
-            <MicOff className="h-2.5 w-2.5 text-red-400" aria-label="Microfone desligado" />
+            <MicOff className="h-2.5 w-2.5 text-red-400" aria-label={t('micOff')} />
           )}
         </div>
       </div>

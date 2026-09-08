@@ -42,6 +42,23 @@ vi.mock('sonner', () => ({
 /** Recorte das chaves consumidas pelo card (fragmento i18n `fx-5.json`). */
 const messages = {
   dashboard: {
+    nextSessionCard: {
+      title: 'Próxima aula',
+      empty: 'Nenhuma aula agendada',
+      schedule: '+ Agendar nova aula',
+      dateTbd: 'Data a confirmar',
+      timeTbd: 'Horário a confirmar',
+      timeUnavailable: 'Horário indisponível',
+      live: 'Sessão ao vivo!',
+      unreadable: 'Não conseguimos ler o horário desta aula.',
+      checkHistory: 'Conferir no histórico',
+      alreadyStarted: 'a aula já começou',
+      untilClass: 'até a aula',
+      cancel: 'Cancelar',
+      enter: 'Entrar',
+      roomCheckPending: 'Verificando o horário de abertura da sala...',
+      roomOpensBefore: 'A sala abre 5 minutos antes do início da aula.',
+    },
     nextSession: {
       error: {
         title: 'Não conseguimos carregar sua próxima aula',

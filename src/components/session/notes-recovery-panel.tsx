@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { History, Download, RotateCcw } from 'lucide-react';
 
@@ -43,14 +44,6 @@ interface RecoverResponse {
 
 type LoadState = 'loading' | 'error' | 'ready';
 
-const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
 interface NotesRecoveryPanelProps {
   sessionId: string;
 }
@@ -63,7 +56,23 @@ interface NotesRecoveryPanelProps {
  * Trata todos os estados: loading, empty, error e success (Regras Zero).
  */
 export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e o formatador de data vivia
+  // no escopo do modulo preso em 'pt-BR' — os dois ignoravam o idioma do aluno.
+  const t = useTranslations('sessionRoom.notesRecovery');
+  const locale = useLocale();
   const router = useRouter();
+
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [locale],
+  );
 
   const [snapshots, setSnapshots] = useState<SnapshotListItem[]>([]);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -85,11 +94,11 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
       const message =
         err instanceof ApiError
           ? err.message
-          : 'Não foi possível carregar os snapshots.';
+          : t('loadError');
       setErrorMessage(message);
       setLoadState('error');
     }
-  }, [sessionId]);
+  }, [sessionId, t]);
 
   useEffect(() => {
     loadSnapshots();
@@ -104,7 +113,7 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
         { snapshotId: selected.id },
       );
       toast.success(
-        res.message ?? `Caderno restaurado para a versão ${selected.version}.`,
+        res.message ?? t('restoredToast', { version: selected.version }),
       );
       setSelected(null);
       router.push(ROUTES.SESSION(sessionId));
@@ -112,19 +121,19 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
       const message =
         err instanceof ApiError
           ? err.message
-          : 'Não foi possível restaurar o snapshot.';
+          : t('restoreError');
       toast.error(message);
     } finally {
       setIsRecovering(false);
     }
-  }, [selected, sessionId, router]);
+  }, [selected, sessionId, router, t]);
 
   const exportHref = (format: 'markdown' | 'html'): string =>
     `${API.SESSION_NOTES_EXPORT(sessionId)}?format=${format}`;
 
   if (loadState === 'loading') {
     return (
-      <div data-testid="session-notes-recovery-loading" className="space-y-3" aria-busy="true" aria-label="Carregando snapshots">
+      <div data-testid="session-notes-recovery-loading" className="space-y-3" aria-busy="true" aria-label={t('loadingAria')}>
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-20 w-full" />
@@ -136,8 +145,8 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
     return (
       <ErrorState
         data-testid="session-notes-recovery-error"
-        title="Erro ao carregar snapshots"
-        message={errorMessage ?? 'Ocorreu um erro. Tente novamente.'}
+        title={t('errorTitle')}
+        message={errorMessage ?? t('errorFallback')}
         onRetry={loadSnapshots}
       />
     );
@@ -147,10 +156,10 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
     <div data-testid="session-notes-recovery-panel" className="space-y-6">
       <section aria-labelledby="export-heading">
         <h2 id="export-heading" className="text-sm font-semibold text-foreground mb-2">
-          Exportar caderno
+          {t('exportTitle')}
         </h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Baixe o conteúdo atual do caderno desta aula.
+          {t('exportDesc')}
         </p>
         <div className="flex flex-wrap gap-2">
           <a
@@ -176,15 +185,15 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
 
       <section aria-labelledby="recovery-heading">
         <h2 id="recovery-heading" className="text-sm font-semibold text-foreground mb-2">
-          Restaurar versão anterior
+          {t('restoreTitle')}
         </h2>
 
         {snapshots.length === 0 ? (
           <EmptyState
             data-testid="session-notes-recovery-empty"
             icon={History}
-            title="Nenhum snapshot disponível"
-            description="Ainda não há versões salvas deste caderno para restaurar."
+            title={t('emptyTitle')}
+            description={t('emptyDesc')}
           />
         ) : (
           <ul role="list" data-testid="session-notes-recovery-list" className="space-y-3">
@@ -193,14 +202,14 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
                 <Card data-testid={`session-notes-recovery-snapshot-${snapshot.id}`} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">Versão {snapshot.version}</Badge>
+                      <Badge variant="secondary">{t('versionBadge', { version: snapshot.version })}</Badge>
                       <span className="text-sm text-muted-foreground">
                         {dateFormatter.format(new Date(snapshot.createdAt))}
                       </span>
                     </div>
                     {typeof snapshot.metadata?.plainTextLength === 'number' && (
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {snapshot.metadata.plainTextLength} caracteres
+                        {t('chars', { count: snapshot.metadata.plainTextLength })}
                       </p>
                     )}
                   </div>
@@ -208,12 +217,12 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setSelected(snapshot)}
-                    aria-label={`Restaurar versão ${snapshot.version}`}
+                    aria-label={t('restoreAria', { version: snapshot.version })}
                     data-testid={`session-notes-recovery-restore-${snapshot.id}`}
                     className="shrink-0"
                   >
                     <RotateCcw className="size-4" />
-                    Restaurar
+                    {t('restore')}
                   </Button>
                 </Card>
               </li>
@@ -226,16 +235,17 @@ export function NotesRecoveryPanel({ sessionId }: NotesRecoveryPanelProps) {
         isOpen={selected !== null}
         onClose={() => !isRecovering && setSelected(null)}
         onConfirm={handleConfirmRecover}
-        title="Restaurar caderno?"
+        title={t('confirmTitle')}
         message={
           selected
-            ? `Esta ação substitui o conteúdo atual do caderno pela versão ${selected.version} (${dateFormatter.format(
-                new Date(selected.createdAt),
-              )}). O conteúdo atual não salvo como snapshot será perdido. Deseja continuar?`
+            ? t('confirmBody', {
+                version: selected.version,
+                date: dateFormatter.format(new Date(selected.createdAt)),
+              })
             : ''
         }
-        confirmText="Restaurar versão"
-        cancelText="Cancelar"
+        confirmText={t('confirmText')}
+        cancelText={t('cancelText')}
         dangerLevel="high"
         isLoading={isRecovering}
         confirmTestId="session-notes-recovery-confirm-button"

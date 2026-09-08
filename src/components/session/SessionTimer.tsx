@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
@@ -24,6 +25,9 @@ export function SessionTimer({
   onExtend,
   totalExtended = 0,
 }: SessionTimerProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.timer')
+
   return (
     <div
       data-testid="session-timer"
@@ -51,9 +55,9 @@ export function SessionTimer({
           size="sm"
           onClick={() => onExtend(10)}
           disabled={totalExtended >= 60}
-          aria-label="Estender sessão em 10 minutos"
+          aria-label={t('extendAria')}
         >
-          Estender +10min
+          {t('extend')}
         </Button>
       )}
     </div>

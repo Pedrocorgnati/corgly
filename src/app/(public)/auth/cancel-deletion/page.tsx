@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { ROUTES, API } from '@/lib/constants/routes';
@@ -13,6 +14,9 @@ import { AuthPageWrapper } from '@/components/shared';
 type CancelState = 'loading' | 'success' | 'error' | 'no-token';
 
 function CancelDeletionContent() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo usuario.
+  const t = useTranslations('pages.auth.cancelDeletion');
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [state, setState] = useState<CancelState>(token ? 'loading' : 'no-token');
@@ -28,15 +32,15 @@ function CancelDeletionContent() {
       } catch (err) {
         setState('error');
         if (err instanceof ApiError) {
-          setErrorMessage(err.message || 'Link inválido ou expirado.');
+          setErrorMessage(err.message || t('errorFallback'));
         } else {
-          setErrorMessage('Erro de conexão. Tente novamente.');
+          setErrorMessage(t('connectionError'));
         }
       }
     }
 
     cancelDeletion();
-  }, [token]);
+  }, [token, t]);
 
   if (state === 'loading') {
     return (
@@ -44,8 +48,8 @@ function CancelDeletionContent() {
         <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
           <div data-testid="auth-cancel-deletion-loading" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <Loader2 className="h-10 w-10 text-primary mx-auto animate-spin" />
-            <h1 className="text-xl font-bold text-foreground">Cancelando exclusão...</h1>
-            <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
+            <h1 className="text-xl font-bold text-foreground">{t('loadingTitle')}</h1>
+            <p className="text-sm text-muted-foreground">{t('loadingDesc')}</p>
           </div>
         </div>
       </AuthPageWrapper>
@@ -58,12 +62,12 @@ function CancelDeletionContent() {
         <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
           <div data-testid="auth-cancel-deletion-success" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
-            <h1 className="text-xl font-bold text-foreground">Sua conta foi restaurada</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('successTitle')}</h1>
             <p className="text-sm text-muted-foreground">
-              A solicitação de exclusão foi cancelada com sucesso. Sua conta está ativa novamente.
+              {t('successDesc')}
             </p>
             <Link data-testid="auth-cancel-deletion-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
-              Ir para o login
+              {t('goToLogin')}
             </Link>
           </div>
         </div>
@@ -77,21 +81,20 @@ function CancelDeletionContent() {
         <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
           <div data-testid="auth-cancel-deletion-error" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
             <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
-            <h1 className="text-xl font-bold text-foreground">Link inválido ou expirado</h1>
+            <h1 className="text-xl font-bold text-foreground">{t('errorTitle')}</h1>
             <p className="text-sm text-muted-foreground">{errorMessage}</p>
             <p className="text-sm text-muted-foreground">
-              Se a janela de cancelamento já expirou, entre em contato com o suporte para
-              verificar a situação da sua conta.
+              {t('errorSupportHint')}
             </p>
             <Link data-testid="auth-cancel-deletion-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
-              Ir para o login
+              {t('goToLogin')}
             </Link>
             <Link
               data-testid="auth-cancel-deletion-support-link"
               href={ROUTES.SUPPORT}
               className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
             >
-              Falar com o suporte
+              {t('contactSupport')}
             </Link>
           </div>
         </div>
@@ -105,12 +108,12 @@ function CancelDeletionContent() {
       <div data-testid="page-auth-cancel-deletion" className="w-full max-w-[384px]">
         <div data-testid="auth-cancel-deletion-no-token" className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-lg text-center space-y-4">
           <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
-          <h1 className="text-xl font-bold text-foreground">Link inválido</h1>
+          <h1 className="text-xl font-bold text-foreground">{t('noTokenTitle')}</h1>
           <p className="text-sm text-muted-foreground">
-            Este link não contém um token válido. Verifique o link recebido por email.
+            {t('noTokenDesc')}
           </p>
           <Link data-testid="auth-cancel-deletion-login-link" href={ROUTES.LOGIN} className={cn(buttonVariants(), 'w-full')}>
-            Ir para o login
+            {t('goToLogin')}
           </Link>
         </div>
       </div>

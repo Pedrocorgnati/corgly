@@ -26,7 +26,7 @@
  * depende do roteador do Next para montar; o contrato provado e o mesmo.
  */
 import { Component, type ReactNode } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({

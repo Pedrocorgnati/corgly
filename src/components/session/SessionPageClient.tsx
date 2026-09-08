@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { CheckCircle, AlertTriangle, Clock, Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -54,6 +55,10 @@ export function SessionPageClient({
   iceServers,
   hocuspocusUrl,
 }: SessionPageClientProps) {
+  // Ate 2026-09-07 toda a copy desta tela (toasts inclusive) era portugues
+  // cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.page')
+
   const [pageState, setPageState] = useState<SessionPageState>(() => {
     if (session.status === SessionStatus.COMPLETED) return 'ENDED'
     if (session.status === SessionStatus.INTERRUPTED) return 'INTERRUPTED'
@@ -65,7 +70,7 @@ export function SessionPageClient({
   const hasStartedTimerRef = useRef(false)
 
   const isAdmin = currentUser.role === UserRole.ADMIN
-  const userName = currentUser.name ?? (isAdmin ? 'Professor' : 'Aluno')
+  const userName = currentUser.name ?? (isAdmin ? t('teacher') : t('student'))
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
 
@@ -121,8 +126,8 @@ export function SessionPageClient({
 
   const handleReconnected = useCallback(() => {
     setPageState('ACTIVE')
-    toast.success('Conexão restabelecida!')
-  }, [])
+    toast.success(t('reconnected'))
+  }, [t])
 
   /**
    * Desfecho do aviso de interrupcao ao servidor. `null` = a tela chegou em
@@ -137,9 +142,9 @@ export function SessionPageClient({
       // Zero Silencio: a falha das duas tentativas de PATCH morria num
       // console.error e a tela seguia afirmando que o credito voltou. O aluno
       // precisa saber que esse aviso nao foi confirmado.
-      toast.error('Não conseguimos confirmar o aviso de interrupção ao servidor.')
+      toast.error(t('interruptUnconfirmedToast'))
     }
-  }, [])
+  }, [t])
 
   const reconnect = useReconnect({
     sessionId: session.id,
@@ -188,8 +193,8 @@ export function SessionPageClient({
 
   useEffect(() => {
     if (pageState !== 'READY') return
-    toast.success('A sala está disponível!')
-  }, [pageState])
+    toast.success(t('roomAvailableToast'))
+  }, [pageState, t])
 
   useEffect(() => {
     if (pageState !== 'ACTIVE') return
@@ -240,10 +245,10 @@ export function SessionPageClient({
       await webrtc.connect(session.id, iceServers)
     } catch (err) {
       console.error('[SessionPageClient] Erro ao conectar:', err)
-      toast.error('Erro ao conectar. Tente novamente.')
+      toast.error(t('connectError'))
       setPageState('READY')
     }
-  }, [webrtc, session.id, iceServers])
+  }, [webrtc, session.id, iceServers, t])
 
   const handleLeave = useCallback(async () => {
     webrtc.disconnect()
@@ -257,12 +262,12 @@ export function SessionPageClient({
       try {
         await apiClient.patch(API.SESSION(session.id), { status: SessionStatus.COMPLETED })
       } catch {
-        toast.error('Erro ao encerrar sessão no servidor.')
+        toast.error(t('endError'))
       }
     }
 
     setPageState('ENDED')
-  }, [webrtc, yjsProvider, session.id])
+  }, [webrtc, yjsProvider, session.id, t])
 
   const handleExtend = useCallback(
     async (minutes: number) => {
@@ -270,13 +275,13 @@ export function SessionPageClient({
         await apiClient.patch(API.SESSION(session.id), { extendedBy: totalExtended + minutes })
         timer.extend(minutes)
         setTotalExtended((prev) => prev + minutes)
-        toast.success(`Sessão estendida em ${minutes} minutos.`)
+        toast.success(t('extendedToast', { minutes }))
       } catch (err) {
         console.error('[SessionPageClient] Falha ao estender:', err)
-        toast.error('Erro ao estender a sessão.')
+        toast.error(t('extendError'))
       }
     },
-    [session.id, totalExtended, timer],
+    [session.id, totalExtended, timer, t],
   )
 
   // ── Computed duration for ENDED state ──────────────────────────────────────
@@ -296,10 +301,10 @@ export function SessionPageClient({
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
           <h1 data-testid="session-waiting-header" className="mt-4 text-xl font-semibold text-foreground">
-            A sala abre em {sessionAccess.formattedCountdown}
+            {t('waitingTitle', { countdown: sessionAccess.formattedCountdown })}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Você poderá entrar 5 minutos antes do horário agendado.
+            {t('waitingDesc')}
           </p>
           <Button
             data-testid="session-waiting-enter-button"
@@ -307,7 +312,7 @@ export function SessionPageClient({
             disabled
             aria-disabled="true"
           >
-            Entrar na sala
+            {t('enterRoom')}
           </Button>
         </div>
       </div>
@@ -322,17 +327,17 @@ export function SessionPageClient({
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <Clock className="mx-auto h-12 w-12 text-primary" />
           <h1 data-testid="session-ready-header" className="mt-4 text-xl font-semibold text-foreground">
-            A sala está disponível!
+            {t('readyTitle')}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Clique abaixo para entrar na aula.
+            {t('readyDesc')}
           </p>
           <Button
             data-testid="session-ready-enter-button"
             className="mt-6 w-full"
             onClick={handleEnterRoom}
           >
-            Entrar na sala
+            {t('enterRoom')}
           </Button>
         </div>
       </div>
@@ -347,10 +352,10 @@ export function SessionPageClient({
         <div className="flex flex-col items-center gap-4">
           <Loader2 data-testid="session-connecting-loading" className="h-12 w-12 animate-spin text-primary" />
           <p className="text-lg font-medium text-foreground">
-            Conectando...
+            {t('connecting')}
           </p>
           <p className="text-sm text-muted-foreground">
-            Estabelecendo conexão segura
+            {t('connectingDesc')}
           </p>
         </div>
       </div>
@@ -365,18 +370,18 @@ export function SessionPageClient({
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
           <h1 data-testid="session-ended-header" className="mt-4 text-2xl font-semibold text-foreground">
-            Aula finalizada
+            {t('endedTitle')}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sua aula de {sessionDurationMinutes}min foi concluída com sucesso.
+            {t('endedDesc', { minutes: sessionDurationMinutes })}
           </p>
           <div data-testid="session-ended-actions" className="mt-6 flex flex-col gap-3">
             <Link href={`/session/${session.id}/feedback`}>
-              <Button data-testid="session-ended-feedback-button" className="w-full">Avaliar aula</Button>
+              <Button data-testid="session-ended-feedback-button" className="w-full">{t('rateLesson')}</Button>
             </Link>
             <Link href={ROUTES.DASHBOARD}>
               <Button data-testid="session-ended-dashboard-button" variant="outline" className="w-full">
-                Voltar ao Dashboard
+                {t('backDashboard')}
               </Button>
             </Link>
           </div>
@@ -393,34 +398,30 @@ export function SessionPageClient({
         <div className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500" />
           <h1 data-testid="session-interrupted-header" className="mt-4 text-2xl font-semibold text-foreground">
-            Sessão interrompida
+            {t('interruptedTitle')}
           </h1>
           {interruptSync === 'unconfirmed' ? (
             <p
               data-testid="session-interrupted-unconfirmed"
               className="mt-2 text-sm text-muted-foreground"
             >
-              Sua sessão foi interrompida por problemas de conexão. Não
-              conseguimos avisar o servidor: seu crédito ainda não está
-              confirmado como devolvido. Fale com o suporte com o código desta
-              aula que verificamos o estorno.
+              {t('interruptedUnconfirmed')}
             </p>
           ) : (
             <p
               data-testid="session-interrupted-confirmed"
               className="mt-2 text-sm text-muted-foreground"
             >
-              Sua sessão foi interrompida por problemas de conexão. 1 crédito foi
-              devolvido à sua conta.
+              {t('interruptedConfirmed')}
             </p>
           )}
           <div data-testid="session-interrupted-actions" className="mt-6 flex flex-col gap-3">
             <Link href={ROUTES.SUPPORT}>
-              <Button data-testid="session-interrupted-support-button" className="w-full">Contato</Button>
+              <Button data-testid="session-interrupted-support-button" className="w-full">{t('contact')}</Button>
             </Link>
             <Link href={ROUTES.DASHBOARD}>
               <Button data-testid="session-interrupted-dashboard-button" variant="outline" className="w-full">
-                Voltar ao Dashboard
+                {t('backDashboard')}
               </Button>
             </Link>
           </div>
@@ -445,8 +446,8 @@ export function SessionPageClient({
         {pageState === 'AUDIO_ONLY' ? (
           <div data-testid="session-audio-only-section" className="flex-1 relative">
             <AudioOnlyOverlay
-              peerName={isAdmin ? session.student.name : 'Professor'}
-              peerInitials={isAdmin ? peerInitials : 'PR'}
+              peerName={isAdmin ? session.student.name : t('teacher')}
+              peerInitials={isAdmin ? peerInitials : t('teacherInitials')}
               isAudioActive={!webrtc.isMuted}
             />
           </div>
@@ -460,7 +461,7 @@ export function SessionPageClient({
               isMuted={webrtc.isMuted}
               isVideoOff={webrtc.isVideoOff}
               localName={userName}
-              remoteName={isAdmin ? session.student.name : 'Professor'}
+              remoteName={isAdmin ? session.student.name : t('teacher')}
               className="h-full w-full rounded-none"
             />
           </div>

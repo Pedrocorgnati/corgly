@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,9 @@ import { ForgotPasswordSchema } from '@/schemas/auth.schema';
 type FormData = { email: string };
 
 export function ForgotPasswordForm() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo usuario.
+  const t = useTranslations('auth.forgotPassword');
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -31,7 +35,7 @@ export function ForgotPasswordForm() {
       setSent(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
-        toast.error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+        toast.error(t('tooManyToast'));
       } else {
         // Always show success to prevent user enumeration
         setSent(true);
@@ -45,10 +49,9 @@ export function ForgotPasswordForm() {
     return (
       <div data-testid="form-forgot-password-success" className="text-center space-y-3 py-4">
         <CheckCircle2 className="h-10 w-10 text-success mx-auto" />
-        <h2 className="text-base font-semibold text-foreground">Verifique seu email</h2>
+        <h2 className="text-base font-semibold text-foreground">{t('sentTitle')}</h2>
         <p className="text-sm text-muted-foreground">
-          Se o email estiver cadastrado, você receberá um link de recuperação.
-          Verifique também sua pasta de spam.
+          {t('sentDesc')}
         </p>
       </div>
     );
@@ -57,7 +60,7 @@ export function ForgotPasswordForm() {
   return (
     <form data-testid="form-forgot-password" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="space-y-1.5">
-        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium">{t('emailLabel')}</Label>
         <Input
           data-testid="form-forgot-password-email-input"
           id="email"
@@ -74,7 +77,7 @@ export function ForgotPasswordForm() {
         )}
       </div>
       <Button data-testid="form-forgot-password-submit-button" type="submit" className="w-full min-h-[44px]" disabled={isLoading}>
-        {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Enviando...</> : 'Enviar link de recuperação'}
+        {isLoading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t('sending')}</> : t('submit')}
       </Button>
     </form>
   );

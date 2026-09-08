@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { getSession } from '@/lib/auth/session';
 import { rescheduleOptionsService } from '@/lib/bookings/reschedule-options.service';
 import {
@@ -11,10 +12,10 @@ import { ROUTES } from '@/lib/constants/routes';
 import { AppError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
-export const metadata: Metadata = {
-  title: 'Reagendar aula',
-  robots: 'noindex',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pages.reschedule');
+  return { title: t('metaTitle'), robots: 'noindex' };
+}
 
 interface Props {
   params: Promise<{ bookingId: string }>;
@@ -30,6 +31,8 @@ interface Props {
  */
 export default async function ReschedulePage({ params }: Props) {
   const { bookingId } = await params;
+  const t = await getTranslations('pages.reschedule');
+  const tA11y = await getTranslations('a11y');
 
   let view: RescheduleOptionsClientProps;
 
@@ -76,7 +79,7 @@ export default async function ReschedulePage({ params }: Props) {
     <PageWrapper data-testid="page-schedule-reschedule" className="max-w-3xl">
       <nav
         data-testid="schedule-reschedule-breadcrumb"
-        aria-label="Breadcrumb"
+        aria-label={tA11y('breadcrumb')}
         className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground"
       >
         <Link
@@ -84,19 +87,17 @@ export default async function ReschedulePage({ params }: Props) {
           href={ROUTES.HISTORY}
           className="transition-colors hover:text-foreground"
         >
-          ← Histórico de aulas
+          &larr; {t('backHistory')}
         </Link>
         <span>/</span>
         <span className="text-foreground" aria-current="page">
-          Reagendar aula
+          {t('current')}
         </span>
       </nav>
 
       <header data-testid="schedule-reschedule-header" className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Reagendar aula</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Escolha um novo horário entre as alternativas disponíveis.
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">{t('subtitle')}</p>
       </header>
 
       <RescheduleOptionsClient {...view} />

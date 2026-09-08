@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -24,6 +25,9 @@ export function ReconnectingOverlay({
   attemptCount,
   onCancel,
 }: ReconnectingOverlayProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.reconnecting')
+
   if (!isVisible) return null
 
   // Parse seconds from countdown for pulse animation
@@ -47,7 +51,7 @@ export function ReconnectingOverlay({
 
       {/* Texto principal */}
       <p className="mt-4 text-lg font-semibold text-white">
-        Reconectando...
+        {t('title')}
       </p>
 
       {/* Countdown */}
@@ -58,12 +62,12 @@ export function ReconnectingOverlay({
           isUrgent && 'animate-pulse text-red-400',
         )}
       >
-        Tempo restante: {countdown}
+        {t('remaining', { countdown })}
       </p>
 
       {/* Tentativas */}
       <p className="mt-1 text-sm text-white/60">
-        Tentativa {attemptCount} de {MAX_ATTEMPTS}
+        {t('attempt', { count: attemptCount, max: MAX_ATTEMPTS })}
       </p>
 
       {/* Botão cancelar */}
@@ -77,7 +81,7 @@ export function ReconnectingOverlay({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/60',
         )}
       >
-        Cancelar
+        {t('cancel')}
       </button>
     </div>
   )

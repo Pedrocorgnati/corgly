@@ -324,6 +324,7 @@ async function main() {
       startAt: blockedStartAt,
       endAt: setSeconds(setMinutes(setHours(addDays(startOfDay(new Date()), 10), 11), 0), 0),
       isBlocked: true,
+      blockOrigin: 'MANUAL',
     },
   })
 

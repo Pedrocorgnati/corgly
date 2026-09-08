@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,16 +19,15 @@ interface Props {
   redirectTo: string;
 }
 
-const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para continuar.';
-const NOT_ENROLLED_MESSAGE = 'O MFA desta conta ainda não foi configurado.';
-const INVALID_CODE_MESSAGE = 'Código inválido. Tente novamente.';
-
 /**
  * Formulario da verificacao em duas etapas (step-up) do admin.
  * Sad paths: 401 (sessao expirada -> login), 409 (MFA nao cadastrado -> link
  * para o setup), 400 (codigo invalido/replay), 429 (rate limit), timeout e rede.
  */
 export function MfaChallengeForm({ redirectTo }: Props) {
+  // Ate 2026-09-07 esta copy (inclusive as tres constantes de modulo) era
+  // portugues cravado e ignorava o idioma escolhido pelo usuario.
+  const t = useTranslations('auth.mfa');
   const router = useRouter();
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,24 +46,24 @@ export function MfaChallengeForm({ redirectTo }: Props) {
         { code: code.trim() },
         { skipAuthRedirect: true },
       );
-      toast.success('Verificação concluída.');
+      toast.success(t('challengeDoneToast'));
       // Mantem o formulario desabilitado ate a navegacao desmontar o componente.
       router.replace(redirectTo);
     } catch (err) {
       setIsSubmitting(false);
 
       if (err instanceof ApiError && err.status === 401) {
-        toast.error(SESSION_EXPIRED_MESSAGE);
+        toast.error(t('sessionExpired'));
         router.replace(withRedirectTo(ROUTES.LOGIN, redirectTo));
         return;
       }
       if (err instanceof ApiError && err.status === 409) {
         setNotEnrolled(true);
-        setError(NOT_ENROLLED_MESSAGE);
+        setError(t('notEnrolled'));
         return;
       }
 
-      setError(describeMfaApiError(err, INVALID_CODE_MESSAGE));
+      setError(describeMfaApiError(err, t('invalidCode'), t));
     }
   }
 
@@ -76,7 +76,7 @@ export function MfaChallengeForm({ redirectTo }: Props) {
     >
       <div className="space-y-1.5">
         <Label htmlFor="mfa-code" className="text-sm font-medium">
-          Código
+          {t('challengeCodeLabel')}
         </Label>
         <Input
           data-testid="form-mfa-challenge-code-input"
@@ -98,8 +98,7 @@ export function MfaChallengeForm({ redirectTo }: Props) {
           aria-describedby={error ? 'mfa-challenge-error' : 'mfa-challenge-hint'}
         />
         <p id="mfa-challenge-hint" className="text-xs text-muted-foreground">
-          Use o código de 6 dígitos do app autenticador ou um dos seus códigos de
-          recuperação.
+          {t('challengeHint')}
         </p>
         {error && (
           <p id="mfa-challenge-error" className="text-sm text-destructive" role="alert">
@@ -112,7 +111,7 @@ export function MfaChallengeForm({ redirectTo }: Props) {
             href={withRedirectTo(ROUTES.MFA_SETUP, redirectTo)}
             className="inline-block text-sm font-medium text-primary hover:underline"
           >
-            Configurar MFA agora
+            {t('challengeSetupLink')}
           </Link>
         )}
       </div>
@@ -126,10 +125,10 @@ export function MfaChallengeForm({ redirectTo }: Props) {
         {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Verificando...
+            {t('verifying')}
           </>
         ) : (
-          'Verificar'
+          t('verify')
         )}
       </Button>
     </form>

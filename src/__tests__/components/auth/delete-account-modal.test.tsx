@@ -7,7 +7,7 @@
  * `details.batches`, falha de rede) e a regra que as separa: senha errada fica
  * na tela; sessao caida vai para o login.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@/test/utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { DeleteAccountModal } from '@/components/auth/delete-account-modal';

@@ -2,18 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants/routes';
 import { TimezoneDisplay } from '@/components/ui/timezone-display';
 import { bookSession } from '@/actions/sessions';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 
 type ModalState = 'idle' | 'confirming' | 'success' | 'error' | 'insufficient_credits';
 
 const SESSION_DURATION_MINUTES = 50;
+const CREDITS_PER_SESSION = 1;
 
 interface BookingConfirmModalProps {
   slot: AvailabilitySlot;
@@ -30,6 +31,9 @@ export function BookingConfirmModal({
   onClose,
   onSuccess,
 }: BookingConfirmModalProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('calendar.booking');
   const [state, setState] = useState<ModalState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -40,7 +44,11 @@ export function BookingConfirmModal({
     try {
       const result = await bookSession(slot.id);
       if (result.error) {
-        if (result.error.toLowerCase().includes('crédito') || result.error.toLowerCase().includes('credit')) {
+        // Ate 2026-09-07 a falta de credito era detectada procurando "credito"
+        // DENTRO da mensagem — classificacao que morreria assim que a copy do
+        // servidor mudasse de idioma. Agora quem discrimina e o `code` do
+        // envelope, que nao tem lingua.
+        if (result.code === 'INSUFFICIENT_CREDITS') {
           setState('insufficient_credits');
         } else {
           setErrorMessage(result.error);
@@ -49,9 +57,9 @@ export function BookingConfirmModal({
         return;
       }
       setState('success');
-      toast.success('Aula agendada com sucesso!');
+      toast.success(t('successToast'));
     } catch {
-      setErrorMessage('Erro ao agendar. Tente novamente.');
+      setErrorMessage(t('genericError'));
       setState('error');
     }
   };
@@ -79,18 +87,18 @@ export function BookingConfirmModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
-      aria-label="Confirmar agendamento"
+      aria-label={t('dialogLabel')}
     >
       <div className="bg-card border border-border rounded-2xl shadow-lg w-full max-w-md mx-4 p-6">
         {/* State: idle */}
         {state === 'idle' && (
           <>
             <h3 data-testid="modal-booking-confirm-header" className="text-lg font-semibold text-foreground mb-4">
-              Confirmar agendamento
+              {t('title')}
             </h3>
             <div data-testid="modal-booking-confirm-summary" className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Data e horário:</span>
+                <span className="text-muted-foreground">{t('datetime')}</span>
                 <TimezoneDisplay
                   time={slot.startAt}
                   studentTz={studentTz}
@@ -99,20 +107,20 @@ export function BookingConfirmModal({
                 />
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Duração:</span>
-                <span className="text-foreground">{SESSION_DURATION_MINUTES} minutos</span>
+                <span className="text-muted-foreground">{t('duration')}</span>
+                <span className="text-foreground">{t('durationValue', { minutes: SESSION_DURATION_MINUTES })}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Custo:</span>
-                <span className="text-foreground">1 crédito</span>
+                <span className="text-muted-foreground">{t('cost')}</span>
+                <span className="text-foreground">{t('costValue', { count: CREDITS_PER_SESSION })}</span>
               </div>
             </div>
             <div data-testid="modal-booking-confirm-actions" className="flex gap-3">
               <Button data-testid="modal-booking-confirm-cancel-button" variant="outline" onClick={handleClose} className="flex-1">
-                Cancelar
+                {t('cancel')}
               </Button>
               <Button data-testid="modal-booking-confirm-submit-button" onClick={handleConfirm} className="flex-1">
-                Confirmar
+                {t('confirm')}
               </Button>
             </div>
           </>
@@ -122,8 +130,8 @@ export function BookingConfirmModal({
         {state === 'confirming' && (
           <div data-testid="modal-booking-confirm-loading" className="flex flex-col items-center py-8">
             <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-            <p className="text-foreground font-medium">Confirmando...</p>
-            <p className="text-sm text-muted-foreground mt-1">Aguarde um momento</p>
+            <p className="text-foreground font-medium">{t('confirming')}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t('confirmingHint')}</p>
           </div>
         )}
 
@@ -131,12 +139,12 @@ export function BookingConfirmModal({
         {state === 'success' && (
           <div data-testid="modal-booking-confirm-success" className="flex flex-col items-center py-8">
             <CheckCircle2 className="h-10 w-10 text-emerald-500 mb-4" />
-            <p className="text-foreground font-medium">Aula agendada!</p>
+            <p className="text-foreground font-medium">{t('successTitle')}</p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
-              Sua aula foi confirmada com sucesso.
+              {t('successDesc')}
             </p>
             <Button data-testid="modal-booking-confirm-history-button" onClick={handleSuccessClose} className="mt-6 w-full">
-              Ver histórico
+              {t('history')}
             </Button>
           </div>
         )}
@@ -145,16 +153,16 @@ export function BookingConfirmModal({
         {state === 'error' && (
           <div data-testid="modal-booking-confirm-error" className="flex flex-col items-center py-8">
             <XCircle className="h-10 w-10 text-destructive mb-4" />
-            <p className="text-foreground font-medium">Erro ao agendar</p>
+            <p className="text-foreground font-medium">{t('errorTitle')}</p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
               {errorMessage}
             </p>
             <div data-testid="modal-booking-confirm-error-actions" className="flex gap-3 mt-6 w-full">
               <Button data-testid="modal-booking-confirm-error-close-button" variant="outline" onClick={handleClose} className="flex-1">
-                Fechar
+                {t('close')}
               </Button>
               <Button data-testid="modal-booking-confirm-retry-button" onClick={handleRetry} className="flex-1">
-                Tentar novamente
+                {t('retry')}
               </Button>
             </div>
           </div>
@@ -164,16 +172,16 @@ export function BookingConfirmModal({
         {state === 'insufficient_credits' && (
           <div data-testid="modal-booking-confirm-insufficient-credits" className="flex flex-col items-center py-8">
             <AlertTriangle className="h-10 w-10 text-amber-500 mb-4" />
-            <p className="text-foreground font-medium">Créditos insuficientes</p>
+            <p className="text-foreground font-medium">{t('insufficientTitle')}</p>
             <p className="text-sm text-muted-foreground mt-1 text-center">
-              Você não possui créditos suficientes para agendar esta aula.
+              {t('insufficientDesc')}
             </p>
             <div data-testid="modal-booking-confirm-credits-actions" className="flex gap-3 mt-6 w-full">
               <Button data-testid="modal-booking-confirm-credits-close-button" variant="outline" onClick={handleClose} className="flex-1">
-                Fechar
+                {t('close')}
               </Button>
               <Button data-testid="modal-booking-confirm-buy-credits-button" asChild className="flex-1">
-                <Link href={ROUTES.CREDITS}>Adquirir créditos</Link>
+                <Link href={ROUTES.CREDITS}>{t('buyCredits')}</Link>
               </Button>
             </div>
           </div>

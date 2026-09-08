@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -132,6 +133,9 @@ export function SessionControls({
   onToggleVideo,
   onLeave,
 }: SessionControlsProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.controls')
+
   const [showConfirm, setShowConfirm] = useState(false)
 
   const handleLeaveClick = useCallback(() => {
@@ -161,7 +165,7 @@ export function SessionControls({
               ? 'bg-destructive hover:bg-destructive/90'
               : 'bg-muted hover:bg-muted/80',
           )}
-          aria-label={isMuted ? 'Ativar microfone' : 'Silenciar microfone'}
+          aria-label={isMuted ? t('micOn') : t('micOff')}
         >
           {isMuted ? (
             <MicOff className="h-5 w-5 text-white" />
@@ -181,7 +185,7 @@ export function SessionControls({
               ? 'bg-destructive hover:bg-destructive/90'
               : 'bg-muted hover:bg-muted/80',
           )}
-          aria-label={isVideoOff ? 'Ligar câmera' : 'Desligar câmera'}
+          aria-label={isVideoOff ? t('cameraOn') : t('cameraOff')}
         >
           {isVideoOff ? (
             <VideoOff className="h-5 w-5 text-white" />
@@ -196,7 +200,7 @@ export function SessionControls({
           type="button"
           onClick={handleLeaveClick}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
-          aria-label="Encerrar aula"
+          aria-label={t('leaveAria')}
         >
           <PhoneOff className="h-5 w-5" />
         </button>
@@ -204,10 +208,10 @@ export function SessionControls({
 
       <ConfirmModal
         isOpen={showConfirm}
-        title="Encerrar aula?"
-        body="Você tem certeza que deseja encerrar a aula?"
-        confirmLabel="Encerrar"
-        cancelLabel="Cancelar"
+        title={t('confirmTitle')}
+        body={t('confirmBody')}
+        confirmLabel={t('confirmLabel')}
+        cancelLabel={t('cancelLabel')}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         variant="danger"

@@ -22,6 +22,14 @@
  *      recebe 409, isBlocked final true e version incrementada exatamente 1
  *  11. Dois unblockSlot concorrentes no mesmo slot: mesma forma, isBlocked final
  *      false e version incrementada exatamente 1
+ *
+ * Cenários de origem do bloqueio (blockOrigin — item 015):
+ *  12. Manual e Google coexistem na mesma linha (MANUAL → BOTH) e sao desfeitos
+ *      independentemente, com isBlocked seguindo como projecao mantida
+ *  13. Simetria: a ordem Google → Manual chega ao mesmo BOTH
+ *  14. Recusa: desbloquear como MANUAL um slot bloqueado so pelo Google responde
+ *      AVAILABILITY_052 sem tocar na linha
+ *  15. Slot que ja nasce BOTH: desbloquear uma origem preserva a outra
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
@@ -41,6 +49,21 @@ let admin: User
 // Data futura para os testes
 const FUTURE_DATE = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
 const FUTURE_DATE_STR = FUTURE_DATE.toISOString().slice(0, 10) // YYYY-MM-DD
+
+/**
+ * Horario reservado as suites que operam slot a slot (concorrencia e origem do
+ * bloqueio). Datas deliberadamente fora da banda 9h/10h/11h usada pelo beforeAll
+ * e fora de days[1,3]/days[4]/days[5] das suites de POST.
+ */
+function horarioExclusivo(hora: number): Date {
+  return new Date(
+    FUTURE_DATE.getFullYear(),
+    FUTURE_DATE.getMonth(),
+    FUTURE_DATE.getDate(),
+    hora,
+    30,
+  )
+}
 
 beforeAll(async () => {
   student = await createTestUser({ email: 'avail-student@corgly.test' })
@@ -298,18 +321,9 @@ describe('blockSlot concorrente (dois escritores no mesmo slot)', () => {
   /**
    * Alvo é a transação do serviço, não a rota: as rotas
    * src/app/api/v1/availability/[id]/{block,unblock}/route.ts apenas repassam
-   * err.message com err.status. Datas deliberadamente fora da banda 9h/10h/11h
-   * usada pelo beforeAll e fora de days[1,3]/days[4]/days[5] das suítes acima.
+   * err.message com err.status. O horario vem de `horarioExclusivo` (escopo de
+   * modulo), compartilhado com a suite de origem do bloqueio.
    */
-  function horarioExclusivo(hora: number): Date {
-    return new Date(
-      FUTURE_DATE.getFullYear(),
-      FUTURE_DATE.getMonth(),
-      FUTURE_DATE.getDate(),
-      hora,
-      30,
-    )
-  }
 
   it('exatamente um dos dois bloqueios concorrentes vence', async () => {
     const slot = await createTestSlot({ startAt: horarioExclusivo(19), isBlocked: false })
@@ -346,6 +360,104 @@ describe('blockSlot concorrente (dois escritores no mesmo slot)', () => {
 
     const depois = await testPrisma.availabilitySlot.findUnique({ where: { id: slot.id } })
     expect(depois?.isBlocked).toBe(false)
+    expect(depois?.version).toBe(slot.version + 1)
+  })
+})
+
+// ── Suite de origem do bloqueio: manual x Google ──────────────────────────────
+
+describe('origem do bloqueio (blockOrigin) em AvailabilitySlot', () => {
+  /**
+   * Alvo é a transação do serviço. `blockOrigin` guarda QUEM bloqueou; `isBlocked`
+   * continua como projecao mantida (true enquanto houver qualquer origem viva),
+   * porque seis consumidores ainda leem so ele.
+   */
+
+  async function lerSlot(id: string) {
+    return testPrisma.availabilitySlot.findUnique({ where: { id } })
+  }
+
+  it('manual e Google coexistem e sao desfeitos de forma independente', async () => {
+    const slot = await createTestSlot({ startAt: horarioExclusivo(21), isBlocked: false })
+
+    await availabilityService.blockSlot(slot.id, 'MANUAL')
+    const aposManual = await lerSlot(slot.id)
+    expect(aposManual?.isBlocked).toBe(true)
+    expect(aposManual?.blockOrigin).toBe('MANUAL')
+
+    await availabilityService.blockSlot(slot.id, 'GOOGLE')
+    const aposAmbos = await lerSlot(slot.id)
+    expect(aposAmbos?.isBlocked).toBe(true)
+    expect(aposAmbos?.blockOrigin).toBe('BOTH')
+
+    // Desfazer o lado Google nao pode liberar o slot: o professor ainda bloqueou.
+    await availabilityService.unblockSlot(slot.id, 'GOOGLE')
+    const aposSaidaDoGoogle = await lerSlot(slot.id)
+    expect(aposSaidaDoGoogle?.isBlocked).toBe(true)
+    expect(aposSaidaDoGoogle?.blockOrigin).toBe('MANUAL')
+
+    // Ultima origem removida: agora sim a linha volta a ficar disponivel.
+    await availabilityService.unblockSlot(slot.id, 'MANUAL')
+    const aposLiberar = await lerSlot(slot.id)
+    expect(aposLiberar?.isBlocked).toBe(false)
+    expect(aposLiberar?.blockOrigin).toBeNull()
+
+    // Quatro escritas aceitas, uma version por escrita.
+    expect(aposLiberar?.version).toBe(slot.version + 4)
+  })
+
+  it('a ordem inversa (Google antes do manual) chega ao mesmo BOTH', async () => {
+    const slot = await createTestSlot({ startAt: horarioExclusivo(22), isBlocked: false })
+
+    await availabilityService.blockSlot(slot.id, 'GOOGLE')
+    await availabilityService.blockSlot(slot.id, 'MANUAL')
+    const aposAmbos = await lerSlot(slot.id)
+    expect(aposAmbos?.blockOrigin).toBe('BOTH')
+    expect(aposAmbos?.isBlocked).toBe(true)
+
+    // Simetrico ao caso anterior: sai o manual, sobra o Google segurando a linha.
+    await availabilityService.unblockSlot(slot.id, 'MANUAL')
+    const aposSaidaDoManual = await lerSlot(slot.id)
+    expect(aposSaidaDoManual?.isBlocked).toBe(true)
+    expect(aposSaidaDoManual?.blockOrigin).toBe('GOOGLE')
+  })
+
+  it('recusa desbloquear como manual um slot bloqueado somente pelo Google', async () => {
+    const slot = await createTestSlot({
+      startAt: horarioExclusivo(23),
+      isBlocked: true,
+      blockOrigin: 'GOOGLE',
+    })
+
+    await expect(availabilityService.unblockSlot(slot.id, 'MANUAL')).rejects.toMatchObject({
+      code: 'AVAILABILITY_052',
+      status: 409,
+    })
+
+    // Recusa nao escreve: nem estado, nem version.
+    const depois = await lerSlot(slot.id)
+    expect(depois?.isBlocked).toBe(true)
+    expect(depois?.blockOrigin).toBe('GOOGLE')
+    expect(depois?.version).toBe(slot.version)
+  })
+
+  it('slot que ja nasce BOTH preserva a outra origem quando uma sai', async () => {
+    const slot = await createTestSlot({
+      startAt: horarioExclusivo(18),
+      isBlocked: true,
+      blockOrigin: 'BOTH',
+    })
+
+    // Bloquear de novo pela mesma origem e ruido: BOTH ja cobre as duas.
+    await expect(availabilityService.blockSlot(slot.id, 'GOOGLE')).rejects.toMatchObject({
+      code: 'AVAILABILITY_050',
+      status: 409,
+    })
+
+    await availabilityService.unblockSlot(slot.id, 'MANUAL')
+    const depois = await lerSlot(slot.id)
+    expect(depois?.isBlocked).toBe(true)
+    expect(depois?.blockOrigin).toBe('GOOGLE')
     expect(depois?.version).toBe(slot.version + 1)
   })
 })

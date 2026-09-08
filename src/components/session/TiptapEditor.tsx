@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
@@ -91,6 +92,9 @@ export function TiptapEditor({
   userColor,
   isReadOnly = false,
 }: TiptapEditorProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.editor')
+
   const editor = useEditor({
     editable: !isReadOnly,
     extensions: [
@@ -117,14 +121,14 @@ export function TiptapEditor({
 
   const handleLinkInsert = () => {
     if (!editor) return
-    const url = window.prompt('URL do link:')
+    const url = window.prompt(t('linkPrompt'))
     if (url) {
       editor.chain().focus().setLink({ href: url }).run()
     }
   }
 
   return (
-    <div data-testid="session-notes-editor" className="flex flex-1 flex-col" aria-label="Editor de notas da aula">
+    <div data-testid="session-notes-editor" className="flex flex-1 flex-col" aria-label={t('editorAria')}>
       {/* Inject cursor styles */}
       <style dangerouslySetInnerHTML={{ __html: CURSOR_STYLES }} />
 
@@ -133,13 +137,13 @@ export function TiptapEditor({
         <div
           data-testid="session-notes-toolbar"
           role="toolbar"
-          aria-label="Ferramentas de formatacao"
+          aria-label={t('toolbarAria')}
           className="flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/30 px-2 py-1"
         >
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBold().run()}
             isActive={editor.isActive('bold')}
-            title="Negrito (Ctrl+B)"
+            title={t('bold')}
             testId="session-notes-bold-button"
           >
             B
@@ -148,7 +152,7 @@ export function TiptapEditor({
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleItalic().run()}
             isActive={editor.isActive('italic')}
-            title="Italico (Ctrl+I)"
+            title={t('italic')}
             testId="session-notes-italic-button"
           >
             <em>I</em>
@@ -159,7 +163,7 @@ export function TiptapEditor({
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             isActive={editor.isActive('heading', { level: 1 })}
-            title="Titulo 1"
+            title={t('heading1')}
             testId="session-notes-heading1-button"
           >
             H1
@@ -168,7 +172,7 @@ export function TiptapEditor({
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             isActive={editor.isActive('heading', { level: 2 })}
-            title="Titulo 2"
+            title={t('heading2')}
             testId="session-notes-heading2-button"
           >
             H2
@@ -179,7 +183,7 @@ export function TiptapEditor({
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             isActive={editor.isActive('bulletList')}
-            title="Lista com marcadores"
+            title={t('bulletList')}
             testId="session-notes-bullet-list-button"
           >
             &bull;
@@ -188,7 +192,7 @@ export function TiptapEditor({
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             isActive={editor.isActive('orderedList')}
-            title="Lista numerada"
+            title={t('orderedList')}
             testId="session-notes-ordered-list-button"
           >
             1.
@@ -199,7 +203,7 @@ export function TiptapEditor({
           <ToolbarButton
             onClick={handleLinkInsert}
             isActive={editor.isActive('link')}
-            title="Inserir link"
+            title={t('insertLink')}
             testId="session-notes-link-button"
           >
             Link

@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { NextIntlClientProvider } from 'next-intl';
 import BillingPaymentDetailPage from './page';
+import ptBR from '../../../../../../i18n/messages/pt-BR.json';
 
 const mockUseParams = vi.hoisted(() => vi.fn(() => ({ paymentId: 'pay-1' })));
 
@@ -42,6 +44,19 @@ function jsonResponse(body: unknown, ok = true, status = ok ? 200 : 400) {
   } as unknown as Response;
 }
 
+/**
+ * A pagina le a copy do catalogo (`pages.paymentDetail`), entao o provider e
+ * obrigatorio. As mensagens sao as REAIS de `i18n/messages/pt-BR.json` para que
+ * as asserts continuem valendo sobre o texto que o aluno brasileiro ve.
+ */
+function renderPage() {
+  return render(
+    <NextIntlClientProvider locale="pt-BR" messages={ptBR}>
+      <BillingPaymentDetailPage />
+    </NextIntlClientProvider>,
+  );
+}
+
 function historyResponse(items: unknown[], nextCursor: string | null = null) {
   return jsonResponse({ data: { items, nextCursor }, error: null, message: null });
 }
@@ -79,7 +94,7 @@ describe('BillingPaymentDetailPage', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<BillingPaymentDetailPage />);
+    renderPage();
 
     expect(await screen.findByText('Pedido já registrado anteriormente.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /enviar pedido/i })).not.toBeInTheDocument();
@@ -95,7 +110,7 @@ describe('BillingPaymentDetailPage', () => {
       .mockResolvedValueOnce(jsonResponse({ data: { refundRequest: null }, error: null, message: null }));
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<BillingPaymentDetailPage />);
+    renderPage();
 
     expect(await screen.findByText('Compra de 1 crédito')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(10);
@@ -107,7 +122,7 @@ describe('BillingPaymentDetailPage', () => {
       vi.fn().mockResolvedValueOnce(historyResponse([{ ...payment, status: 'FAILED' }])),
     );
 
-    render(<BillingPaymentDetailPage />);
+    renderPage();
 
     expect(
       await screen.findByText('Este pagamento não está elegível para pedido de reembolso.'),
@@ -121,7 +136,7 @@ describe('BillingPaymentDetailPage', () => {
       .mockResolvedValueOnce(historyResponse([{ ...payment, refundEligible: false }]));
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<BillingPaymentDetailPage />);
+    renderPage();
 
     expect(
       await screen.findByText('Este pagamento não está elegível para pedido de reembolso.'),
@@ -156,7 +171,7 @@ describe('BillingPaymentDetailPage', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    render(<BillingPaymentDetailPage />);
+    renderPage();
 
     await user.type(await screen.findByLabelText('Motivo do reembolso'), 'Motivo detalhado');
     await user.click(screen.getByRole('button', { name: /enviar pedido/i }));

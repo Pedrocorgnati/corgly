@@ -1,8 +1,9 @@
 /**
  * Item 009 — contrato de retorno do auxiliar `apiFetch` (`src/actions/sessions.ts`).
  *
- * `apiFetch` publica `Promise<{ data: T | null; error: string | null }>`: um par,
- * nunca uma excecao. Antes deste item ele lia `await res.json()` sem guarda, e
+ * `apiFetch` publica `Promise<{ data: T | null; error: string | null; code: string
+ * | null }>`: um par (mais o discriminante sem idioma do envelope, `code`, que so
+ * e preenchido quando o servidor classifica a falha), nunca uma excecao. Antes deste item ele lia `await res.json()` sem guarda, e
  * corpo ilegivel (405 sem corpo, HTML de gateway do Passenger em 502/504) fazia a
  * promessa REJEITAR. `HistoryPage` (`src/app/(student)/history/page.tsx` linha 34)
  * chama `getSessions` num `Promise.all` sem `try/catch`: a rejeicao subia pelo
@@ -63,6 +64,7 @@ describe('apiFetch — corpo ilegivel devolve par, nunca rejeita (item 009)', ()
     await expect(getAvailability('2026-03')).resolves.toEqual({
       data: null,
       error: 'Erro 405',
+      code: null,
     });
   });
 
@@ -72,6 +74,7 @@ describe('apiFetch — corpo ilegivel devolve par, nunca rejeita (item 009)', ()
     await expect(getAvailability('2026-03')).resolves.toEqual({
       data: null,
       error: 'Erro 502',
+      code: null,
     });
   });
 
@@ -143,7 +146,7 @@ describe('apiFetch — corpo ilegivel devolve par, nunca rejeita (item 009)', ()
 
     const result = await getAvailability('2026-03');
 
-    expect(result).toEqual({ data: null, error: 'Resposta ilegível do servidor.' });
+    expect(result).toEqual({ data: null, error: 'Resposta ilegível do servidor.', code: null });
     expect(result.error).not.toBeNull();
   });
 
@@ -153,6 +156,7 @@ describe('apiFetch — corpo ilegivel devolve par, nunca rejeita (item 009)', ()
     await expect(getAvailability('2026-13')).resolves.toEqual({
       data: null,
       error: 'Mês inválido. Use formato YYYY-MM.',
+      code: null,
     });
     expect(spy).not.toHaveBeenCalled();
   });
@@ -176,7 +180,7 @@ describe('chamadores recebem par, nao rejeicao (item 009)', () => {
 
     const result = await bookSession('slot-1');
 
-    expect(result).toEqual({ data: null, error: 'Erro 502' });
+    expect(result).toEqual({ data: null, error: 'Erro 502', code: null });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 

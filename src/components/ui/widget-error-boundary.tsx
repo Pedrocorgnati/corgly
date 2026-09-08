@@ -2,6 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,10 @@ interface State {
  * soltamos o boundary, com o botao em estado ocupado enquanto isso.
  */
 function WidgetErrorFallback({ onReset, className }: { onReset: () => void; className?: string }) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo usuario. So o FALLBACK pode chamar hook: `WidgetErrorBoundary`, no mesmo
+  // arquivo, e class component e nao tem acesso a `useTranslations`.
+  const t = useTranslations('errorState');
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -50,7 +55,7 @@ function WidgetErrorFallback({ onReset, className }: { onReset: () => void; clas
       )}
     >
       <AlertTriangle className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-      <p className="text-xs text-muted-foreground text-center">Erro ao carregar este widget</p>
+      <p className="text-xs text-muted-foreground text-center">{t('widget')}</p>
       <button
         type="button"
         data-testid="widget-error-boundary-retry-button"
@@ -64,7 +69,7 @@ function WidgetErrorFallback({ onReset, className }: { onReset: () => void; clas
         className="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
       >
         {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
-        {isPending ? 'Recarregando...' : 'Tentar novamente'}
+        {isPending ? t('reloading') : t('retry')}
       </button>
     </div>
   );

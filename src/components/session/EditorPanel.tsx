@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import type { HocuspocusProvider } from '@hocuspocus/provider'
 import type * as Y from 'yjs'
 import { EditorStatusBar } from './EditorStatusBar'
@@ -30,10 +31,13 @@ export function EditorPanel({
   connectedUsers,
   isReadOnly = false,
 }: EditorPanelProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.editor')
+
   return (
     <section
       className="flex flex-col border-border bg-background max-md:h-[60vh] md:w-[65%] md:border-l"
-      aria-label="Painel do editor colaborativo"
+      aria-label={t('panelAria')}
     >
       <EditorStatusBar
         syncBannerText={syncBannerText}

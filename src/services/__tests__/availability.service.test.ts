@@ -41,13 +41,23 @@ function makeSlot(overrides: Record<string, unknown> = {}) {
  * `session.service.ts` no `reschedule`.
  */
 function armarTx(options: {
-  row?: { id: string; isBlocked: number; version: number } | null;
+  row?: { id: string; isBlocked: number; version: number; blockOrigin?: string | null } | null;
   occupant?: { id: string } | null;
   cas?: number;
 }) {
   const { row = { id: 'slot-1', isBlocked: 0, version: 3 }, occupant = null, cas = 1 } = options;
+  // Origem derivada de `isBlocked` quando a fixture nao a declara, espelhando o default de
+  // `createTestSlot`: linha bloqueada sem origem e o estado que a migration do item 015
+  // eliminou do banco, entao nenhuma fixture pode arma-lo por omissao.
+  const linha =
+    row === null
+      ? null
+      : {
+          ...row,
+          blockOrigin: row.blockOrigin !== undefined ? row.blockOrigin : row.isBlocked ? 'MANUAL' : null,
+        };
   const tx = {
-    $queryRaw: vi.fn().mockResolvedValue(row ? [row] : []),
+    $queryRaw: vi.fn().mockResolvedValue(linha ? [linha] : []),
     $executeRaw: vi.fn().mockResolvedValue(cas),
     session: { findFirst: vi.fn().mockResolvedValue(occupant) },
   };
@@ -321,7 +331,9 @@ describe('AvailabilityService', () => {
       expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
       const call = tx.$executeRaw.mock.calls[0] as unknown[];
       const sql = (call[0] as string[]).join('?');
-      expect(sql).toContain('SET isBlocked = true, version = version + 1');
+      expect(sql).toContain('isBlocked = true');
+      expect(sql).toContain('blockOrigin =');
+      expect(sql).toContain('version = version + 1');
       expect(sql).toContain('AND version =');
       // o parametro de version e o valor lido sob o lock, nao outro
       expect(call.slice(1)).toContain(3);
@@ -453,6 +465,117 @@ describe('AvailabilityService', () => {
 
       await expect(service.blockSlot('slot-1')).rejects.toBe(err);
     });
+
+    // ── origem do bloqueio (item 015) ──
+    // Uma linha por transicao da primeira tabela do objetivo do item: a decisao passa a ser
+    // pela ORIGEM, nao por `isBlocked`.
+    describe('origem do bloqueio', () => {
+      function paramsDoCas(tx: ReturnType<typeof armarTx>) {
+        const call = tx.$executeRaw.mock.calls[0] as unknown[];
+        return { sql: (call[0] as string[]).join('?'), params: call.slice(1) };
+      }
+
+      it('slot livre bloqueado por MANUAL grava MANUAL', async () => {
+        const tx = armarTx({ row: { id: 'slot-1', isBlocked: 0, version: 3, blockOrigin: null } });
+
+        await service.blockSlot('slot-1', 'MANUAL');
+
+        const { sql, params } = paramsDoCas(tx);
+        expect(params).toContain('MANUAL');
+        expect(sql).toContain('isBlocked = true');
+        expect(sql).toContain('AND version =');
+        expect(params).toContain(3);
+      });
+
+      it('slot livre bloqueado por GOOGLE grava GOOGLE', async () => {
+        const tx = armarTx({ row: { id: 'slot-1', isBlocked: 0, version: 3, blockOrigin: null } });
+
+        await service.blockSlot('slot-1', 'GOOGLE');
+
+        const { params } = paramsDoCas(tx);
+        expect(params).toContain('GOOGLE');
+      });
+
+      it('slot MANUAL bloqueado por GOOGLE vira BOTH', async () => {
+        const tx = armarTx({
+          row: { id: 'slot-1', isBlocked: 1, version: 3, blockOrigin: 'MANUAL' },
+        });
+
+        await service.blockSlot('slot-1', 'GOOGLE');
+
+        const { sql, params } = paramsDoCas(tx);
+        expect(params).toContain('BOTH');
+        expect(sql).toContain('isBlocked = true');
+        expect(sql).toContain('AND version =');
+      });
+
+      it('slot GOOGLE bloqueado por MANUAL vira BOTH', async () => {
+        const tx = armarTx({
+          row: { id: 'slot-1', isBlocked: 1, version: 3, blockOrigin: 'GOOGLE' },
+        });
+
+        await service.blockSlot('slot-1', 'MANUAL');
+
+        expect(paramsDoCas(tx).params).toContain('BOTH');
+      });
+
+      it('bloquear duas vezes pela MESMA origem lanca AVAILABILITY_050', async () => {
+        const tx = armarTx({
+          row: { id: 'slot-1', isBlocked: 1, version: 3, blockOrigin: 'GOOGLE' },
+        });
+
+        try {
+          await service.blockSlot('slot-1', 'GOOGLE');
+          throw new Error('deveria ter rejeitado');
+        } catch (err) {
+          expect(err).toBeInstanceOf(AppError);
+          expect((err as AppError).code).toBe('AVAILABILITY_050');
+          expect((err as AppError).status).toBe(409);
+        }
+        expect(tx.$executeRaw).not.toHaveBeenCalled();
+      });
+
+      it.each(['MANUAL', 'GOOGLE'] as const)(
+        'slot BOTH recusa bloqueio por %s com AVAILABILITY_050',
+        async (origem) => {
+          const tx = armarTx({
+            row: { id: 'slot-1', isBlocked: 1, version: 3, blockOrigin: 'BOTH' },
+          });
+
+          try {
+            await service.blockSlot('slot-1', origem);
+            throw new Error('deveria ter rejeitado');
+          } catch (err) {
+            expect(err).toBeInstanceOf(AppError);
+            expect((err as AppError).code).toBe('AVAILABILITY_050');
+            expect((err as AppError).status).toBe(409);
+          }
+          expect(tx.$executeRaw).not.toHaveBeenCalled();
+        },
+      );
+
+      // Decisao de ST003: a transicao para BOTH parte de slot JA bloqueado, onde nenhuma
+      // sessao nova pode ter entrado. Rodar a re-checagem ali mudaria um caminho fechado.
+      it('nao re-checa ocupante na transicao para BOTH, mesmo com ocupante armado', async () => {
+        const tx = armarTx({
+          row: { id: 'slot-1', isBlocked: 1, version: 3, blockOrigin: 'MANUAL' },
+          occupant: { id: 'session-1' },
+        });
+
+        await service.blockSlot('slot-1', 'GOOGLE');
+
+        expect(tx.session.findFirst).not.toHaveBeenCalled();
+        expect(paramsDoCas(tx).params).toContain('BOTH');
+      });
+
+      it('sem origem explicita, bloqueia como MANUAL (default das rotas HTTP)', async () => {
+        const tx = armarTx({ row: { id: 'slot-1', isBlocked: 0, version: 3, blockOrigin: null } });
+
+        await service.blockSlot('slot-1');
+
+        expect(paramsDoCas(tx).params).toContain('MANUAL');
+      });
+    });
   });
 
   // ── unblockSlot ──
@@ -479,7 +602,9 @@ describe('AvailabilityService', () => {
       expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
       const call = tx.$executeRaw.mock.calls[0] as unknown[];
       const sql = (call[0] as string[]).join('?');
-      expect(sql).toContain('SET isBlocked = false, version = version + 1');
+      expect(sql).toContain('isBlocked =');
+      expect(sql).toContain('blockOrigin =');
+      expect(sql).toContain('version = version + 1');
       expect(sql).toContain('AND version =');
       expect(call.slice(1)).toContain(5);
     });
@@ -535,6 +660,89 @@ describe('AvailabilityService', () => {
         expect((caught as AppError).code).toBe('AVAILABILITY_054');
         expect((caught as AppError).status).toBe(409);
       }
+    });
+
+    // ── origem do bloqueio (item 015) ──
+    // Uma linha por transicao da segunda tabela do objetivo do item. O aceite central do
+    // item vive aqui: desfazer uma origem de um slot BOTH nao desfaz a outra.
+    describe('origem do bloqueio', () => {
+      function paramsDoCas(tx: ReturnType<typeof armarTx>) {
+        const call = tx.$executeRaw.mock.calls[0] as unknown[];
+        return { sql: (call[0] as string[]).join('?'), params: call.slice(1) };
+      }
+
+      it('BOTH menos MANUAL deixa GOOGLE com isBlocked verdadeiro', async () => {
+        const tx = armarTx({ row: { id: 'slot-1', isBlocked: 1, version: 5, blockOrigin: 'BOTH' } });
+
+        await service.unblockSlot('slot-1', 'MANUAL');
+
+        const { sql, params } = paramsDoCas(tx);
+        expect(params).toContain('GOOGLE');
+        expect(params).toContain(true);
+        expect(sql).toContain('AND version =');
+        expect(params).toContain(5);
+      });
+
+      it('BOTH menos GOOGLE deixa MANUAL com isBlocked verdadeiro', async () => {
+        const tx = armarTx({ row: { id: 'slot-1', isBlocked: 1, version: 5, blockOrigin: 'BOTH' } });
+
+        await service.unblockSlot('slot-1', 'GOOGLE');
+
+        const { params } = paramsDoCas(tx);
+        expect(params).toContain('MANUAL');
+        expect(params).toContain(true);
+      });
+
+      it('origem unica igual a pedida libera o slot (origem nula, isBlocked falso)', async () => {
+        const tx = armarTx({
+          row: { id: 'slot-1', isBlocked: 1, version: 5, blockOrigin: 'MANUAL' },
+        });
+
+        await service.unblockSlot('slot-1', 'MANUAL');
+
+        const { params } = paramsDoCas(tx);
+        expect(params).toContain(null);
+        expect(params).toContain(false);
+      });
+
+      it('origem divergente lanca AVAILABILITY_052 com mensagem propria', async () => {
+        const tx = armarTx({
+          row: { id: 'slot-1', isBlocked: 1, version: 5, blockOrigin: 'GOOGLE' },
+        });
+
+        try {
+          await service.unblockSlot('slot-1', 'MANUAL');
+          throw new Error('deveria ter rejeitado');
+        } catch (err) {
+          expect(err).toBeInstanceOf(AppError);
+          expect((err as AppError).code).toBe('AVAILABILITY_052');
+          expect((err as AppError).status).toBe(409);
+          expect((err as AppError).message).toBe('Slot não possui bloqueio desta origem.');
+        }
+        expect(tx.$executeRaw).not.toHaveBeenCalled();
+      });
+
+      it('slot sem origem lanca AVAILABILITY_052 com a mensagem de ja desbloqueado', async () => {
+        const tx = armarTx({ row: { id: 'slot-1', isBlocked: 0, version: 5, blockOrigin: null } });
+
+        try {
+          await service.unblockSlot('slot-1', 'MANUAL');
+          throw new Error('deveria ter rejeitado');
+        } catch (err) {
+          expect(err).toBeInstanceOf(AppError);
+          expect((err as AppError).code).toBe('AVAILABILITY_052');
+          expect((err as AppError).message).toBe('Slot já está desbloqueado.');
+        }
+        expect(tx.$executeRaw).not.toHaveBeenCalled();
+      });
+
+      it('sem origem explicita, desbloqueia como MANUAL (default das rotas HTTP)', async () => {
+        const tx = armarTx({ row: { id: 'slot-1', isBlocked: 1, version: 5, blockOrigin: 'BOTH' } });
+
+        await service.unblockSlot('slot-1');
+
+        expect(paramsDoCas(tx).params).toContain('GOOGLE');
+      });
     });
   });
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,6 +51,10 @@ type GateState =
 const TERMS_STATUS_URL = '/api/v1/legal/terms/acceptance';
 
 export function TermsAcceptanceGate({ children }: { children: React.ReactNode }) {
+  // O gate cobre a area logada inteira e era 100% portugues cravado: com o site
+  // em outro idioma o aluno via o bloqueio dos termos em pt-BR.
+  const t = useTranslations('termsGate');
+  const locale = useLocale();
   const router = useRouter();
   const [state, setState] = useState<GateState>({ phase: 'loading' });
   const [submitting, setSubmitting] = useState(false);
@@ -94,20 +99,20 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
       if (!res.ok) {
         // Mantem o Gate aberto e permite retry (Zero Silencio).
         const json = await res.json().catch(() => null);
-        toast.error(json?.error ?? 'Nao foi possivel registrar o aceite. Tente novamente.');
+        toast.error(json?.error ?? t('acceptError'));
         return;
       }
 
       // Sucesso: revalida sessao/dados e libera o acesso com feedback explicito.
       setState({ phase: 'satisfied' });
-      toast.success('Termos aceitos. Bom uso!');
+      toast.success(t('acceptSuccess'));
       router.refresh();
     } catch {
-      toast.error('Erro de conexao ao registrar o aceite. Tente novamente.');
+      toast.error(t('connectionError'));
     } finally {
       setSubmitting(false);
     }
-  }, [state, router]);
+  }, [state, router, t]);
 
   if (state.phase === 'loading') {
     return (
@@ -116,7 +121,7 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
           <Skeleton className="h-6 w-1/2" />
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-10 w-32" />
-          <span className="sr-only">Carregando os termos exigidos...</span>
+          <span className="sr-only">{t('loading')}</span>
         </div>
       </div>
     );
@@ -126,8 +131,8 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
     return (
       <div data-testid="terms-gate-error" className="flex min-h-[60vh] items-center justify-center p-6">
         <ErrorState
-          title="Nao foi possivel carregar os termos"
-          message="O acesso depende da leitura e do aceite dos termos. Tente novamente."
+          title={t('errorTitle')}
+          message={t('errorMessage')}
           onRetry={() => void loadStatus()}
         />
       </div>
@@ -150,8 +155,10 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
               {document.title}
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Versao {document.version} - vigente desde{' '}
-              {new Date(document.required_since).toLocaleDateString('pt-BR')}
+              {t('version', {
+                version: document.version,
+                date: new Date(document.required_since).toLocaleDateString(locale),
+              })}
             </p>
           </div>
 
@@ -165,13 +172,13 @@ export function TermsAcceptanceGate({ children }: { children: React.ReactNode })
               variant="outline"
               disabled={submitting}
               onClick={() =>
-                toast.info('O acesso ao dashboard depende do aceite dos termos vigentes.')
+                toast.info(t('declineNotice'))
               }
             >
-              Recusar
+              {t('decline')}
             </Button>
             <Button data-testid="modal-terms-acceptance-accept-button" onClick={() => void handleAccept()} disabled={submitting}>
-              {submitting ? 'Registrando...' : 'Li e aceito os termos'}
+              {submitting ? t('accepting') : t('accept')}
             </Button>
           </div>
         </div>

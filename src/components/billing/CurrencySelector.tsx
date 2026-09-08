@@ -41,7 +41,10 @@ interface CurrencySelectorProps {
  *   propria. Isso evita a gravacao dupla que existia quando o componente
  *   chamava o PATCH sozinho alem do hook.
  * - Nenhuma promessa de que a cobranca sera feita nessa moeda (Zero Assumido):
- *   a moeda de registro efetiva e confirmada no checkout.
+ *   o componente nao renderiza preco nenhum. O aviso de rodape que repetia isso
+ *   em texto ("a moeda cobrada e confirmada no checkout / USDC sujeito ao
+ *   gateway") saiu em 2026-09-07: era ruido fixo abaixo do seletor, sem acao
+ *   possivel para quem le.
  */
 export function CurrencySelector({
   value,
@@ -98,13 +101,28 @@ export function CurrencySelector({
             );
           })}
         </div>
+        {/*
+          Indicador de "em voo" SEM reflow.
+
+          Ate 2026-09-07 este bloco injetava a frase inteira ("Salvando sua
+          preferencia de moeda...", ~264px) na MESMA linha flex dos botoes
+          durante o PATCH e a removia ao terminar: por um instante o rotulo e as
+          quatro moedas eram empurrados para fora da tela e voltavam. Agora o
+          espaco do spinner e RESERVADO o tempo todo (largura fixa, sempre
+          montado), entao nada se move quando a gravacao comeca ou acaba.
+
+          Zero Silencio continua valendo: a frase segue no DOM, em `sr-only`,
+          dentro de um `role="status"` que o leitor de tela anuncia.
+        */}
+        <span
+          data-slot="currency-selector-busy-slot"
+          aria-hidden="true"
+          className="inline-flex h-4 w-4 shrink-0 items-center justify-center"
+        >
+          {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+        </span>
         {busy && (
-          <span
-            data-testid={`${testId}-status`}
-            role="status"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
-          >
-            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          <span data-testid={`${testId}-status`} role="status" className="sr-only">
             {isSaving ? text('saving') : text('loading')}
           </span>
         )}
@@ -129,11 +147,6 @@ export function CurrencySelector({
           )}
         </p>
       )}
-
-      <p className="text-xs text-muted-foreground">
-        {text('note')}
-        {available.includes('USDC') && ` ${text('usdcNote')}`}
-      </p>
     </div>
   );
 }

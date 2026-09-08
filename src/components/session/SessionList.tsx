@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SessionStatus, SESSION_STATUS_MAP, SESSION_STATUS_LABEL_KEY } from '@/lib/constants/enums';
@@ -42,7 +42,11 @@ export function SessionList({
   isLoading,
   onSessionClick,
 }: SessionListProps) {
+  // Ate 2026-09-07 esta copy (e os dois 'pt-BR' cravados no formatador de data)
+  // ignorava o idioma escolhido pelo usuario.
+  const t = useTranslations('sessionRoom.list');
   const tStatus = useTranslations('sessionStatus');
+  const locale = useLocale();
 
   if (isLoading) {
     return (
@@ -61,7 +65,7 @@ export function SessionList({
     <div data-testid="admin-sessions-list" className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
       {/* Filters */}
       <div data-testid="admin-sessions-filter-bar" className="p-4 border-b border-border flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-medium text-foreground mr-2">Filtrar:</span>
+        <span className="text-sm font-medium text-foreground mr-2">{t('filter')}</span>
         <button
           data-testid="admin-sessions-filter-all-button"
           onClick={() => onStatusFilter(null)}
@@ -72,7 +76,7 @@ export function SessionList({
               : 'border-border text-muted-foreground hover:border-primary',
           )}
         >
-          Todos
+          {t('all')}
         </button>
         {ALL_STATUSES.map((status) => {
           const config = SESSION_STATUS_MAP[status];
@@ -97,18 +101,18 @@ export function SessionList({
       {/* Table */}
       {sessions.data.length === 0 ? (
         <div data-testid="admin-sessions-empty" className="py-12 text-center text-muted-foreground">
-          <p className="text-sm">Nenhuma sessão encontrada.</p>
+          <p className="text-sm">{t('empty')}</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table data-testid="admin-sessions-table" className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Aluno</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Data/Hora</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Score</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ações</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('colStudent')}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('colDateTime')}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('colStatus')}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('colScore')}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t('colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,11 +126,11 @@ export function SessionList({
                   <tr key={session.id} data-testid={`admin-sessions-row-${session.id}`} className="border-b border-border last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-3 text-foreground">{session.studentName ?? '—'}</td>
                     <td className="px-4 py-3 text-foreground">
-                      {new Date(session.startAt).toLocaleDateString('pt-BR', {
+                      {new Date(session.startAt).toLocaleDateString(locale, {
                         day: '2-digit',
                         month: '2-digit',
                       })}{' '}
-                      {new Date(session.startAt).toLocaleTimeString('pt-BR', {
+                      {new Date(session.startAt).toLocaleTimeString(locale, {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
@@ -154,7 +158,7 @@ export function SessionList({
                         size="sm"
                         onClick={() => onSessionClick?.(session.id)}
                       >
-                        Ver
+                        {t('view')}
                       </Button>
                     </td>
                   </tr>
@@ -169,7 +173,11 @@ export function SessionList({
       {sessions.totalPages > 1 && (
         <div data-testid="admin-sessions-pagination" className="flex items-center justify-between p-4 border-t border-border">
           <p className="text-xs text-muted-foreground">
-            Página {sessions.page} de {sessions.totalPages} ({sessions.total} sessões)
+            {t('pageStatus', {
+              page: sessions.page,
+              totalPages: sessions.totalPages,
+              total: sessions.total,
+            })}
           </p>
           <div className="flex items-center gap-2">
             <Button

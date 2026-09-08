@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { AlertTriangle, WifiOff } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -26,6 +27,9 @@ import { SessionFallbackControls } from '@/components/session/SessionFallbackCon
  * volta para a sala completa; encerrar interrompe a sessão (crédito reembolsado).
  */
 export default function SessionAudioOnlyPage() {
+  // Idioma resolvido no servidor (i18n/request.ts). Ate 2026-09-07 esta tela
+  // escrevia portugues cravado e ignorava o idioma escolhido pelo aluno.
+  const t = useTranslations('pages.audioOnly')
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const { role, isLoading } = useAuth()
@@ -54,11 +58,11 @@ export default function SessionAudioOnlyPage() {
     }).then((ok) => {
       if (!ok) {
         setHealthNotice(
-          'Não foi possível registrar o estado da conexão, mas sua aula continua ativa.',
+          t('healthNotice'),
         )
       }
     })
-  }, [sessionId, role, isLoading])
+  }, [sessionId, role, isLoading, t])
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -104,13 +108,13 @@ export default function SessionAudioOnlyPage() {
       })
     } catch (err) {
       console.error('[audio-only] Falha ao interromper sessão:', err)
-      toast.error('Não foi possível encerrar a sessão no servidor. Tente novamente.')
+      toast.error(t('interruptError'))
       setIsBusy(false)
       return
     }
 
     router.push(ROUTES.SESSION(sessionId))
-  }, [sessionId, role, isBusy, router])
+  }, [sessionId, role, isBusy, router, t])
 
   // ── Estados de borda ───────────────────────────────────────────────────────
 
@@ -119,18 +123,14 @@ export default function SessionAudioOnlyPage() {
       <main data-testid="page-session-audio-only" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div data-testid="session-audio-only-error" className="w-full max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
-          <h1 className="mt-4 text-xl font-semibold text-foreground">
-            Sessão não identificada
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Não foi possível localizar esta aula. Volte ao painel e tente novamente.
-          </p>
+          <h1 className="mt-4 text-xl font-semibold text-foreground">{t('errorTitle')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('errorDesc')}</p>
           <Link
             href={ROUTES.DASHBOARD}
             data-testid="session-audio-only-dashboard-link"
             className="mt-6 inline-flex rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Voltar ao Dashboard
+            {t('backDashboard')}
           </Link>
         </div>
       </main>
@@ -142,21 +142,21 @@ export default function SessionAudioOnlyPage() {
       <main data-testid="page-session-audio-only" className="flex min-h-screen items-center justify-center bg-background p-4">
         <div data-testid="session-audio-only-loading" className="flex flex-col items-center gap-3" aria-live="polite">
           <WifiOff className="h-10 w-10 animate-pulse text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Preparando o modo apenas áudio...</p>
+          <p className="text-sm text-muted-foreground">{t('loading')}</p>
         </div>
       </main>
     )
   }
 
-  const peerName = isAdmin ? 'Aluno' : 'Professor'
-  const peerInitials = isAdmin ? 'AL' : 'PR'
+  const peerName = isAdmin ? t('peerStudent') : t('peerTeacher')
+  const peerInitials = isAdmin ? t('peerStudentInitials') : t('peerTeacherInitials')
 
   return (
     <main data-testid="page-session-audio-only" className="flex min-h-screen flex-col bg-background">
       {/* Banner de contexto */}
       <header data-testid="session-audio-only-header" className="border-b border-border bg-yellow-500/10 px-4 py-3 text-center">
         <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-          O vídeo está indisponível. Você continua na aula em modo apenas áudio.
+          {t('banner')}
         </p>
       </header>
 
@@ -197,7 +197,7 @@ export default function SessionAudioOnlyPage() {
           interruptTestId="session-audio-only-interrupt-button"
         />
         <p className="mt-3 text-center text-xs text-muted-foreground">
-          Sua sessão permanece ativa. Reative o vídeo assim que sua conexão melhorar.
+          {t('footerNote')}
         </p>
       </footer>
     </main>

@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { CalendarCheck, CheckCircle2, Flame, History } from 'lucide-react';
 import { WidgetCard } from '@/components/shared/widget-card';
 import { cn } from '@/lib/utils';
@@ -22,18 +23,21 @@ interface QuickStatsProps {
  * legenda em slate, separados por hairline vertical.
  */
 export function QuickStats({ total, completedPercent, streak, className }: QuickStatsProps) {
+  // Server Component: `useTranslations` do next-intl tambem vale aqui (o pacote
+  // publica uma versao react-server do hook). Nada de rotulo cravado — ate
+  // 2026-09-07 este widget escrevia portugues fixo e ignorava o idioma escolhido.
+  const t = useTranslations('dashboard.stats');
+
   const stats = [
-    { icon: CalendarCheck, value: String(total), label: 'Total de aulas' },
-    { icon: CheckCircle2, value: `${completedPercent}%`, label: 'Concluídas' },
-    ...(streak === undefined
-      ? []
-      : [{ icon: Flame, value: String(streak), label: 'Sequência (sem.)' }]),
+    { icon: CalendarCheck, value: String(total), label: t('total') },
+    { icon: CheckCircle2, value: `${completedPercent}%`, label: t('completed') },
+    ...(streak === undefined ? [] : [{ icon: Flame, value: String(streak), label: t('streak') }]),
   ];
 
   return (
     <WidgetCard
       data-testid="dashboard-kpi-quick-stats"
-      title="Seu histórico"
+      title={t('title')}
       icon={History}
       className={className}
     >

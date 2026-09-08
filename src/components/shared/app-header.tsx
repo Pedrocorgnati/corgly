@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { UserRole } from '@/lib/constants/enums';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AppHeaderProps {
   user: { name: string; email: string; role: UserRole; creditBalance: number };
@@ -28,6 +29,8 @@ interface AppHeaderProps {
 
 export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
   const t = useTranslations('nav');
+  const tSidebar = useTranslations('sidebar');
+  const { logout } = useAuth();
   const isAdmin = user.role === UserRole.ADMIN;
 
   return (
@@ -77,7 +80,9 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
             >
               <AvatarInitials name={user.name} size="sm" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent data-testid="header-user-menu" align="end" className="w-48">
+            <DropdownMenuContent data-testid="header-user-menu" align="end" className="w-56">
+              {/* Cabecalho do menu. `DropdownMenuLabel` e um <div> puro de
+                  proposito — ver a nota em src/components/ui/dropdown-menu.tsx. */}
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{user.name}</p>
@@ -85,11 +90,47 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem data-testid="header-user-menu-settings-item" className="cursor-pointer">
-                <Link href={ROUTES.ACCOUNT}>{t('settings')}</Link>
-              </DropdownMenuItem>
+              {/*
+                Destinos REAIS, por papel. `/account` so existe na area do aluno
+                (o layout de (student) devolve o ADMIN para /admin/dashboard), e
+                a unica pagina de conta do admin e /admin/account/security.
+                `render={<Link/>}` faz o proprio item virar o <a>: aninhar um
+                <Link> dentro do item punha um interativo dentro de outro, e o
+                clique no meio do item nao navegava.
+              */}
+              {isAdmin ? (
+                <DropdownMenuItem
+                  data-testid="header-user-menu-security-item"
+                  className="cursor-pointer"
+                  render={<Link href={ROUTES.ADMIN_ACCOUNT_SECURITY} />}
+                >
+                  {tSidebar('admin.security')}
+                </DropdownMenuItem>
+              ) : (
+                <>
+                  <DropdownMenuItem
+                    data-testid="header-user-menu-profile-item"
+                    className="cursor-pointer"
+                    render={<Link href={ROUTES.ACCOUNT} />}
+                  >
+                    {t('profile')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid="header-user-menu-billing-item"
+                    className="cursor-pointer"
+                    render={<Link href={ROUTES.ACCOUNT_BILLING} />}
+                  >
+                    {t('billing')}
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem data-testid="header-user-menu-logout-item" className="text-destructive focus:text-destructive">
+              {/* Zero Orfaos: o item de sair tinha texto e nenhum handler. */}
+              <DropdownMenuItem
+                data-testid="header-user-menu-logout-item"
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onClick={() => logout()}
+              >
                 {t('logout')}
               </DropdownMenuItem>
             </DropdownMenuContent>

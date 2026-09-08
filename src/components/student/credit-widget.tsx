@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, Coins } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { WidgetCard } from '@/components/shared/widget-card';
@@ -15,16 +16,13 @@ interface CreditWidgetProps {
   expiringDays?: number;
 }
 
-/**
- * Pluralizacao em pt-BR pelo criterio correto: singular SO no 1.
- * `> 1` (a forma anterior) tratava 0 como singular — "0 crédito expira".
- * Mesma regra de src/components/billing/credit-breakdown.tsx.
- */
-function plural(count: number, singular: string, plural: string): string {
-  return count === 1 ? singular : plural;
-}
-
 export function CreditWidget({ balance, expiringCount = 0, expiringDays = 0 }: CreditWidgetProps) {
+  // A pluralizacao mora no CATALOGO (ICU `plural`), nao mais num helper local em
+  // portugues: cada idioma tem as suas formas e o antigo `plural(n, 'crédito',
+  // 'créditos')` escrevia portugues mesmo com o site em ingles. O ICU tambem
+  // acerta o caso do zero, que o `> 1` original errava.
+  const t = useTranslations('dashboard.credits');
+
   const isEmpty = balance === 0;
   const isExpiring = expiringCount > 0;
   // O produtor (dashboard) so alerta para lote com `expiresAt` no futuro, entao
@@ -34,7 +32,7 @@ export function CreditWidget({ balance, expiringCount = 0, expiringDays = 0 }: C
   return (
     <WidgetCard
       data-testid="dashboard-kpi-credits"
-      title="Créditos Corgly"
+      title={t('title')}
       icon={Coins}
       accent={isEmpty ? 'destructive' : isExpiring ? 'amber' : 'brand'}
       featured={!isEmpty && !isExpiring}
@@ -55,7 +53,7 @@ export function CreditWidget({ balance, expiringCount = 0, expiringDays = 0 }: C
           {balance}
         </p>
         <p className="mt-1.5 text-[13px] text-muted-foreground">
-          {plural(balance, 'crédito', 'créditos')}
+          {t('unit', { count: balance })}
         </p>
       </div>
 
@@ -67,9 +65,7 @@ export function CreditWidget({ balance, expiringCount = 0, expiringDays = 0 }: C
         >
           <p className="text-[13px] text-warning font-medium flex items-center gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-            {expiringCount} {plural(expiringCount, 'crédito', 'créditos')}{' '}
-            {plural(expiringCount, 'expira', 'expiram')} em {daysLabel}{' '}
-            {plural(daysLabel, 'dia', 'dias')}
+            {t('expiring', { count: expiringCount, days: daysLabel })}
           </p>
         </div>
       )}
@@ -83,7 +79,7 @@ export function CreditWidget({ balance, expiringCount = 0, expiringDays = 0 }: C
           !isEmpty && 'border-[1.5px] border-brand-500 text-brand-500 hover:bg-brand-500/5',
         )}
       >
-        {isEmpty ? 'Comprar créditos' : 'Comprar mais'}
+        {isEmpty ? t('buy') : t('buyMore')}
       </Link>
     </WidgetCard>
   );

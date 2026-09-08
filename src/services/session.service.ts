@@ -760,7 +760,11 @@ export class SessionService {
         isBlocked: false,
         sessions: { none: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } },
       },
-      data: { isBlocked: true, version: { increment: 1 } },
+      // `blockOrigin: 'MANUAL'` fecha o invariante do par: o filtro `isBlocked: false` acima
+      // garante que toda linha alcancada aqui esta com origem nula, entao gravar MANUAL nunca
+      // sobrescreve bloqueio vindo do Google. Sem isso este escritor produziria linha
+      // bloqueada com origem nula, que nenhum `unblockSlot` consegue desfazer.
+      data: { isBlocked: true, blockOrigin: 'MANUAL', version: { increment: 1 } },
     });
 
     return { cancelled, refunded, blocked: blockedResult.count, errors };

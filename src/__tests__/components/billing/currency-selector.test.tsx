@@ -37,8 +37,6 @@ const messages = {
       saveError:
         'Não foi possível salvar sua preferência de moeda. A escolha vale apenas neste navegador.',
       retry: 'Tentar novamente',
-      note: 'A moeda cobrada é confirmada no pagamento.',
-      usdcNote: 'USDC disponível conforme suporte do gateway.',
     },
   },
 };
@@ -95,12 +93,15 @@ describe('CurrencySelector — selecao controlada', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('respeita a lista de moedas disponiveis e omite a nota de USDC fora dela', () => {
+  it('respeita a lista de moedas disponiveis', () => {
     renderSelector({ value: 'USD', available: ['USD', 'BRL'] });
     expect(within(screen.getByTestId('currency-selector')).getAllByRole('button')).toHaveLength(2);
     expect(screen.queryByTestId('currency-selector-usdc-button')).toBeNull();
-    expect(screen.queryByText(/USDC disponível/)).toBeNull();
-    expect(screen.getByText(/A moeda cobrada é confirmada no pagamento/)).toBeInTheDocument();
+  });
+
+  it('nao renderiza aviso de rodape: nada de texto fixo sem acao abaixo do seletor', () => {
+    const { container } = renderSelector({ value: 'USD' });
+    expect(container.querySelectorAll('p')).toHaveLength(0);
   });
 });
 
@@ -113,6 +114,12 @@ describe('CurrencySelector — estados', () => {
     expect(screen.getByTestId('currency-selector-usd-button')).not.toBeDisabled();
   });
 
+  /**
+   * O status vive em `sr-only`: a frase inteira dentro da linha dos botoes
+   * empurrava o seletor para fora da tela enquanto o PATCH estava em voo. O
+   * texto continua no DOM (e por isso ainda e assertavel aqui) e o feedback
+   * visual e o spinner, que ocupa um slot de largura fixa sempre montado.
+   */
   it('carregando: anuncia leitura em voo e bloqueia a troca', () => {
     const { onChange } = renderSelector({ isLoading: true });
     const status = screen.getByTestId('currency-selector-status');

@@ -219,6 +219,7 @@ describe('SessionService — bulkCancel() bloqueia os horarios do periodo (item 
     expect(mockPrisma.availabilitySlot.updateMany).toHaveBeenCalledTimes(1);
     const arg = mockPrisma.availabilitySlot.updateMany.mock.calls[0][0];
     expect(arg.data.isBlocked).toBe(true);
+    expect(arg.data.blockOrigin).toBe('MANUAL');
     expect(arg.data.version).toEqual({ increment: 1 });
     expect(arg.where.startAt.gte.toISOString()).toBe('2026-04-01T00:00:00.000Z');
     expect(arg.where.startAt.lte.toISOString()).toBe('2026-04-30T23:59:59.999Z');

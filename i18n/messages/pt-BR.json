@@ -10,6 +10,7 @@
     "logout": "Sair",
     "notifications": "Notificações",
     "settings": "Configurações",
+    "billing": "Faturamento",
     "aria": {
       "openMenu": "Abrir menu",
       "closeMenu": "Fechar menu",
@@ -40,7 +41,8 @@
       "health": "Saúde",
       "security": "Segurança",
       "phase1Label": "Fase 1",
-      "emailTemplates": "Emails"
+      "emailTemplates": "Emails",
+      "exercises": "Exercícios"
     }
   },
   "darkMode": {
@@ -72,7 +74,8 @@
   "creditBadge": {
     "credits": "{count} créditos",
     "expiringSoon": "Expirando em breve",
-    "buy": "Comprar"
+    "buy": "Comprar",
+    "title": "{count, plural, one {# crédito disponível} other {# créditos disponíveis}}"
   },
   "sessionCard": {
     "actions": {
@@ -111,7 +114,9 @@
   "errorState": {
     "defaultMessage": "Erro inesperado. Tente novamente.",
     "retry": "Tentar novamente",
-    "errorCode": "Código do erro: {code}"
+    "errorCode": "Código do erro: {code}",
+    "widget": "Erro ao carregar este widget",
+    "reloading": "Recarregando..."
   },
   "loading": {
     "message": "Carregando...",
@@ -124,9 +129,14 @@
     "prev": "Anterior",
     "next": "Próxima",
     "aria": {
-      "page": "Página {page}"
+      "page": "Página {page}",
+      "nav": "Paginação",
+      "prev": "Página anterior",
+      "next": "Próxima página"
     },
-    "perPage": "por página"
+    "perPage": "por página",
+    "status": "{page} de {totalPages}",
+    "info": "{from}–{to} de {total}"
   },
   "cookieBanner": {
     "title": "Este site utiliza cookies",
@@ -579,7 +589,17 @@
       "statusPending": "Pendente",
       "statusSucceeded": "Aprovado",
       "statusFailed": "Falhou",
-      "statusRefunded": "Reembolsado"
+      "statusRefunded": "Reembolsado",
+      "loadError": "Erro ao carregar pagamentos",
+      "emptyPurchases": "Nenhuma compra ainda",
+      "emptyPurchasesDesc": "Suas transações de créditos aparecerão aqui",
+      "id": "ID",
+      "paymentStatus": {
+        "COMPLETED": "Pago",
+        "PENDING": "Pendente",
+        "FAILED": "Falhou",
+        "REFUNDED": "Reembolsado"
+      }
     },
     "subscription": {
       "title": "Assinatura Mensal",
@@ -675,7 +695,22 @@
       "emptyDesc": "Compre seu primeiro pacote para começar.",
       "buyAction": "Comprar créditos",
       "expiresAt": "Expira em {date}",
-      "urgent": "Expira em breve"
+      "urgent": "Expira em breve",
+      "loadError": "Erro ao carregar créditos",
+      "emptyActive": "Sem créditos ativos",
+      "emptyActiveDesc": "Compre créditos para começar a agendar suas aulas.",
+      "balanceCredits": "{count, plural, one {# crédito} other {# créditos}}",
+      "batchCredits": "{remaining}/{total, plural, one {# crédito} other {# créditos}}",
+      "addedAt": "Adicionado em {date}",
+      "expiredBadge": "Expirado",
+      "expiresInDays": "{count, plural, one {Expira em # dia} other {Expira em # dias}}",
+      "source": {
+        "PURCHASE": "Compra",
+        "SUBSCRIPTION": "Assinatura",
+        "PROMO": "Promocional",
+        "MANUAL": "Ajuste manual",
+        "REFUND": "Reembolso"
+      }
     },
     "expiryAlert": {
       "message": "{count, plural, one {# crédito expira} other {# créditos expiram}} em {days, plural, one {# dia} other {# dias}}.",
@@ -723,13 +758,16 @@
       "saving": "Salvando sua preferência de moeda...",
       "loadError": "Não foi possível carregar sua preferência de moeda salva. Exibindo em {currency}.",
       "saveError": "Não foi possível salvar sua preferência de moeda. A escolha vale apenas neste navegador.",
-      "retry": "Tentar novamente",
-      "note": "A moeda cobrada é confirmada no pagamento.",
-      "usdcNote": "USDC disponível conforme suporte do gateway."
+      "retry": "Tentar novamente"
     },
     "paymentCanceled": {
       "title": "Pagamento cancelado.",
       "message": "Você pode tentar novamente quando quiser."
+    },
+    "gate": {
+      "title": "Créditos insuficientes para agendar",
+      "description": "Você precisa de pelo menos 1 crédito disponível antes de escolher e confirmar um horário.",
+      "cta": "Comprar créditos"
     }
   },
   "errors": {
@@ -808,11 +846,24 @@
     "pageDescription": "Pratique o conteúdo das aulas no seu ritmo.",
     "breadcrumbDashboard": "Painel",
     "emptyTitle": "Nenhum exercício disponível ainda",
-    "emptyDescription": "Assim que uma aula com exercícios for publicada, ela aparece aqui.",
+    "emptyDescription": "Assim que um exercício for liberado para você, ele aparece aqui.",
     "emptyExercise": "Esta aula ainda não tem questões de múltipla escolha.",
     "lessonBadge": "Aula {number}",
     "levelBadge": "Nível {level}",
     "kindMultipleChoice": "Múltipla escolha",
+    "kindMatchClick": "Ligar pares",
+    "kindAudioWord": "Ditado de palavra",
+    "kindAudioCloze": "Lacuna de áudio",
+    "kindAudioSentence": "Ditado de frase",
+    "kindAudioChoice": "Escuta e escolha",
+    "kindAudioOrder": "Ordenar a frase ouvida",
+    "kindTextChoice": "Leitura e escolha",
+    "kindVerbCloze": "Conjugação na frase",
+    "kindImageWord": "Imagem e escrita",
+    "kindImageChoice": "Imagem e escolha",
+    "kindImageSpeak": "Descrição da imagem",
+    "kindAudioShadow": "Repetição do modelo",
+    "kindL1SpeakPt": "Tradução falada",
     "questionCount": "{count, plural, one {# questão} other {# questões}}",
     "instructions": "Escolha uma alternativa e confira a resposta.",
     "grammarToggle": "Ponto gramatical da aula",
@@ -839,10 +890,285 @@
   "auth": {
     "register": {
       "planNoticeTitle": "Plano escolhido: {plan}",
-      "planNoticeDesc": "Guardamos sua escolha neste navegador. Depois de confirmar seu e-mail e entrar, ela já estará selecionada na página de créditos."
+      "planNoticeDesc": "Guardamos sua escolha neste navegador. Depois de confirmar seu e-mail e entrar, ela já estará selecionada na página de créditos.",
+      "createdToast": "Conta criada! Verifique seu email para confirmar.",
+      "emailTakenToast": "Este email já está cadastrado. Tente fazer login.",
+      "tooManyToast": "Muitas tentativas. Aguarde e tente novamente.",
+      "genericErrorToast": "Ocorreu um erro inesperado. Tente novamente em alguns instantes.",
+      "connectionErrorToast": "Erro de conexão. Verifique sua internet e tente novamente.",
+      "nameLabel": "Nome completo",
+      "namePlaceholder": "João Silva",
+      "emailLabel": "Email",
+      "emailPlaceholder": "joao@exemplo.com",
+      "passwordLabel": "Senha",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "hidePassword": "Ocultar senha",
+      "showPassword": "Mostrar senha",
+      "confirmPasswordLabel": "Confirmar senha",
+      "confirmPasswordPlaceholder": "Digite a senha novamente",
+      "countryLabel": "País",
+      "countryPlaceholder": "Selecione seu país",
+      "timezoneLabel": "Fuso horário",
+      "timezonePlaceholder": "Detectando automaticamente...",
+      "termsAccept": "Li e aceito os <terms>Termos de Uso</terms> e a <privacy>Política de Privacidade</privacy>",
+      "privacyAccept": "Autorizo o tratamento dos meus dados pessoais conforme a <privacy>Política de Privacidade</privacy> e a LGPD (Lei nº 13.709/2018)",
+      "marketingAccept": "Aceito receber novidades e dicas de aprendizado por email",
+      "creating": "Criando conta...",
+      "submit": "Criar Conta"
+    },
+    "mfa": {
+      "timeout": "A solicitação demorou demais. Verifique sua conexão e tente novamente.",
+      "rateLimit": "Muitas tentativas. Aguarde um minuto e tente novamente.",
+      "sessionExpired": "Sua sessão expirou. Entre novamente para continuar.",
+      "notEnrolled": "O MFA desta conta ainda não foi configurado.",
+      "invalidCode": "Código inválido. Tente novamente.",
+      "loadErrorTitle": "Erro ao carregar o status do MFA",
+      "loadErrorDesc": "Não foi possível verificar o status do MFA. Tente novamente.",
+      "secretGeneratedToast": "Segredo gerado. Escaneie o QR code e confirme com um código.",
+      "confirmToReconfigure": "Confirme o MFA para reconfigurar.",
+      "initError": "Erro ao iniciar o cadastro de MFA.",
+      "enabledToast": "MFA ativado com sucesso.",
+      "verifiedToast": "Identidade verificada com sucesso.",
+      "copyFailed": "Não foi possível copiar. Copie manualmente.",
+      "codesCopiedToast": "Códigos de recuperação copiados.",
+      "initReconfigure": "Reconfigurar / gerar novos códigos",
+      "initRegenerate": "Gerar novo segredo e continuar",
+      "initConfigure": "Configurar MFA",
+      "cardTitle": "Autenticação em duas etapas (MFA)",
+      "cardDesc": "Protege o acesso administrativo com um código TOTP gerado no seu app autenticador.",
+      "badgeActive": "Ativo",
+      "badgePending": "Pendente",
+      "badgeInactive": "Inativo",
+      "activeRemaining": "MFA ativo. Códigos de recuperação restantes: <value>{count}</value>.",
+      "setupNotice": "Sua conta administrativa precisa do MFA ativo para acessar o painel. Configure agora com o app autenticador de sua preferência.",
+      "inactiveNotice": "O MFA ainda não está ativo nesta conta. Configure agora para reforçar a segurança do acesso administrativo.",
+      "doneEnrolledTitle": "MFA ativado",
+      "doneVerifiedTitle": "Identidade verificada",
+      "doneCodesDesc": "Guarde os códigos de recuperação abaixo em um lugar seguro. Eles não serão exibidos novamente.",
+      "doneVerifiedDesc": "Sua verificação foi concluída.",
+      "recoveryCodes": "Códigos de recuperação",
+      "copyAll": "Copiar todos",
+      "codesOnceHint": "Cada código serve uma única vez. Use-os se perder acesso ao app autenticador.",
+      "opening": "Abrindo o painel...",
+      "finishSetup": "Concluir e acessar o painel",
+      "finish": "Concluir",
+      "confirmTitle": "Confirme o cadastro",
+      "confirmDesc": "Escaneie o QR code com o app autenticador (ou digite o segredo) e informe o código de 6 dígitos para ativar.",
+      "qrAria": "QR code para configurar o app autenticador",
+      "openInApp": "Abrir no app autenticador",
+      "secretLabel": "Segredo (entrada manual)",
+      "copySecretAria": "Copiar segredo",
+      "recoveryCodesSaveNow": "Códigos de recuperação (guarde agora)",
+      "codesOnceHintEnroll": "Cada código serve uma única vez e não será exibido novamente. Use-os se perder acesso ao app autenticador.",
+      "codeLabel": "Código de verificação",
+      "confirming": "Confirmando...",
+      "confirmAndActivate": "Confirmar e ativar",
+      "generateAnother": "Gerar outro segredo",
+      "cancel": "Cancelar",
+      "pendingNotice": "Um cadastro anterior não foi concluído. Ao continuar, um novo segredo e novos códigos de recuperação serão gerados e os anteriores deixarão de valer.",
+      "requiredNotice": "Obrigatório para todas as contas administrativas.",
+      "recommendedNotice": "Recomendado para todas as contas administrativas.",
+      "generatingSecret": "Gerando segredo...",
+      "challengeCodeLabel": "Código",
+      "challengeHint": "Use o código de 6 dígitos do app autenticador ou um dos seus códigos de recuperação.",
+      "challengeSetupLink": "Configurar MFA agora",
+      "verifying": "Verificando...",
+      "verify": "Verificar",
+      "challengeDoneToast": "Verificação concluída."
+    },
+    "magicLink": {
+      "sentTitle": "Verifique seu email",
+      "sentDesc": "Se este email estiver cadastrado, você receberá um link de acesso. O link expira em 15 minutos. Verifique também sua pasta de spam.",
+      "rateLimitTitle": "Muitas solicitações",
+      "rateLimitDesc": "Você atingiu o limite de solicitações. Aguarde alguns minutos antes de tentar novamente.",
+      "back": "Voltar",
+      "sendError": "Não foi possível enviar o link. Verifique sua conexão e tente novamente.",
+      "emailLabel": "Email",
+      "sending": "Enviando...",
+      "submit": "Enviar link de acesso"
+    },
+    "profile": {
+      "nameMin": "Nome deve ter pelo menos 2 caracteres",
+      "timezoneRequired": "Selecione um fuso horário",
+      "languageRequired": "Selecione um idioma",
+      "marketingOnToast": "Você receberá emails de marketing.",
+      "marketingOffToast": "Você não receberá mais emails de marketing.",
+      "marketingErrorToast": "Não foi possível salvar sua preferência. Tente novamente.",
+      "savedToast": "Perfil atualizado com sucesso.",
+      "saveErrorToast": "Erro ao salvar. Tente novamente.",
+      "nameLabel": "Nome completo",
+      "emailLabel": "Email",
+      "emailLocked": "O email não pode ser alterado.",
+      "timezoneLabel": "Fuso horário",
+      "languageLabel": "Idioma preferido",
+      "saving": "Salvando...",
+      "save": "Salvar alterações",
+      "marketingLabel": "Receber emails de marketing",
+      "marketingDesc": "Novidades, promoções e dicas. Você pode sair a qualquer momento.",
+      "dangerTitle": "Zona de perigo",
+      "dangerDesc": "A exclusão da conta é permanente e não pode ser desfeita. Todos os seus dados e créditos restantes serão removidos.",
+      "deleteAccount": "Excluir minha conta"
+    },
+    "deleteAccount": {
+      "fallbackError": "Não foi possível excluir a conta. Tente novamente.",
+      "networkError": "Erro de rede. Verifique sua conexão e tente de novo.",
+      "successToast": "Conta marcada para exclusão. Você receberá um email de confirmação. A exclusão será efetivada em 30 dias.",
+      "title": "Excluir minha conta",
+      "description": "Esta ação é irreversível. Após a confirmação, sua conta entrará em um período de carência de <days>30 dias</days>. Durante esse período, você pode cancelar a exclusão fazendo login novamente. Após 30 dias, todos os seus dados serão permanentemente removidos.",
+      "passwordLabel": "Confirme sua senha",
+      "passwordPlaceholder": "Digite sua senha",
+      "confirmationLabel": "Digite <word>EXCLUIR</word> para confirmar",
+      "activeBatches": "Lotes ativos: {count}.",
+      "creditsHint": "Use os créditos restantes agendando aulas — depois disso a exclusão fica liberada.",
+      "scheduleLink": "Agendar aula",
+      "passwordHint": "Confirme a senha e tente novamente.",
+      "cancel": "Cancelar",
+      "submit": "Excluir conta"
+    },
+    "password": {
+      "weak": "Senha fraca",
+      "fair": "Senha razoável",
+      "strong": "Senha forte",
+      "veryStrong": "Senha muito forte"
+    },
+    "forgotPassword": {
+      "tooManyToast": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+      "sentTitle": "Verifique seu email",
+      "sentDesc": "Se o email estiver cadastrado, você receberá um link de recuperação. Verifique também sua pasta de spam.",
+      "emailLabel": "Email",
+      "sending": "Enviando...",
+      "submit": "Enviar link de recuperação"
+    },
+    "lgpd": {
+      "exportRequestedToast": "Solicitação de exportação recebida. Você receberá um email com seus dados em breve.",
+      "exportErrorToast": "Erro ao solicitar exportação. Tente novamente.",
+      "title": "Privacidade e dados (LGPD)",
+      "desc": "Em conformidade com a LGPD e GDPR, você pode solicitar a exportação ou exclusão dos seus dados pessoais a qualquer momento.",
+      "exportTitle": "Exportar meus dados",
+      "exportDesc": "Receba uma cópia de todos os dados associados à sua conta",
+      "exportButton": "Exportar dados",
+      "deleteTitle": "Excluir minha conta",
+      "deleteDesc": "Exclusão permanente com carência de 30 dias",
+      "deleteButton": "Excluir conta"
+    },
+    "login": {
+      "successToast": "Login realizado com sucesso!",
+      "unconfirmedError": "Confirme seu email antes de fazer login.",
+      "tooManyError": "Muitas tentativas. Aguarde um momento e tente novamente.",
+      "invalidError": "Email ou senha incorretos. Verifique seus dados e tente novamente.",
+      "connectionError": "Erro de conexão. Verifique sua internet e tente novamente.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "email@exemplo.com",
+      "passwordLabel": "Senha",
+      "forgotLink": "Esqueci minha senha",
+      "hidePassword": "Ocultar senha",
+      "showPassword": "Mostrar senha",
+      "signingIn": "Entrando...",
+      "submit": "Entrar"
+    },
+    "mfaExit": {
+      "loggingOut": "Saindo...",
+      "logout": "Sair da conta",
+      "home": "Voltar ao início"
+    },
+    "emailBanner": {
+      "resentToast": "E-mail de confirmação reenviado! Verifique sua caixa de entrada.",
+      "rateLimitToast": "Muitas tentativas. Aguarde alguns minutos antes de reenviar.",
+      "errorToast": "Erro ao reenviar o e-mail. Tente novamente.",
+      "message": "Confirme seu e-mail para acessar todos os recursos da plataforma.",
+      "resendAria": "Reenviar e-mail de confirmação",
+      "dismissAria": "Dispensar aviso de confirmação de e-mail",
+      "sending": "Enviando...",
+      "resend": "Reenviar e-mail"
     }
   },
   "dashboard": {
+    "header": {
+      "eyebrow": "Sua jornada Corgly",
+      "greeting": "Olá, {name}!",
+      "guest": "Estudante",
+      "subtitle": "Que bom ver você de volta à sua jornada de aprendizado.",
+      "creditsChip": "{count, plural, one {# crédito} other {# créditos}}",
+      "creditsUnavailable": "Créditos indisponíveis",
+      "scheduleUnavailable": "Agenda indisponível",
+      "nextAt": "Próxima: {time}",
+      "nextTimePending": "Horário a confirmar",
+      "noSession": "Sem aula agendada",
+      "sessionsChip": "{count, plural, one {# aula concluída} other {# aulas concluídas}}",
+      "scheduleAction": "Agendar aula"
+    },
+    "loadError": {
+      "message": "Não conseguimos carregar {panels}. Os cartões abaixo podem estar incompletos.",
+      "retry": "Tentar de novo",
+      "panel": {
+        "profile": "seu perfil",
+        "credits": "créditos",
+        "nextSession": "próxima aula",
+        "progress": "progresso",
+        "feedbacks": "avaliações recentes"
+      }
+    },
+    "credits": {
+      "title": "Créditos Corgly",
+      "unit": "{count, plural, one {crédito} other {créditos}}",
+      "expiring": "{count, plural, one {# crédito expira} other {# créditos expiram}} em {days, plural, one {# dia} other {# dias}}",
+      "buy": "Comprar créditos",
+      "buyMore": "Comprar mais",
+      "unavailable": {
+        "title": "Créditos",
+        "heading": "Não foi possível ler seu saldo",
+        "fallback": "Tente de novo em instantes.",
+        "retry": "Tentar de novo",
+        "open": "Ver créditos"
+      }
+    },
+    "quickActions": {
+      "title": "Ações rápidas",
+      "schedule": "Agendar aula",
+      "buyCredits": "Comprar créditos"
+    },
+    "stats": {
+      "title": "Seu histórico",
+      "total": "Total de aulas",
+      "completed": "Concluídas",
+      "streak": "Sequência (sem.)"
+    },
+    "circle": {
+      "title": "Corgly Circle",
+      "chartAria": "Gráfico de progresso por dimensão",
+      "empty": "Complete suas primeiras aulas para ver seu Corgly Circle",
+      "fullProgress": "Ver progresso completo",
+      "dimension": {
+        "listening": "Escuta",
+        "speaking": "Fala",
+        "writing": "Escrita",
+        "vocabulary": "Vocabulário"
+      }
+    },
+    "feedback": {
+      "title": "Avaliações recentes",
+      "empty": "Nenhum feedback ainda",
+      "viewProgress": "Ver progresso",
+      "viewAll": "Ver tudo",
+      "details": "Ver detalhes"
+    },
+    "nextSessionCard": {
+      "title": "Próxima aula",
+      "empty": "Nenhuma aula agendada",
+      "schedule": "+ Agendar nova aula",
+      "dateTbd": "Data a confirmar",
+      "timeTbd": "Horário a confirmar",
+      "timeUnavailable": "Horário indisponível",
+      "live": "Sessão ao vivo!",
+      "unreadable": "Não conseguimos ler o horário desta aula.",
+      "checkHistory": "Conferir no histórico",
+      "alreadyStarted": "a aula já começou",
+      "untilClass": "até a aula",
+      "cancel": "Cancelar",
+      "enter": "Entrar",
+      "roomCheckPending": "Verificando o horário de abertura da sala...",
+      "roomOpensBefore": "A sala abre 5 minutos antes do início da aula."
+    },
     "nextSession": {
       "error": {
         "title": "Não conseguimos carregar sua próxima aula",
@@ -877,7 +1203,30 @@
       "attachmentTooLarge": "\"{filename}\" excede o limite de {limit}.",
       "createSuccess": "Chamado aberto! Nossa equipe vai responder por aqui.",
       "rateLimited": "Muitas solicitações. Tente novamente em alguns minutos.",
-      "createFailed": "Não foi possível abrir o chamado. Tente novamente."
+      "createFailed": "Não foi possível abrir o chamado. Tente novamente.",
+      "subjectLabel": "Assunto",
+      "subjectPlaceholder": "Ex.: Não consigo entrar na minha aula",
+      "subjectTooShort": "Assunto muito curto.",
+      "subjectTooLong": "Assunto muito longo.",
+      "priorityLabel": "Prioridade",
+      "priorityPlaceholder": "Selecione a prioridade",
+      "priority": {
+        "LOW": "Baixa",
+        "NORMAL": "Normal",
+        "HIGH": "Alta",
+        "URGENT": "Urgente"
+      },
+      "messageLabel": "Mensagem",
+      "messagePlaceholder": "Descreva o que aconteceu com o máximo de detalhes possível.",
+      "messageRequired": "Mensagem obrigatória.",
+      "messageTooLong": "Mensagem muito longa.",
+      "attachmentsLabel": "Anexos (opcional)",
+      "attachmentsHint": "Até {max} arquivos, 10 MiB cada. Imagens, PDF ou texto.",
+      "addAttachment": "Adicionar anexo",
+      "removeAttachment": "Remover {filename}",
+      "submitting": "Enviando...",
+      "submit": "Abrir chamado",
+      "cancel": "Cancelar"
     }
   },
   "sessionLobby": {
@@ -924,5 +1273,775 @@
     "PROMO": "Promoção",
     "MANUAL": "Manual",
     "REFUND": "Reembolso"
+  },
+  "termsGate": {
+    "loading": "Carregando os termos exigidos...",
+    "errorTitle": "Não foi possível carregar os termos",
+    "errorMessage": "O acesso depende da leitura e do aceite dos termos. Tente novamente.",
+    "version": "Versão {version} - vigente desde {date}",
+    "decline": "Recusar",
+    "declineNotice": "O acesso ao dashboard depende do aceite dos termos vigentes.",
+    "accept": "Li e aceito os termos",
+    "accepting": "Registrando...",
+    "acceptError": "Não foi possível registrar o aceite. Tente novamente.",
+    "acceptSuccess": "Termos aceitos. Bom uso!",
+    "connectionError": "Erro de conexão ao registrar o aceite. Tente novamente."
+  },
+  "a11y": {
+    "breadcrumb": "Trilha de navegação",
+    "studentNav": "Navegação do estudante",
+    "adminNav": "Navegação do administrador",
+    "mainNav": "Navegação principal",
+    "mobileMenu": "Menu de navegação"
+  },
+  "pages": {
+    "schedule": {
+      "metaTitle": "Agendar Aula",
+      "title": "Agendar Aula",
+      "timezone": "Horários em {timezone}"
+    },
+    "account": {
+      "metaTitle": "Configurações",
+      "title": "Configurações",
+      "subtitle": "Gerencie seu perfil e preferências",
+      "paymentsTitle": "Pagamentos",
+      "paymentsSubtitle": "Histórico de compras e métodos de pagamento",
+      "viewPayments": "Ver pagamentos"
+    },
+    "support": {
+      "metaTitle": "Suporte",
+      "title": "Suporte",
+      "subtitle": "Abra chamados e acompanhe o histórico de atendimento",
+      "newTicket": "Abrir chamado"
+    },
+    "supportNew": {
+      "metaTitle": "Abrir chamado",
+      "back": "Voltar para suporte",
+      "title": "Abrir chamado",
+      "subtitle": "Descreva o que aconteceu e anexe arquivos se precisar"
+    },
+    "billingHistory": {
+      "metaTitle": "Extrato Financeiro",
+      "title": "Extrato Financeiro",
+      "subtitle": "Seus pagamentos e recibos"
+    },
+    "sessionFeedback": {
+      "metaTitle": "Avaliar Aula",
+      "current": "Avaliar aula"
+    },
+    "progress": {
+      "metaTitle": "Meu Progresso",
+      "title": "Meu Progresso",
+      "subtitle": "Acompanhe sua evolução em português",
+      "exportCsv": "Exportar CSV",
+      "loadErrorTitle": "Não foi possível carregar todos os dados do seu progresso",
+      "kpiCompleted": "Aulas concluídas",
+      "kpiTotal": "Total de sessões",
+      "kpiAverage": "Nota média",
+      "kpiTrend": "Tendência",
+      "trendUp": "Subindo",
+      "trendDown": "Caindo",
+      "trendStable": "Estável"
+    },
+    "historyNotes": {
+      "metaTitle": "Caderno da Aula",
+      "backHistory": "Histórico de aulas",
+      "current": "Caderno da aula",
+      "title": "Caderno da aula",
+      "subtitle": "Anotações registradas durante a sessão, em modo somente leitura."
+    },
+    "notesRecovery": {
+      "metaTitle": "Recuperar caderno",
+      "backSession": "Voltar para a aula",
+      "current": "Recuperar caderno",
+      "title": "Recuperar caderno",
+      "subtitle": "Exporte o caderno desta aula ou restaure uma versão salva anteriormente."
+    },
+    "preCheck": {
+      "title": "Teste pré-aula",
+      "subtitle": "Verifique câmera, microfone e conexão antes de entrar na sala.",
+      "warningConfirm": "Entendo que a conexão pode instabilizar (sem TURN/relay ou microfone silencioso) e quero entrar na sala mesmo assim.",
+      "back": "Voltar",
+      "enter": "Entrar na aula",
+      "overallStatus": "Status geral:"
+    },
+    "reschedule": {
+      "metaTitle": "Reagendar aula",
+      "backHistory": "Histórico de aulas",
+      "current": "Reagendar aula",
+      "title": "Reagendar aula",
+      "subtitle": "Escolha um novo horário entre as alternativas disponíveis."
+    },
+    "dataRights": {
+      "metaTitle": "Direitos sobre os dados",
+      "title": "Direitos sobre os dados",
+      "subtitle": "Em conformidade com a LGPD e o GDPR, gerencie o acesso, a correção, a portabilidade e a exclusão dos seus dados pessoais.",
+      "rightsAria": "Direitos do titular",
+      "requestTitle": "Abrir uma solicitação",
+      "requestSubtitle": "Como você está autenticado, usaremos o e-mail da sua conta para confirmar o pedido.",
+      "back": "Voltar para Configurações",
+      "rights": {
+        "export": {
+          "title": "Exportação (acesso)",
+          "text": "Uma cópia completa dos dados da sua conta."
+        },
+        "correction": {
+          "title": "Correção",
+          "text": "Atualização de dados incompletos ou inexatos."
+        },
+        "portability": {
+          "title": "Portabilidade",
+          "text": "Seus dados em formato estruturado e transferível."
+        },
+        "deletion": {
+          "title": "Exclusão",
+          "text": "Remoção dos seus dados, com janela de arrependimento."
+        }
+      }
+    },
+    "billingHistoryList": {
+      "filterFrom": "De",
+      "filterTo": "Até",
+      "filterAll": "Todos",
+      "filterPaid": "Pagos",
+      "filterRefunded": "Estornados",
+      "filterFailed": "Falhos",
+      "emptyTitle": "Nenhum pagamento encontrado",
+      "emptyDesc": "Seus pagamentos aparecerão aqui.",
+      "colDate": "Data",
+      "colDescription": "Descrição",
+      "colAmount": "Valor",
+      "colCurrency": "Moeda",
+      "colStatus": "Status",
+      "colActions": "Ações",
+      "receipt": "Recibo",
+      "loadMore": "Carregar mais",
+      "loadError": "Não foi possível carregar o extrato.",
+      "unknownError": "Erro desconhecido.",
+      "receiptError": "Não foi possível gerar o recibo.",
+      "downloadError": "Não foi possível baixar o recibo."
+    },
+    "paymentDetail": {
+      "backAria": "Voltar para extrato",
+      "title": "Pedido de reembolso",
+      "subtitle": "Pagamento {id}",
+      "loading": "Carregando pagamento...",
+      "retry": "Tentar novamente",
+      "notFoundTitle": "Pagamento não encontrado",
+      "notFoundDesc": "Não encontramos esse pagamento no seu extrato.",
+      "amount": "Valor",
+      "currency": "Moeda",
+      "notEligibleTitle": "Este pagamento não está elegível para pedido de reembolso.",
+      "notEligibleDesc": "Apenas pagamentos concluídos podem iniciar análise de reembolso.",
+      "alreadyRequested": "Pedido já registrado anteriormente.",
+      "requestRegistered": "Pedido registrado com sucesso.",
+      "reviewNotice": "O suporte financeiro revisará sua solicitação antes de qualquer ação no Stripe.",
+      "reasonLabel": "Motivo do reembolso",
+      "reasonPlaceholder": "Descreva por que você está solicitando o reembolso.",
+      "submit": "Enviar pedido",
+      "errorLoad": "Não foi possível carregar o pagamento.",
+      "errorUnknown": "Erro desconhecido.",
+      "errorCheckExisting": "Não foi possível verificar pedido de reembolso existente.",
+      "errorCursorRepeat": "A paginação do extrato retornou cursor repetido.",
+      "errorRegister": "Não foi possível registrar o pedido.",
+      "errorReasonRequired": "Informe o motivo do pedido de reembolso."
+    },
+    "paymentMethods": {
+      "title": "Métodos de pagamento",
+      "subtitle": "Cartões salvos, método padrão e portal financeiro da Stripe.",
+      "prepare": "Preparar método",
+      "openPortal": "Abrir portal",
+      "defaultTitle": "Método padrão",
+      "defaultLine": "{brand} final {last4} · expira em {expiry}.",
+      "errorTitle": "Atenção no pagamento",
+      "contactSupport": "Falar com suporte",
+      "loading": "Carregando métodos de pagamento",
+      "emptyTitle": "Nenhum método salvo",
+      "emptyDesc": "Abra o portal para adicionar ou revisar cartões vinculados à assinatura.",
+      "cardLabel": "{brand} final {last4}",
+      "expires": "Expira em {expiry}",
+      "defaultBadge": "Padrão",
+      "setDefault": "Definir padrão",
+      "secureId": "Identificador seguro: {id}",
+      "loadError": "Não foi possível carregar métodos de pagamento.",
+      "loadConnectionError": "Erro de conexão ao carregar métodos de pagamento.",
+      "prepareError": "Não foi possível preparar método de pagamento.",
+      "prepareConnectionError": "Erro de conexão ao preparar método de pagamento.",
+      "prepareSuccess": "Método preparado com segurança pela Stripe.",
+      "portalError": "Não foi possível abrir o portal de pagamento.",
+      "portalConnectionError": "Erro de conexão ao abrir o portal de pagamento.",
+      "portalRedirecting": "Redirecionando para a Stripe.",
+      "defaultError": "Não foi possível atualizar método padrão.",
+      "defaultConnectionError": "Erro de conexão ao atualizar método padrão.",
+      "defaultSuccess": "Método padrão atualizado."
+    },
+    "audioOnly": {
+      "healthNotice": "Não foi possível registrar o estado da conexão, mas sua aula continua ativa.",
+      "errorTitle": "Sessão não identificada",
+      "errorDesc": "Não foi possível localizar esta aula. Volte ao painel e tente novamente.",
+      "backDashboard": "Voltar ao Dashboard",
+      "loading": "Preparando o modo apenas áudio...",
+      "peerStudent": "Aluno",
+      "peerTeacher": "Professor",
+      "peerStudentInitials": "AL",
+      "peerTeacherInitials": "PR",
+      "banner": "O vídeo está indisponível. Você continua na aula em modo apenas áudio.",
+      "interruptError": "Não foi possível encerrar a sessão no servidor. Tente novamente.",
+      "footerNote": "Sua sessão permanece ativa. Reative o vídeo assim que sua conexão melhorar."
+    },
+    "reconnecting": {
+      "healthNotice": "Não foi possível registrar a tentativa de reconexão, mas seguimos tentando.",
+      "errorTitle": "Sessão não identificada",
+      "errorDesc": "Não foi possível localizar esta aula. Volte ao painel e tente novamente.",
+      "backDashboard": "Voltar ao Dashboard",
+      "loading": "Verificando sua conexão...",
+      "title": "Reconectando...",
+      "subtitle": "Sua conexão caiu. Vamos tentar restabelecer a aula automaticamente nos próximos 2 minutos.",
+      "attempt": "Tentativa {count} dentro da janela de reconexão",
+      "interruptLabel": "Interromper sessão",
+      "footerNote": "Se a conexão não voltar, sua sessão será interrompida e 1 crédito será devolvido à sua conta.",
+      "interruptError": "Não foi possível encerrar a sessão no servidor. Tente novamente."
+    },
+    "auth": {
+      "login": {
+        "metaTitle": "Entrar",
+        "metaDesc": "Faça login na sua conta Corgly.",
+        "title": "Entrar",
+        "subtitle": "Bem-vindo de volta",
+        "noAccount": "Não tem conta?",
+        "createAccount": "Criar conta"
+      },
+      "register": {
+        "metaTitle": "Criar Conta",
+        "metaDesc": "Crie sua conta no Corgly e comece a aprender português hoje.",
+        "title": "Criar Conta",
+        "subtitle": "Junte-se ao Corgly e comece a aprender português",
+        "hasAccount": "Já tem uma conta?",
+        "signIn": "Entrar"
+      },
+      "forgotPassword": {
+        "metaTitle": "Recuperar Senha",
+        "title": "Recuperar senha",
+        "subtitle": "Informe seu email e enviaremos um link de recuperação.",
+        "backToLogin": "← Voltar para o login"
+      },
+      "magicLink": {
+        "metaTitle": "Acesso por link",
+        "title": "Acesso por link",
+        "subtitle": "Informe seu email e enviaremos um link de acesso. Sem senha.",
+        "backToLogin": "← Voltar para o login",
+        "invalidTitle": "Link inválido",
+        "invalidDesc": "Link expirado ou já utilizado, solicite outro.",
+        "unavailableTitle": "Não foi possível entrar agora",
+        "unavailableDesc": "Tivemos uma falha temporária ao validar seu link. Tente abrir o link de novo em alguns instantes ou solicite um novo.",
+        "requestNew": "Solicitar novo link",
+        "backLogin": "Voltar para o login"
+      },
+      "resetPassword": {
+        "passwordMin": "A senha deve ter no mínimo 8 caracteres",
+        "passwordComplexity": "A senha deve conter letra maiúscula, número e símbolo",
+        "passwordMismatch": "As senhas não coincidem",
+        "invalidTitle": "Link inválido ou expirado",
+        "invalidDesc": "Este link de recuperação é inválido ou já expirou. Solicite um novo link.",
+        "requestNew": "Solicitar novo link",
+        "successTitle": "Senha redefinida!",
+        "successDesc": "Sua senha foi alterada com sucesso. Faça login com a nova senha.",
+        "goToLogin": "Ir para o login",
+        "successToast": "Senha redefinida com sucesso!",
+        "invalidTokenToast": "Token inválido ou expirado. Solicite um novo link.",
+        "genericErrorToast": "Ocorreu um erro. Tente novamente.",
+        "title": "Nova senha",
+        "subtitle": "Crie uma senha forte para proteger sua conta.",
+        "passwordLabel": "Nova senha",
+        "passwordPlaceholder": "Mínimo 8 caracteres",
+        "confirmLabel": "Confirmar senha",
+        "confirmPlaceholder": "Digite a nova senha novamente",
+        "hidePassword": "Ocultar senha",
+        "showPassword": "Mostrar senha",
+        "saving": "Salvando...",
+        "submit": "Redefinir senha",
+        "backToLogin": "← Voltar para o login"
+      },
+      "cancelDeletion": {
+        "loadingTitle": "Cancelando exclusão...",
+        "loadingDesc": "Aguarde um momento.",
+        "successTitle": "Sua conta foi restaurada",
+        "successDesc": "A solicitação de exclusão foi cancelada com sucesso. Sua conta está ativa novamente.",
+        "goToLogin": "Ir para o login",
+        "errorTitle": "Link inválido ou expirado",
+        "errorFallback": "Link inválido ou expirado.",
+        "connectionError": "Erro de conexão. Tente novamente.",
+        "errorSupportHint": "Se a janela de cancelamento já expirou, entre em contato com o suporte para verificar a situação da sua conta.",
+        "contactSupport": "Falar com o suporte",
+        "noTokenTitle": "Link inválido",
+        "noTokenDesc": "Este link não contém um token válido. Verifique o link recebido por email."
+      },
+      "confirmEmail": {
+        "loadingTitle": "Confirmando seu email...",
+        "loadingDesc": "Aguarde um momento.",
+        "successTitle": "Email confirmado!",
+        "successDesc": "Sua conta foi ativada com sucesso. Agora você pode fazer login.",
+        "goToLogin": "Ir para o login",
+        "errorTitle": "Erro na confirmação",
+        "errorFallback": "Token inválido ou expirado.",
+        "connectionError": "Erro de conexão. Tente novamente.",
+        "resendLink": "Reenviar email de confirmação",
+        "backToLogin": "Voltar para o login",
+        "instructionsTitle": "Verifique seu email",
+        "instructionsDesc": "Enviamos um link de confirmação para o seu email. Clique no link para ativar sua conta.",
+        "spamHint": "Não encontrou o email? Verifique sua pasta de spam ou solicite o reenvio abaixo."
+      },
+      "resendConfirmation": {
+        "tooManyToast": "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+        "sentTitle": "Verifique seu email",
+        "sentDesc": "Se este email estiver cadastrado e não confirmado, um novo link de confirmação foi enviado. Verifique também sua pasta de spam.",
+        "backToLogin": "Voltar para o login",
+        "title": "Reenviar confirmação",
+        "subtitle": "Informe seu email para receber um novo link de confirmação.",
+        "emailLabel": "Email",
+        "sending": "Enviando...",
+        "submit": "Reenviar link de confirmação"
+      },
+      "mfaChallenge": {
+        "metaTitle": "Verificação em duas etapas",
+        "metaDesc": "Confirme sua identidade para acessar a área administrativa.",
+        "title": "Verificação em duas etapas",
+        "subtitle": "Confirme sua identidade para acessar a área administrativa."
+      },
+      "mfaSetup": {
+        "metaTitle": "Configurar MFA",
+        "metaDesc": "Ative a autenticação em duas etapas do seu acesso administrativo.",
+        "title": "Configurar autenticação em duas etapas",
+        "subtitle": "Sua conta administrativa precisa do MFA ativo para acessar o painel. Leva menos de um minuto."
+      }
+    }
+  },
+  "sessionRoom": {
+    "page": {
+      "reconnected": "Conexão restabelecida!",
+      "interruptUnconfirmedToast": "Não conseguimos confirmar o aviso de interrupção ao servidor.",
+      "roomAvailableToast": "A sala está disponível!",
+      "connectError": "Erro ao conectar. Tente novamente.",
+      "endError": "Erro ao encerrar sessão no servidor.",
+      "extendedToast": "Sessão estendida em {minutes} minutos.",
+      "extendError": "Erro ao estender a sessão.",
+      "waitingTitle": "A sala abre em {countdown}",
+      "waitingDesc": "Você poderá entrar 5 minutos antes do horário agendado.",
+      "enterRoom": "Entrar na sala",
+      "readyTitle": "A sala está disponível!",
+      "readyDesc": "Clique abaixo para entrar na aula.",
+      "connecting": "Conectando...",
+      "connectingDesc": "Estabelecendo conexão segura",
+      "endedTitle": "Aula finalizada",
+      "endedDesc": "Sua aula de {minutes}min foi concluída com sucesso.",
+      "rateLesson": "Avaliar aula",
+      "backDashboard": "Voltar ao Dashboard",
+      "interruptedTitle": "Sessão interrompida",
+      "interruptedUnconfirmed": "Sua sessão foi interrompida por problemas de conexão. Não conseguimos avisar o servidor: seu crédito ainda não está confirmado como devolvido. Fale com o suporte com o código desta aula que verificamos o estorno.",
+      "interruptedConfirmed": "Sua sessão foi interrompida por problemas de conexão. 1 crédito foi devolvido à sua conta.",
+      "contact": "Contato",
+      "teacher": "Professor",
+      "teacherInitials": "PR",
+      "student": "Aluno"
+    },
+    "video": {
+      "ariaConnecting": "Painel de vídeo: conectando",
+      "ariaFailed": "Painel de vídeo: falha na conexão",
+      "ariaDisconnected": "Painel de vídeo: desconectado",
+      "ariaPanel": "Painel de vídeo da sessão",
+      "ariaSelfView": "Seu vídeo (self-view)",
+      "ariaLocalVideo": "Seu próprio vídeo",
+      "ariaRemoteVideo": "Vídeo de {name}",
+      "connecting": "Conectando...",
+      "connectingDesc": "Estabelecendo conexão segura",
+      "failedTitle": "Falha na conexão",
+      "failedDesc": "Não foi possível estabelecer a conexão de vídeo.",
+      "retryAria": "Tentar reconectar",
+      "retry": "Tentar novamente",
+      "disconnectedTitle": "Conexão interrompida",
+      "disconnectedDesc": "Aguardando reconexão automática...",
+      "reconnectAria": "Reconectar manualmente",
+      "reconnect": "Reconectar",
+      "audioOnly": "Apenas áudio",
+      "waitingRemote": "Aguardando vídeo do professor...",
+      "micOff": "Microfone desligado",
+      "localNameDefault": "Você",
+      "remoteNameDefault": "Professor"
+    },
+    "connection": {
+      "connecting": "Conectando...",
+      "waiting": "Aguardando conexão",
+      "failed": "Falha na conexão",
+      "disconnected": "Desconectado",
+      "qualityGood": "Conexão: Boa",
+      "qualityUnstable": "Conexão: Instável",
+      "qualityBad": "Conexão: Ruim",
+      "rtt": "RTT: {rtt}ms",
+      "loss": "Perda: {loss}%",
+      "monitoring": "Monitorando conexão...",
+      "ariaConnecting": "Indicador de conexão: conectando",
+      "ariaWaiting": "Indicador de conexão: aguardando",
+      "ariaFailed": "Indicador de conexão: falha",
+      "ariaDisconnected": "Indicador de conexão: desconectado",
+      "ariaQuality": "Indicador de conexão: qualidade {quality}",
+      "ariaQualityRtt": "Indicador de conexão: qualidade {quality}, latência {rtt} milissegundos",
+      "levelGood": "boa",
+      "levelUnstable": "instável",
+      "levelBad": "ruim",
+      "levelUnknown": "desconhecida"
+    },
+    "controls": {
+      "micOn": "Ativar microfone",
+      "micOff": "Silenciar microfone",
+      "cameraOn": "Ligar câmera",
+      "cameraOff": "Desligar câmera",
+      "leaveAria": "Encerrar aula",
+      "confirmTitle": "Encerrar aula?",
+      "confirmBody": "Você tem certeza que deseja encerrar a aula?",
+      "confirmLabel": "Encerrar",
+      "cancelLabel": "Cancelar"
+    },
+    "fallback": {
+      "groupAria": "Controles da sala em modo de contingência",
+      "micOn": "Ativar microfone",
+      "micOff": "Silenciar microfone",
+      "retryVideo": "Reativar vídeo",
+      "retryConnection": "Tentar reconectar agora",
+      "support": "Falar com suporte",
+      "interrupt": "Encerrar sessão"
+    },
+    "timer": {
+      "extendAria": "Estender sessão em 10 minutos",
+      "extend": "Estender +10min"
+    },
+    "audioOnly": {
+      "aria": "Modo apenas áudio. {name} está conectado via áudio.",
+      "banner": "Modo apenas áudio"
+    },
+    "reconnecting": {
+      "title": "Reconectando...",
+      "remaining": "Tempo restante: {countdown}",
+      "attempt": "Tentativa {count} de {max}",
+      "cancel": "Cancelar"
+    },
+    "editor": {
+      "panelAria": "Painel do editor colaborativo",
+      "syncing": "Sincronizando...",
+      "saved": "Salvo",
+      "offline": "Offline — alterações salvas localmente",
+      "onlyYou": "Apenas você",
+      "connectedCount": "{count, plural, one {# conectado} other {# conectados}}",
+      "editorAria": "Editor de notas da aula",
+      "toolbarAria": "Ferramentas de formatação",
+      "bold": "Negrito (Ctrl+B)",
+      "italic": "Itálico (Ctrl+I)",
+      "heading1": "Título 1",
+      "heading2": "Título 2",
+      "bulletList": "Lista com marcadores",
+      "orderedList": "Lista numerada",
+      "insertLink": "Inserir link",
+      "linkPrompt": "URL do link:"
+    },
+    "notes": {
+      "loading": "Carregando anotações da aula",
+      "empty": "Nenhuma anotação registrada nesta sessão.",
+      "forbiddenTitle": "Acesso negado",
+      "forbiddenDesc": "Você não tem permissão para visualizar o caderno desta aula.",
+      "notFoundTitle": "Sessão não encontrada",
+      "notFoundDesc": "Não localizamos a aula solicitada. Verifique o link e tente novamente.",
+      "errorTitle": "Algo deu errado",
+      "errorDesc": "Não foi possível carregar as anotações desta aula.",
+      "retry": "Tentar novamente",
+      "header": "Anotações da aula",
+      "updatedAt": "Atualizado em {date}"
+    },
+    "notesRecovery": {
+      "loadingAria": "Carregando snapshots",
+      "loadError": "Não foi possível carregar os snapshots.",
+      "errorTitle": "Erro ao carregar snapshots",
+      "errorFallback": "Ocorreu um erro. Tente novamente.",
+      "restoredToast": "Caderno restaurado para a versão {version}.",
+      "restoreError": "Não foi possível restaurar o snapshot.",
+      "exportTitle": "Exportar caderno",
+      "exportDesc": "Baixe o conteúdo atual do caderno desta aula.",
+      "restoreTitle": "Restaurar versão anterior",
+      "emptyTitle": "Nenhum snapshot disponível",
+      "emptyDesc": "Ainda não há versões salvas deste caderno para restaurar.",
+      "versionBadge": "Versão {version}",
+      "chars": "{count} caracteres",
+      "restoreAria": "Restaurar versão {version}",
+      "restore": "Restaurar",
+      "confirmTitle": "Restaurar caderno?",
+      "confirmBody": "Esta ação substitui o conteúdo atual do caderno pela versão {version} ({date}). O conteúdo atual não salvo como snapshot será perdido. Deseja continuar?",
+      "confirmText": "Restaurar versão",
+      "cancelText": "Cancelar"
+    },
+    "feedback": {
+      "dimListening": "Escuta e Compreensão",
+      "dimSpeaking": "Fala e Pronúncia",
+      "dimWriting": "Escrita",
+      "dimVocabulary": "Vocabulário",
+      "sentTitle": "Avaliação enviada!",
+      "sentDesc": "Obrigada pelo seu feedback. Ele nos ajuda a melhorar continuamente.",
+      "backDashboard": "← Voltar ao dashboard",
+      "successToast": "Obrigado pela sua avaliação!",
+      "submitError": "Erro ao enviar avaliação. Tente novamente.",
+      "titleExisting": "Sua avaliação",
+      "titleNew": "Avaliar sua aula",
+      "windowExpired": "O prazo para avaliar esta aula expirou.",
+      "dimComment": "Comentário sobre {dimension} (opcional)",
+      "dimPlaceholder": "O que observou sobre {dimension}?",
+      "overallLabel": "Comentário geral (opcional, mínimo 20 caracteres)",
+      "overallPlaceholder": "Compartilhe sua experiência geral...",
+      "submitting": "Enviando...",
+      "submit": "Enviar avaliação"
+    },
+    "deviceTest": {
+      "cameraTitle": "Camera",
+      "cameraPlaceholder": "Clique em \"Iniciar teste\" para pre-visualizar.",
+      "device": "Dispositivo",
+      "micTitle": "Microfone",
+      "micHint": "Fale algo: o nivel acima deve reagir. Se nao reagir, verifique permissoes.",
+      "speakerTitle": "Audio de saida",
+      "speakerButton": "Tocar bip de teste",
+      "speakerHint": "Voce deve ouvir um tom curto. Ajuste o volume do sistema se necessario.",
+      "networkTitle": "Rede (STUN/TURN)",
+      "candidates": "Candidates: {list}",
+      "none": "nenhum",
+      "stun": "STUN (srflx): {value}",
+      "turn": "TURN (relay): {value}",
+      "yes": "sim",
+      "no": "nao",
+      "turnNo": "nao — algumas redes corporativas podem falhar",
+      "bandwidth": "Banda estimada: {mbps} Mbps",
+      "networkProfile": "Perfil de rede: {type}",
+      "duration": "Duracao: {ms} ms",
+      "timeout": "(timeout)",
+      "probePending": "Probe sera executado apos iniciar o teste.",
+      "testing": "Testando...",
+      "start": "Iniciar teste",
+      "stop": "Parar",
+      "iceError": "Nao foi possivel preparar o teste de rede. Tente novamente em instantes.",
+      "iceInvalid": "Configuracao de rede invalida.",
+      "networkConfigError": "Nao foi possivel carregar a configuracao de rede.",
+      "badgeOk": "OK",
+      "badgeWarning": "Atencao",
+      "badgeFail": "Falha",
+      "badgeChecking": "Testando",
+      "badgeIdle": "Aguardando",
+      "errorUnsupported": "Navegador nao suporta getUserMedia",
+      "errorPermission": "Permissao negada. Autorize camera e microfone no navegador.",
+      "errorNotFound": "Nenhum dispositivo encontrado.",
+      "errorUnknown": "Falha desconhecida"
+    },
+    "list": {
+      "filter": "Filtrar:",
+      "all": "Todos",
+      "empty": "Nenhuma sessão encontrada.",
+      "colStudent": "Aluno",
+      "colDateTime": "Data/Hora",
+      "colStatus": "Status",
+      "colScore": "Score",
+      "colActions": "Ações",
+      "view": "Ver",
+      "pageStatus": "Página {page} de {totalPages} ({total} sessões)"
+    },
+    "media": {
+      "cameraUnavailable": "Câmera não disponível. Conectando apenas com áudio.",
+      "permissionDenied": "Permissão de câmera/microfone negada. Verifique as configurações do navegador.",
+      "cameraDisconnected": "Câmera desconectada. Continuando apenas com áudio.",
+      "connectionFailed": "Falha na conexão WebRTC. Verifique sua conexão de rede.",
+      "connectionInterrupted": "Conexão interrompida. Aguardando reconexão..."
+    }
+  },
+  "calendar": {
+    "view": {
+      "loadErrorTitle": "Erro ao carregar horários",
+      "retry": "Tentar novamente",
+      "prevMonth": "Mês anterior",
+      "nextMonth": "Próximo mês",
+      "gridLabel": "Calendário",
+      "today": "Hoje",
+      "slotsAvailableShort": "horários disponíveis",
+      "legend": "Dias com horários disponíveis"
+    },
+    "slots": {
+      "idle": "Selecione um dia no calendário para ver os horários disponíveis",
+      "title": "Horários disponíveis",
+      "empty": "Nenhum horário disponível neste dia.",
+      "listLabel": "Horários disponíveis",
+      "slotAria": "{time}, {minutes} minutos, {count, plural, one {# crédito} other {# créditos}}",
+      "minutes": "{minutes} min",
+      "credits": "{count, plural, one {# crédito} other {# créditos}}",
+      "selected": "Selecionado"
+    },
+    "booking": {
+      "dialogLabel": "Confirmar agendamento",
+      "title": "Confirmar agendamento",
+      "datetime": "Data e horário:",
+      "duration": "Duração:",
+      "durationValue": "{minutes} minutos",
+      "cost": "Custo:",
+      "costValue": "{count, plural, one {# crédito} other {# créditos}}",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar",
+      "confirming": "Confirmando...",
+      "confirmingHint": "Aguarde um momento",
+      "successTitle": "Aula agendada!",
+      "successDesc": "Sua aula foi confirmada com sucesso.",
+      "successToast": "Aula agendada com sucesso!",
+      "history": "Ver histórico",
+      "errorTitle": "Erro ao agendar",
+      "genericError": "Erro ao agendar. Tente novamente.",
+      "close": "Fechar",
+      "retry": "Tentar novamente",
+      "insufficientTitle": "Créditos insuficientes",
+      "insufficientDesc": "Você não possui créditos suficientes para agendar esta aula.",
+      "buyCredits": "Adquirir créditos"
+    },
+    "cancel": {
+      "dialogLabel": "Confirmar cancelamento",
+      "title": "Confirmar cancelamento",
+      "lateTitle": "Cancelamento tardio — crédito não será reembolsado",
+      "lateDesc": "A sessão começa em menos de {hours} horas.",
+      "refundNotice": "Seu crédito será reembolsado",
+      "reasonLabel": "Motivo (opcional)",
+      "reasonPlaceholder": "Informe o motivo do cancelamento...",
+      "back": "Voltar",
+      "cancelling": "Cancelando...",
+      "submit": "Confirmar cancelamento",
+      "successToast": "Sessão cancelada com sucesso.",
+      "errorToast": "Erro ao cancelar sessão. Tente novamente."
+    },
+    "reschedule": {
+      "dialogLabel": "Reagendar sessão",
+      "title": "Reagendar sessão",
+      "approvalTitle": "Seu pedido será enviado para aprovação do professor",
+      "approvalDesc": "A sessão original começa em menos de {hours} horas.",
+      "loadErrorTitle": "Erro ao carregar horários",
+      "retry": "Tentar novamente",
+      "suggestionsLink": "Ver horários alternativos sugeridos",
+      "cancel": "Cancelar",
+      "requestSubmit": "Solicitar reagendamento",
+      "confirmSubmit": "Confirmar reagendamento",
+      "rescheduling": "Reagendando...",
+      "requestSentTitle": "Pedido enviado!",
+      "doneTitle": "Sessão reagendada!",
+      "requestSentDesc": "Seu pedido foi enviado para aprovação do professor.",
+      "doneDesc": "Sua sessão foi reagendada com sucesso.",
+      "close": "Fechar",
+      "errorTitle": "Erro ao reagendar",
+      "genericError": "Erro ao reagendar. Tente novamente.",
+      "slotGoneHint": "O horário escolhido pode não estar mais disponível. Veja as alternativas sugeridas dentro da política de reagendamento.",
+      "alternativesLink": "Ver alternativas",
+      "requestToast": "Pedido de reagendamento enviado para aprovação.",
+      "doneToast": "Sessão reagendada com sucesso!"
+    },
+    "rescheduleOptions": {
+      "forbiddenTitle": "Acesso negado",
+      "forbiddenDesc": "Esta sessão não pertence à sua conta.",
+      "notFoundTitle": "Sessão não encontrada",
+      "notFoundDesc": "Não localizamos a sessão que você quer reagendar.",
+      "invalidStatusTitle": "Reagendamento indisponível",
+      "invalidStatusDesc": "Só é possível reagendar sessões agendadas e ainda não realizadas.",
+      "serverTitle": "Erro ao carregar opções",
+      "serverDesc": "Algo deu errado ao buscar as alternativas. Tente novamente em instantes.",
+      "backHistory": "Voltar ao histórico",
+      "originalSession": "Sessão original:",
+      "approvalTitle": "Seu pedido será enviado para aprovação do professor",
+      "freeWindow": "Reagendamento gratuito dentro da janela de {hours}h",
+      "freeWindowDesc": "Confirme uma das alternativas abaixo para trocar o horário imediatamente.",
+      "emptyTitle": "Sem horários alternativos no momento",
+      "emptyDesc": "Não há slots livres nos próximos dias. Tente novamente mais tarde.",
+      "legend": "Escolha um novo horário",
+      "cancel": "Cancelar",
+      "rescheduling": "Reagendando...",
+      "requestSubmit": "Solicitar reagendamento",
+      "confirmSubmit": "Confirmar reagendamento",
+      "immediateHint": "Confirmação imediata, sem aprovação necessária.",
+      "requestToast": "Pedido de reagendamento enviado para aprovação do professor.",
+      "doneToast": "Sessão reagendada com sucesso!",
+      "errorToast": "Erro ao reagendar. Tente novamente."
+    }
+  },
+  "billing": {
+    "pastDue": {
+      "portalError": "Não foi possível abrir o portal de cobrança.",
+      "redirecting": "Redirecionando para o portal da Stripe.",
+      "connectionError": "Erro de conexão ao abrir o portal de cobrança.",
+      "title": "Pagamento da assinatura pendente",
+      "description": "Atualize o método de pagamento para manter a assinatura ativa.",
+      "descriptionUntil": "Atualize o método de pagamento para manter a assinatura ativa antes de {date}.",
+      "opening": "Abrindo portal",
+      "updatePayment": "Atualizar pagamento",
+      "contactSupport": "Falar com suporte"
+    }
+  },
+  "progress": {
+    "dimensions": {
+      "listening": "Escuta",
+      "speaking": "Fala",
+      "writing": "Escrita",
+      "vocabulary": "Vocabulário"
+    },
+    "radar": {
+      "title": "Perfil por Dimensao",
+      "chartAria": "Grafico radar de dimensoes",
+      "empty": "Sem dados suficientes",
+      "emptyDesc": "Faca ao menos uma avaliacao para ver seu perfil"
+    },
+    "charts": {
+      "title": "Evolucao da Media",
+      "chartAria": "Grafico de evolucao da media",
+      "empty": "Sem dados de progresso",
+      "emptyDesc": "Faca suas primeiras avaliacoes para ver o progresso",
+      "average": "Media",
+      "noDate": "Data indisponivel"
+    },
+    "trend": {
+      "title": "Tendencia por Dimensao",
+      "chartAria": "Grafico de tendencia por dimensao",
+      "empty": "Historico insuficiente",
+      "emptyDesc": "Historico insuficiente para exibir tendencias",
+      "period5": "Ultimas 5",
+      "period10": "Ultimas 10",
+      "periodAll": "Todas",
+      "toggleAria": "Mostrar/ocultar {dimension}",
+      "noneSelected": "Selecione ao menos uma dimensao"
+    },
+    "history": {
+      "title": "Historico de Avaliacoes",
+      "tableCaption": "Historico de avaliacoes",
+      "period30d": "Ultimo mes",
+      "period90d": "Ultimos 3 meses",
+      "periodAll": "Todas",
+      "export": "Exportar CSV",
+      "columnDate": "Data",
+      "columnAverage": "Media",
+      "columnComment": "Comentario",
+      "average": "Media",
+      "empty": "Sem avaliacoes",
+      "emptyDesc": "Voce ainda nao tem avaliacoes registradas",
+      "badFormat": "Resposta do servidor fora do formato esperado.",
+      "refreshFailed": "Nao foi possivel atualizar o historico.",
+      "refreshFailedDetail": "Nao foi possivel atualizar o historico: {message}",
+      "pageInfo": "Pagina {page} de {totalPages} ({total} avaliacoes)",
+      "prev": "Anterior",
+      "next": "Proxima",
+      "prevAria": "Pagina anterior",
+      "nextAria": "Proxima pagina"
+    }
+  },
+  "student": {
+    "sessionError": {
+      "session_not_found": "Sessão não encontrada",
+      "unauthorized": "Você não tem acesso a esta sessão",
+      "completed": "Aula finalizada com sucesso!"
+    },
+    "schedule": {
+      "loadErrorTitle": "Erro ao carregar horários",
+      "retry": "Tentar novamente",
+      "confirmSlot": "Confirmar horário"
+    }
   }
 }

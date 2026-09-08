@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import QRCode from 'react-qr-code';
 import {
   ShieldCheck,
@@ -75,8 +76,6 @@ interface Props {
   redirectTo?: string;
 }
 
-const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para continuar.';
-
 /**
  * Fluxo de cadastro/reconfiguracao de MFA TOTP do admin, compartilhado entre o
  * painel de seguranca e a tela publica de setup obrigatorio.
@@ -87,6 +86,9 @@ const SESSION_EXPIRED_MESSAGE = 'Sua sessão expirou. Entre novamente para conti
  * 409, 429 (rate limit), timeout/rede.
  */
 export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo }: Props) {
+  // Ate 2026-09-07 toda a copy deste fluxo (inclusive a constante de modulo com a
+  // mensagem de sessao expirada) era portugues cravado e ignorava o idioma do admin.
+  const t = useTranslations('auth.mfa');
   const router = useRouter();
   const [status, setStatus] = useState<MfaStatusView>(initialStatus);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -105,15 +107,15 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
     return (
       <ErrorState
         data-testid={isSetup ? 'auth-mfa-load-error' : 'admin-account-security-error'}
-        title="Erro ao carregar o status do MFA"
-        message="Não foi possível verificar o status do MFA. Tente novamente."
+        title={t('loadErrorTitle')}
+        message={t('loadErrorDesc')}
         onRetry={() => router.refresh()}
       />
     );
   }
 
   function handleSessionExpired() {
-    toast.error(SESSION_EXPIRED_MESSAGE);
+    toast.error(t('sessionExpired'));
     const here = window.location.pathname + window.location.search;
     router.replace(withRedirectTo(ROUTES.LOGIN, here));
   }
@@ -130,14 +132,14 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
       setEnrollment(res.data);
       setCompleted(null);
       setCode('');
-      toast.success('Segredo gerado. Escaneie o QR code e confirme com um código.');
+      toast.success(t('secretGeneratedToast'));
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         handleSessionExpired();
         return;
       }
       if (err instanceof ApiError && err.status === 403 && err.code === 'mfa_required') {
-        toast.error('Confirme o MFA para reconfigurar.');
+        toast.error(t('confirmToReconfigure'));
         // setup: volta ao destino original apos o challenge; settings: volta ao painel.
         router.replace(
           withRedirectTo(
@@ -147,7 +149,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
         );
         return;
       }
-      const msg = describeMfaApiError(err, 'Erro ao iniciar o cadastro de MFA.');
+      const msg = describeMfaApiError(err, t('initError'), t);
       setFormError(msg);
       toast.error(msg);
     } finally {
@@ -175,7 +177,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
       setCompleted({ recoveryCodes: enrollment?.recoveryCodes ?? [], justEnrolled });
       setEnrollment(null);
       setCode('');
-      toast.success(justEnrolled ? 'MFA ativado com sucesso.' : 'Identidade verificada com sucesso.');
+      toast.success(justEnrolled ? t('enabledToast') : t('verifiedToast'));
       // No modo setup NAO chamamos router.refresh(): a pagina servidor redirecionaria
       // para /admin/account/security antes de o admin ler os codigos de recuperacao.
       if (!isSetup) router.refresh();
@@ -184,7 +186,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
         handleSessionExpired();
         return;
       }
-      const msg = describeMfaApiError(err, 'Código inválido. Tente novamente.');
+      const msg = describeMfaApiError(err, t('invalidCode'), t);
       setFormError(msg);
       toast.error(msg);
     } finally {
@@ -208,7 +210,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Não foi possível copiar. Copie manualmente.');
+      toast.error(t('copyFailed'));
     }
   }
 
@@ -216,10 +218,10 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
     try {
       await navigator.clipboard.writeText(codes.join('\n'));
       setCopiedCodes(true);
-      toast.success('Códigos de recuperação copiados.');
+      toast.success(t('codesCopiedToast'));
       setTimeout(() => setCopiedCodes(false), 2000);
     } catch {
-      toast.error('Não foi possível copiar. Copie manualmente.');
+      toast.error(t('copyFailed'));
     }
   }
 
@@ -227,10 +229,10 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
   const isPending = status.status === 'PENDING';
 
   const initLabel = isActive
-    ? 'Reconfigurar / gerar novos códigos'
+    ? t('initReconfigure')
     : isPending
-      ? 'Gerar novo segredo e continuar'
-      : 'Configurar MFA';
+      ? t('initRegenerate')
+      : t('initConfigure');
 
   return (
     <div
@@ -248,36 +250,32 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                 <ShieldAlert className="h-6 w-6 text-muted-foreground" aria-hidden />
               )}
               <div>
-                <CardTitle>Autenticação em duas etapas (MFA)</CardTitle>
-                <CardDescription>
-                  Protege o acesso administrativo com um código TOTP gerado no seu
-                  app autenticador.
-                </CardDescription>
+                <CardTitle>{t('cardTitle')}</CardTitle>
+                <CardDescription>{t('cardDesc')}</CardDescription>
               </div>
             </div>
             <Badge variant={isActive ? 'default' : 'outline'}>
-              {isActive ? 'Ativo' : isPending ? 'Pendente' : 'Inativo'}
+              {isActive ? t('badgeActive') : isPending ? t('badgePending') : t('badgeInactive')}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {isActive ? (
             <p className="text-sm text-muted-foreground">
-              MFA ativo. Códigos de recuperação restantes:{' '}
-              <span className="font-medium text-foreground">
-                {status.recoveryCodesRemaining}
-              </span>
-              .
+              {t.rich('activeRemaining', {
+                count: status.recoveryCodesRemaining,
+                value: (chunks) => (
+                  <span className="font-medium text-foreground">{chunks}</span>
+                ),
+              })}
             </p>
           ) : isSetup ? (
             <p className="text-sm text-muted-foreground">
-              Sua conta administrativa precisa do MFA ativo para acessar o painel.
-              Configure agora com o app autenticador de sua preferência.
+              {t('setupNotice')}
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              O MFA ainda não está ativo nesta conta. Configure agora para reforçar
-              a segurança do acesso administrativo.
+              {t('inactiveNotice')}
             </p>
           )}
         </CardContent>
@@ -291,12 +289,12 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
               <ShieldCheck className="h-6 w-6 text-success" aria-hidden />
               <div>
                 <CardTitle className="text-base">
-                  {completed.justEnrolled ? 'MFA ativado' : 'Identidade verificada'}
+                  {completed.justEnrolled ? t('doneEnrolledTitle') : t('doneVerifiedTitle')}
                 </CardTitle>
                 <CardDescription>
                   {completed.recoveryCodes.length > 0
-                    ? 'Guarde os códigos de recuperação abaixo em um lugar seguro. Eles não serão exibidos novamente.'
-                    : 'Sua verificação foi concluída.'}
+                    ? t('doneCodesDesc')
+                    : t('doneVerifiedDesc')}
                 </CardDescription>
               </div>
             </div>
@@ -308,7 +306,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                   <div className="flex items-center gap-2">
                     <KeyRound className="h-4 w-4 text-warning" aria-hidden />
                     <p className="text-sm font-medium text-foreground">
-                      Códigos de recuperação
+                      {t('recoveryCodes')}
                     </p>
                   </div>
                   <Button
@@ -323,7 +321,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                     ) : (
                       <Copy className="h-4 w-4 mr-1" aria-hidden />
                     )}
-                    Copiar todos
+                    {t('copyAll')}
                   </Button>
                 </div>
                 <ul className="grid grid-cols-2 gap-1.5">
@@ -337,8 +335,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                   ))}
                 </ul>
                 <p className="text-xs text-muted-foreground">
-                  Cada código serve uma única vez. Use-os se perder acesso ao app
-                  autenticador.
+                  {t('codesOnceHint')}
                 </p>
               </div>
             )}
@@ -352,12 +349,12 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
               {isLeaving ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Abrindo o painel...
+                  {t('opening')}
                 </>
               ) : isSetup ? (
-                'Concluir e acessar o painel'
+                t('finishSetup')
               ) : (
-                'Concluir'
+                t('finish')
               )}
             </Button>
           </CardContent>
@@ -366,17 +363,14 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
         /* Passo de confirmacao: QR code + segredo + codigo */
         <Card data-testid="admin-account-security-enrollment-card">
           <CardHeader>
-            <CardTitle className="text-base">Confirme o cadastro</CardTitle>
-            <CardDescription>
-              Escaneie o QR code com o app autenticador (ou digite o segredo) e
-              informe o código de 6 dígitos para ativar.
-            </CardDescription>
+            <CardTitle className="text-base">{t('confirmTitle')}</CardTitle>
+            <CardDescription>{t('confirmDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex flex-col items-center gap-3">
               <div
                 role="img"
-                aria-label="QR code para configurar o app autenticador"
+                aria-label={t('qrAria')}
                 data-testid="mfa-enrollment-qr"
                 className="rounded-lg bg-white p-3"
               >
@@ -388,12 +382,12 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
                 <Smartphone className="h-4 w-4" aria-hidden />
-                Abrir no app autenticador
+                {t('openInApp')}
               </a>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Segredo (entrada manual)</Label>
+              <Label className="text-sm font-medium">{t('secretLabel')}</Label>
               <div className="flex items-center gap-2">
                 <code
                   data-testid="mfa-enrollment-secret"
@@ -406,7 +400,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                   variant="outline"
                   size="sm"
                   onClick={copySecret}
-                  aria-label="Copiar segredo"
+                  aria-label={t('copySecretAria')}
                 >
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
@@ -417,12 +411,11 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
               <div className="flex items-center gap-2 mb-2">
                 <KeyRound className="h-4 w-4 text-warning" aria-hidden />
                 <p className="text-sm font-medium text-foreground">
-                  Códigos de recuperação (guarde agora)
+                  {t('recoveryCodesSaveNow')}
                 </p>
               </div>
               <p className="text-xs text-muted-foreground mb-2">
-                Cada código serve uma única vez e não será exibido novamente. Use-os
-                se perder acesso ao app autenticador.
+                {t('codesOnceHintEnroll')}
               </p>
               <ul className="grid grid-cols-2 gap-1.5">
                 {enrollment.recoveryCodes.map((rc) => (
@@ -439,7 +432,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
             <form data-testid="form-mfa-verify" onSubmit={handleVerify} className="space-y-3" noValidate>
               <div className="space-y-1.5">
                 <Label htmlFor="mfa-code" className="text-sm font-medium">
-                  Código de verificação
+                  {t('codeLabel')}
                 </Label>
                 <Input
                   data-testid="form-mfa-verify-code-input"
@@ -470,10 +463,10 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                   {isVerifying ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Confirmando...
+                      {t('confirming')}
                     </>
                   ) : (
-                    'Confirmar e ativar'
+                    t('confirmAndActivate')
                   )}
                 </Button>
                 {isSetup ? (
@@ -484,7 +477,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                     disabled={isVerifying || isIniting}
                     onClick={handleInit}
                   >
-                    Gerar outro segredo
+                    {t('generateAnother')}
                   </Button>
                 ) : (
                   <Button
@@ -497,7 +490,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                       setFormError(null);
                     }}
                   >
-                    Cancelar
+                    {t('cancel')}
                   </Button>
                 )}
               </div>
@@ -515,9 +508,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
               >
                 <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" aria-hidden />
                 <span>
-                  Um cadastro anterior não foi concluído. Ao continuar, um novo segredo
-                  e novos códigos de recuperação serão gerados e os anteriores deixarão
-                  de valer.
+                  {t('pendingNotice')}
                 </span>
               </div>
             )}
@@ -526,8 +517,8 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
                 <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" aria-hidden />
                 <span>
                   {isSetup
-                    ? 'Obrigatório para todas as contas administrativas.'
-                    : 'Recomendado para todas as contas administrativas.'}
+                    ? t('requiredNotice')
+                    : t('recommendedNotice')}
                 </span>
               </div>
             )}
@@ -545,7 +536,7 @@ export function MfaEnrollmentClient({ mode, initialStatus, loadError, redirectTo
               {isIniting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Gerando segredo...
+                  {t('generatingSecret')}
                 </>
               ) : (
                 initLabel

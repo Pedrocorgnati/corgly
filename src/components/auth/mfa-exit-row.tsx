@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { apiClient } from '@/lib/api-client';
 import { API, ROUTES } from '@/lib/constants/routes';
 
@@ -11,6 +12,8 @@ import { API, ROUTES } from '@/lib/constants/routes';
  * nao esta montado nas paginas publicas.
  */
 export function MfaExitRow() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma do usuario.
+  const t = useTranslations('auth.mfaExit');
   const [isLeaving, setIsLeaving] = useState(false);
 
   async function handleLogout() {
@@ -36,7 +39,7 @@ export function MfaExitRow() {
         disabled={isLeaving}
         className="hover:text-foreground hover:underline disabled:opacity-60"
       >
-        {isLeaving ? 'Saindo...' : 'Sair da conta'}
+        {isLeaving ? t('loggingOut') : t('logout')}
       </button>
       <span aria-hidden>|</span>
       <Link
@@ -44,7 +47,7 @@ export function MfaExitRow() {
         href={ROUTES.HOME}
         className="hover:text-foreground hover:underline"
       >
-        Voltar ao início
+        {t('home')}
       </Link>
     </div>
   );

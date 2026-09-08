@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,9 @@ export interface RegisterFormProps {
 }
 
 export function RegisterForm({ planSelection = null }: RegisterFormProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo visitante na vitrine publica.
+  const t = useTranslations('auth.register');
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -98,19 +102,19 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
         preferredLanguage,
       });
 
-      toast.success('Conta criada! Verifique seu email para confirmar.');
+      toast.success(t('createdToast'));
       router.push(ROUTES.CONFIRM_EMAIL);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          toast.error('Este email já está cadastrado. Tente fazer login.');
+          toast.error(t('emailTakenToast'));
         } else if (err.status === 429) {
-          toast.error('Muitas tentativas. Aguarde e tente novamente.');
+          toast.error(t('tooManyToast'));
         } else {
-          toast.error(err.message || 'Ocorreu um erro inesperado. Tente novamente em alguns instantes.');
+          toast.error(err.message || t('genericErrorToast'));
         }
       } else {
-        toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+        toast.error(t('connectionErrorToast'));
       }
     } finally {
       setIsLoading(false);
@@ -121,12 +125,12 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
     <form data-testid="form-register" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       {/* Nome */}
       <div className="space-y-1.5">
-        <Label htmlFor="name" className="text-sm font-medium">Nome completo</Label>
+        <Label htmlFor="name" className="text-sm font-medium">{t('nameLabel')}</Label>
         <Input
           data-testid="form-register-name-input"
           id="name"
           type="text"
-          placeholder="João Silva"
+          placeholder={t('namePlaceholder')}
           autoComplete="name"
           disabled={isLoading}
           aria-invalid={!!errors.name}
@@ -140,12 +144,12 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
 
       {/* Email */}
       <div className="space-y-1.5">
-        <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium">{t('emailLabel')}</Label>
         <Input
           data-testid="form-register-email-input"
           id="email"
           type="email"
-          placeholder="joao@exemplo.com"
+          placeholder={t('emailPlaceholder')}
           autoComplete="email"
           disabled={isLoading}
           aria-invalid={!!errors.email}
@@ -159,13 +163,13 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
 
       {/* Senha */}
       <div className="space-y-1.5">
-        <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+        <Label htmlFor="password" className="text-sm font-medium">{t('passwordLabel')}</Label>
         <div className="relative">
           <Input
             data-testid="form-register-password-input"
             id="password"
             type={showPassword ? 'text' : 'password'}
-            placeholder="Mínimo 8 caracteres"
+            placeholder={t('passwordPlaceholder')}
             autoComplete="new-password"
             disabled={isLoading}
             className="pr-10"
@@ -178,7 +182,7 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
             data-testid="form-register-toggle-password-button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            aria-label={showPassword ? t('hidePassword') : t('showPassword')}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -192,13 +196,13 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
 
       {/* Confirmar senha */}
       <div className="space-y-1.5">
-        <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar senha</Label>
+        <Label htmlFor="confirmPassword" className="text-sm font-medium">{t('confirmPasswordLabel')}</Label>
         <div className="relative">
           <Input
             data-testid="form-register-confirm-password-input"
             id="confirmPassword"
             type={showConfirmPassword ? 'text' : 'password'}
-            placeholder="Digite a senha novamente"
+            placeholder={t('confirmPasswordPlaceholder')}
             autoComplete="new-password"
             disabled={isLoading}
             className="pr-10"
@@ -211,7 +215,7 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
             data-testid="form-register-toggle-confirm-password-button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            aria-label={showConfirmPassword ? t('hidePassword') : t('showPassword')}
           >
             {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -223,7 +227,7 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
 
       {/* País */}
       <div className="space-y-1.5">
-        <Label htmlFor="country" className="text-sm font-medium">País</Label>
+        <Label htmlFor="country" className="text-sm font-medium">{t('countryLabel')}</Label>
         <Select onValueChange={(v) => setValue('country', v as string)} disabled={isLoading}>
           <SelectTrigger
             data-testid="form-register-country-select"
@@ -232,7 +236,7 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
             aria-describedby={errors.country ? 'country-error' : undefined}
             className={errors.country ? 'border-destructive' : ''}
           >
-            <SelectValue placeholder="Selecione seu país" />
+            <SelectValue placeholder={t('countryPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {COUNTRIES.map((c) => (
@@ -247,7 +251,7 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
 
       {/* Fuso horário */}
       <div className="space-y-1.5">
-        <Label htmlFor="timezone" className="text-sm font-medium">Fuso horário</Label>
+        <Label htmlFor="timezone" className="text-sm font-medium">{t('timezoneLabel')}</Label>
         <Select
           onValueChange={(v) => setValue('timezone', v as string)}
           defaultValue="America/Sao_Paulo"
@@ -260,7 +264,7 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
             aria-describedby={errors.timezone ? 'timezone-error' : undefined}
             className={errors.timezone ? 'border-destructive' : ''}
           >
-            <SelectValue placeholder="Detectando automaticamente..." />
+            <SelectValue placeholder={t('timezonePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {TIMEZONES.map((tz) => (
@@ -284,14 +288,18 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
             className="mt-0.5 min-h-[24px] min-w-[24px]"
           />
           <Label htmlFor="termsAccepted" className="text-sm text-foreground cursor-pointer leading-relaxed">
-            Li e aceito os{' '}
-            <Link href={ROUTES.TERMS} target="_blank" className="text-primary underline hover:no-underline">
-              Termos de Uso
-            </Link>{' '}
-            e a{' '}
-            <Link href={ROUTES.PRIVACY} target="_blank" className="text-primary underline hover:no-underline">
-              Política de Privacidade
-            </Link>
+            {t.rich('termsAccept', {
+              terms: (chunks) => (
+                <Link href={ROUTES.TERMS} target="_blank" className="text-primary underline hover:no-underline">
+                  {chunks}
+                </Link>
+              ),
+              privacy: (chunks) => (
+                <Link href={ROUTES.PRIVACY} target="_blank" className="text-primary underline hover:no-underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
           </Label>
         </div>
         {errors.termsAccepted && (
@@ -307,11 +315,13 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
             className="mt-0.5 min-h-[24px] min-w-[24px]"
           />
           <Label htmlFor="privacyAccepted" className="text-sm text-foreground cursor-pointer leading-relaxed">
-            Autorizo o tratamento dos meus dados pessoais conforme a{' '}
-            <Link href={ROUTES.PRIVACY} target="_blank" className="text-primary underline hover:no-underline">
-              Política de Privacidade
-            </Link>{' '}
-            e a LGPD (Lei nº 13.709/2018)
+            {t.rich('privacyAccept', {
+              privacy: (chunks) => (
+                <Link href={ROUTES.PRIVACY} target="_blank" className="text-primary underline hover:no-underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
           </Label>
         </div>
         {errors.privacyAccepted && (
@@ -327,7 +337,7 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
             className="mt-0.5 min-h-[24px] min-w-[24px]"
           />
           <Label htmlFor="marketingOptIn" className="text-sm text-muted-foreground cursor-pointer leading-relaxed">
-            Aceito receber novidades e dicas de aprendizado por email
+            {t('marketingAccept')}
           </Label>
         </div>
       </div>
@@ -342,10 +352,10 @@ export function RegisterForm({ planSelection = null }: RegisterFormProps) {
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            Criando conta...
+            {t('creating')}
           </>
         ) : (
-          'Criar Conta'
+          t('submit')
         )}
       </Button>
     </form>

@@ -17,12 +17,15 @@ const TABS = getStudentBottomNavItems();
 export function MobileBottomNav() {
   const pathname = usePathname();
   const t = useTranslations('bottomNav');
+  // Ate 2026-09-07 os aria-labels de navegacao eram portugues cravado e ignoravam
+  // o idioma escolhido pelo usuario, mesmo com o resto da barra ja traduzido.
+  const tA11y = useTranslations('a11y');
 
   return (
     <nav
       data-testid="mobile-bottom-nav"
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-sm safe-bottom"
-      aria-label="Navegação principal"
+      aria-label={tA11y('mainNav')}
     >
       <div className="flex items-stretch h-14">
         {TABS.map(({ href, bottomLabelKey, icon, bottomIcon }) => {

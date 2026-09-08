@@ -3,7 +3,7 @@
  * Testa render, toolbar, read-only e acessibilidade.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent } from '@/test/utils'
 import { TiptapEditor } from '@/components/session/TiptapEditor'
 
 // ── Mocks (hoisted) ────────────────────────────────────────────────────────────
@@ -84,9 +84,9 @@ describe('TiptapEditor Functional', () => {
 
     expect(screen.getByRole('toolbar')).toBeInTheDocument()
     expect(screen.getByTitle('Negrito (Ctrl+B)')).toBeInTheDocument()
-    expect(screen.getByTitle('Italico (Ctrl+I)')).toBeInTheDocument()
-    expect(screen.getByTitle('Titulo 1')).toBeInTheDocument()
-    expect(screen.getByTitle('Titulo 2')).toBeInTheDocument()
+    expect(screen.getByTitle('Itálico (Ctrl+I)')).toBeInTheDocument()
+    expect(screen.getByTitle('Título 1')).toBeInTheDocument()
+    expect(screen.getByTitle('Título 2')).toBeInTheDocument()
     expect(screen.getByTitle('Lista com marcadores')).toBeInTheDocument()
     expect(screen.getByTitle('Lista numerada')).toBeInTheDocument()
     expect(screen.getByTitle('Inserir link')).toBeInTheDocument()
@@ -104,7 +104,7 @@ describe('TiptapEditor Functional', () => {
 
   it('toolbar italic button aciona toggleItalic', () => {
     render(<TiptapEditor {...defaultProps} />)
-    const italicBtn = screen.getByTitle('Italico (Ctrl+I)')
+    const italicBtn = screen.getByTitle('Itálico (Ctrl+I)')
     fireEvent.click(italicBtn)
 
     expect(mockToggleItalic).toHaveBeenCalled()

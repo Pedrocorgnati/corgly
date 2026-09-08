@@ -4,6 +4,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type DeviceCheckStatus = 'idle' | 'checking' | 'ok' | 'error'
 
+/**
+ * Discriminante da falha, independente de idioma.
+ *
+ * Ate 2026-09-07 este hook devolvia SO a mensagem em portugues cravado e o
+ * `DeviceTest` classificava a falha com `errMsg.includes('Permissao')`. Traduzir
+ * a copy quebraria o classificador em silencio; por isso a causa virou dado.
+ * `unknown` vem acompanhado de `error` com a mensagem crua do navegador.
+ */
+export type DeviceCheckErrorKind = 'unsupported' | 'permission' | 'notfound' | 'unknown'
+
+/** Sentinela interna: o navegador nao expoe getUserMedia. */
+const UNSUPPORTED_SENTINEL = 'DEVICE_CHECK_UNSUPPORTED'
+
 export interface DeviceInfo {
   deviceId: string
   label: string
@@ -12,7 +25,9 @@ export interface DeviceInfo {
 
 export interface UseDeviceCheckResult {
   status: DeviceCheckStatus
+  /** Mensagem crua do navegador quando `errorKind === 'unknown'`; senao null. */
   error: string | null
+  errorKind: DeviceCheckErrorKind | null
   cameras: DeviceInfo[]
   microphones: DeviceInfo[]
   speakers: DeviceInfo[]
@@ -37,6 +52,7 @@ export interface UseDeviceCheckResult {
 export function useDeviceCheck(): UseDeviceCheckResult {
   const [status, setStatus] = useState<DeviceCheckStatus>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [errorKind, setErrorKind] = useState<DeviceCheckErrorKind | null>(null)
   const [cameras, setCameras] = useState<DeviceInfo[]>([])
   const [microphones, setMicrophones] = useState<DeviceInfo[]>([])
   const [speakers, setSpeakers] = useState<DeviceInfo[]>([])
@@ -89,9 +105,10 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   const start = useCallback(async () => {
     setStatus('checking')
     setError(null)
+    setErrorKind(null)
     try {
       if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Navegador nao suporta getUserMedia')
+        throw new Error(UNSUPPORTED_SENTINEL)
       }
       const constraints: MediaStreamConstraints = {
         video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
@@ -139,15 +156,18 @@ export function useDeviceCheck(): UseDeviceCheckResult {
 
       setStatus('ok')
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.name === 'NotAllowedError'
-            ? 'Permissao negada. Autorize camera e microfone no navegador.'
-            : err.name === 'NotFoundError'
-              ? 'Nenhum dispositivo encontrado.'
-              : err.message
-          : 'Falha desconhecida'
-      setError(message)
+      // A copy do erro mora no catalogo (`sessionRoom.deviceTest.error*`); aqui so
+      // sai a CAUSA, para que o consumidor traduza sem perder a classificacao.
+      let kind: DeviceCheckErrorKind = 'unknown'
+      let detail: string | null = null
+      if (err instanceof Error) {
+        if (err.message === UNSUPPORTED_SENTINEL) kind = 'unsupported'
+        else if (err.name === 'NotAllowedError') kind = 'permission'
+        else if (err.name === 'NotFoundError') kind = 'notfound'
+        else detail = err.message
+      }
+      setErrorKind(kind)
+      setError(detail)
       setStatus('error')
     }
   }, [enumerate, selectedCameraId, selectedMicId])
@@ -163,6 +183,7 @@ export function useDeviceCheck(): UseDeviceCheckResult {
   return {
     status,
     error,
+    errorKind,
     cameras,
     microphones,
     speakers,

@@ -18,7 +18,7 @@
  *  3. o editor recebe `existingSlots`, e o slot bloqueado expoe o botao de
  *     desbloqueio.
  */
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextIntlClientProvider } from 'next-intl';
 import ptBR from '../../../../i18n/messages/pt-BR.json';

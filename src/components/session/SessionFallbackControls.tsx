@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Mic, MicOff, Video, LifeBuoy, PhoneOff, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -99,12 +100,12 @@ export function SessionFallbackControls({
   isMuted = false,
   onToggleAudio,
   onRetryVideo,
-  retryLabel = 'Reativar vídeo',
+  retryLabel,
   onRetryConnection,
-  retryConnectionLabel = 'Tentar reconectar agora',
+  retryConnectionLabel,
   onSupport,
   onInterrupt,
-  interruptLabel = 'Encerrar sessão',
+  interruptLabel,
   isBusy = false,
   className,
   toggleAudioTestId = 'session-fallback-toggle-audio-button',
@@ -113,6 +114,15 @@ export function SessionFallbackControls({
   supportTestId = 'session-fallback-support-button',
   interruptTestId = 'session-fallback-interrupt-button',
 }: SessionFallbackControlsProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  // Os defaults sairam da desestruturacao porque `t` so existe no corpo do
+  // componente; quem passa o rotulo por prop continua vencendo o catalogo.
+  const t = useTranslations('sessionRoom.fallback')
+
+  const resolvedRetryLabel = retryLabel ?? t('retryVideo')
+  const resolvedRetryConnectionLabel = retryConnectionLabel ?? t('retryConnection')
+  const resolvedInterruptLabel = interruptLabel ?? t('interrupt')
+
   return (
     <div
       className={cn(
@@ -120,7 +130,7 @@ export function SessionFallbackControls({
         className,
       )}
       role="group"
-      aria-label="Controles da sala em modo de contingência"
+      aria-label={t('groupAria')}
     >
       {onToggleAudio && (
         <FallbackButton
@@ -128,7 +138,7 @@ export function SessionFallbackControls({
           disabled={isBusy}
           variant="neutral"
           icon={isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          label={isMuted ? 'Ativar microfone' : 'Silenciar microfone'}
+          label={isMuted ? t('micOn') : t('micOff')}
           ariaLabel={isMuted ? 'Ativar microfone' : 'Silenciar microfone'}
           data-testid={toggleAudioTestId}
         />
@@ -140,7 +150,7 @@ export function SessionFallbackControls({
           disabled={isBusy}
           variant="primary"
           icon={<RefreshCw className={cn('h-4 w-4', isBusy && 'animate-spin')} />}
-          label={retryConnectionLabel}
+          label={resolvedRetryConnectionLabel}
           data-testid={retryConnectionTestId}
         />
       )}
@@ -151,7 +161,7 @@ export function SessionFallbackControls({
           disabled={isBusy}
           variant="primary"
           icon={<Video className="h-4 w-4" />}
-          label={retryLabel}
+          label={resolvedRetryLabel}
           data-testid={retryVideoTestId}
         />
       )}
@@ -161,7 +171,7 @@ export function SessionFallbackControls({
         disabled={isBusy}
         variant="neutral"
         icon={<LifeBuoy className="h-4 w-4" />}
-        label="Falar com suporte"
+        label={t('support')}
         data-testid={supportTestId}
       />
 
@@ -170,7 +180,7 @@ export function SessionFallbackControls({
         disabled={isBusy}
         variant="danger"
         icon={<PhoneOff className="h-4 w-4" />}
-        label={interruptLabel}
+        label={resolvedInterruptLabel}
         data-testid={interruptTestId}
       />
     </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface EditorStatusBarProps {
@@ -29,10 +31,14 @@ export function EditorStatusBar({
   syncBannerVariant,
   connectedUsers,
 }: EditorStatusBarProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido pelo aluno.
+  // O plural sai do ICU do catalogo, nao de uma concatenacao de 's'.
+  const t = useTranslations('sessionRoom.editor')
+
   const usersLabel =
     connectedUsers <= 0
-      ? 'Apenas voce'
-      : `${connectedUsers} conectado${connectedUsers > 1 ? 's' : ''}`
+      ? t('onlyYou')
+      : t('connectedCount', { count: connectedUsers })
 
   return (
     <div

@@ -2,6 +2,7 @@
 import { API } from '@/lib/constants/routes';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -31,27 +32,42 @@ interface PaginationMeta {
 
 const PAGE_SIZE = 10;
 
-function formatCurrency(amount: number, currency: string) {
-  const locale = currency === 'BRL' ? 'pt-BR' : 'en-US';
+/**
+ * Ate 2026-09-07 o valor era formatado em 'pt-BR' ou 'en-US' escolhido pela MOEDA
+ * da compra, e a data sempre em 'pt-BR'. Quem manda na formatacao e o idioma do
+ * LEITOR: `Intl` ja resolve o simbolo certo de qualquer moeda em qualquer locale.
+ */
+function formatCurrency(amount: number, currency: string, locale: string) {
   return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount / 100);
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('pt-BR', {
+function formatDate(dateStr: string, locale: string) {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
 }
 
-const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  COMPLETED: { label: 'Pago', variant: 'default' },
-  PENDING: { label: 'Pendente', variant: 'secondary' },
-  FAILED: { label: 'Falhou', variant: 'destructive' },
-  REFUNDED: { label: 'Reembolsado', variant: 'outline' },
+/**
+ * O mapa guarda so a VARIANTE do badge, que nao tem idioma. A copy de cada status
+ * saiu para `credits.history.paymentStatus.*` — ate 2026-09-07 ela morava aqui em
+ * portugues cravado, fora do alcance do next-intl.
+ */
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+  COMPLETED: 'default',
+  PENDING: 'secondary',
+  FAILED: 'destructive',
+  REFUNDED: 'outline',
 };
 
 export function PaymentHistory() {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('credits.history');
+  const locale = useLocale();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -69,13 +85,13 @@ export function PaymentHistory() {
       setPayments(json.data.payments);
       setPagination(json.data.pagination);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Erro ao carregar pagamentos';
+      const msg = err instanceof ApiError ? err.message : t('loadError');
       setError(msg);
       toast.error(msg);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchPayments(page);
@@ -103,9 +119,9 @@ export function PaymentHistory() {
     return (
       <EmptyState
         icon={Receipt}
-        title="Nenhuma compra ainda"
-        description="Suas transações de créditos aparecerão aqui"
-        actionLabel="Comprar créditos"
+        title={t('emptyPurchases')}
+        description={t('emptyPurchasesDesc')}
+        actionLabel={t('buyAction')}
         actionHref={ROUTES.CREDITS}
       />
     );
@@ -116,7 +132,10 @@ export function PaymentHistory() {
       {/* Mobile: card layout */}
       <div className="space-y-3 sm:hidden">
         {payments.map((payment) => {
-          const status = STATUS_MAP[payment.status] ?? { label: payment.status, variant: 'secondary' as const };
+          const statusLabel = STATUS_VARIANTS[payment.status]
+            ? t(`paymentStatus.${payment.status}`)
+            : payment.status;
+          const statusVariant = STATUS_VARIANTS[payment.status] ?? 'secondary';
           return (
             <div
               key={payment.id}
@@ -124,11 +143,11 @@ export function PaymentHistory() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">
-                  {formatCurrency(payment.amount, payment.currency)}
+                  {formatCurrency(payment.amount, payment.currency, locale)}
                 </span>
-                <Badge variant={status.variant}>{status.label}</Badge>
+                <Badge variant={statusVariant}>{statusLabel}</Badge>
               </div>
-              <p className="text-xs text-muted-foreground">{formatDate(payment.createdAt)}</p>
+              <p className="text-xs text-muted-foreground">{formatDate(payment.createdAt, locale)}</p>
             </div>
           );
         })}
@@ -139,23 +158,26 @@ export function PaymentHistory() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Data</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Valor</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Status</th>
-              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">ID</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">{t('date')}</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">{t('amount')}</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">{t('status')}</th>
+              <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">{t('id')}</th>
             </tr>
           </thead>
           <tbody>
             {payments.map((payment) => {
-              const status = STATUS_MAP[payment.status] ?? { label: payment.status, variant: 'secondary' as const };
+              const statusLabel = STATUS_VARIANTS[payment.status]
+            ? t(`paymentStatus.${payment.status}`)
+            : payment.status;
+          const statusVariant = STATUS_VARIANTS[payment.status] ?? 'secondary';
               return (
                 <tr key={payment.id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 text-sm text-foreground">{formatDate(payment.createdAt)}</td>
+                  <td className="px-4 py-3 text-sm text-foreground">{formatDate(payment.createdAt, locale)}</td>
                   <td className="px-4 py-3 text-sm font-semibold text-foreground">
-                    {formatCurrency(payment.amount, payment.currency)}
+                    {formatCurrency(payment.amount, payment.currency, locale)}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={status.variant}>{status.label}</Badge>
+                    <Badge variant={statusVariant}>{statusLabel}</Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
                     {payment.id.slice(0, 8)}...

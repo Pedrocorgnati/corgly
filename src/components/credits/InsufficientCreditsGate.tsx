@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, CreditCard } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants/routes';
@@ -10,6 +11,10 @@ interface InsufficientCreditsGateProps {
 }
 
 export function InsufficientCreditsGate({ balance, children }: InsufficientCreditsGateProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno. Server Component sincrono: `useTranslations` vale aqui.
+  const t = useTranslations('credits.gate');
+
   if (balance > 0) {
     return <>{children}</>;
   }
@@ -26,10 +31,10 @@ export function InsufficientCreditsGate({ balance, children }: InsufficientCredi
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
           <div className="min-w-0">
             <h2 id="insufficient-credits-title" className="text-sm font-semibold text-foreground">
-              Créditos insuficientes para agendar
+              {t('title')}
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Você precisa de pelo menos 1 crédito disponível antes de escolher e confirmar um horário.
+              {t('description')}
             </p>
           </div>
         </div>
@@ -40,7 +45,7 @@ export function InsufficientCreditsGate({ balance, children }: InsufficientCredi
           className={cn(buttonVariants(), 'min-h-[44px] shrink-0')}
         >
           <CreditCard className="h-4 w-4" aria-hidden="true" />
-          Comprar créditos
+          {t('cta')}
         </Link>
       </div>
     </section>

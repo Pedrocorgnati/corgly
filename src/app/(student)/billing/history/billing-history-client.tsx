@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -19,12 +20,24 @@ interface HistoryItem {
   receiptAvailable: boolean;
 }
 
-const STATUS_FILTERS: Array<{ label: string; value: '' | Status }> = [
-  { label: 'Todos', value: '' },
-  { label: 'Pagos', value: 'SUCCEEDED' },
-  { label: 'Estornados', value: 'REFUNDED' },
-  { label: 'Falhos', value: 'FAILED' },
+/**
+ * Filtros de status. So a chave de catalogo vive aqui: ate 2026-09-07 os rotulos
+ * eram portugues cravado e nao acompanhavam o idioma escolhido pelo aluno.
+ */
+const STATUS_FILTERS: Array<{ key: string; value: '' | Status }> = [
+  { key: 'filterAll', value: '' },
+  { key: 'filterPaid', value: 'SUCCEEDED' },
+  { key: 'filterRefunded', value: 'REFUNDED' },
+  { key: 'filterFailed', value: 'FAILED' },
 ];
+
+/** Rotulo humano do status, reaproveitando o bloco ja existente do extrato de creditos. */
+const STATUS_LABEL_KEY: Record<Status, string> = {
+  PENDING: 'statusPending',
+  SUCCEEDED: 'statusSucceeded',
+  FAILED: 'statusFailed',
+  REFUNDED: 'statusRefunded',
+};
 
 const STATUS_COLOR: Record<Status, string> = {
   PENDING: 'text-amber-600',
@@ -34,6 +47,9 @@ const STATUS_COLOR: Record<Status, string> = {
 };
 
 export function BillingHistoryClient() {
+  const t = useTranslations('pages.billingHistoryList');
+  const tStatus = useTranslations('credits.history');
+  const locale = useLocale();
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,17 +74,17 @@ export function BillingHistoryClient() {
           credentials: 'include',
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || 'Erro ao carregar extrato');
+        if (!res.ok) throw new Error(json?.error || t('loadError'));
         const data = json.data as { items: HistoryItem[]; nextCursor: string | null };
         setItems((prev) => (reset ? data.items : [...prev, ...data.items]));
         setCursor(data.nextCursor);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erro desconhecido');
+        setError(e instanceof Error ? e.message : t('unknownError'));
       } finally {
         setLoading(false);
       }
     },
-    [cursor, status, from, to],
+    [cursor, status, from, to, t],
   );
 
   // Reset + reload when filters change
@@ -87,7 +103,7 @@ export function BillingHistoryClient() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || 'Falha ao gerar recibo');
+        throw new Error(json?.error || t('receiptError'));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -99,7 +115,7 @@ export function BillingHistoryClient() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao baixar recibo');
+      setError(e instanceof Error ? e.message : t('downloadError'));
     } finally {
       setDownloading(null);
     }
@@ -110,7 +126,7 @@ export function BillingHistoryClient() {
       {/* Filters */}
       <div data-testid="billing-history-filter-bar" className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted-foreground">De</label>
+          <label className="text-xs font-medium text-muted-foreground">{t('filterFrom')}</label>
           <input
             data-testid="billing-history-filter-from-input"
             type="date"
@@ -120,7 +136,7 @@ export function BillingHistoryClient() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted-foreground">Até</label>
+          <label className="text-xs font-medium text-muted-foreground">{t('filterTo')}</label>
           <input
             data-testid="billing-history-filter-to-input"
             type="date"
@@ -139,7 +155,7 @@ export function BillingHistoryClient() {
               size="sm"
               onClick={() => setStatus(s.value)}
             >
-              {s.label}
+              {t(s.key)}
             </Button>
           ))}
         </div>
@@ -159,35 +175,35 @@ export function BillingHistoryClient() {
       {items.length === 0 && !loading ? (
         <EmptyState
           data-testid="billing-history-empty"
-          title="Nenhum pagamento encontrado"
-          description="Seus pagamentos aparecerão aqui."
+          title={t('emptyTitle')}
+          description={t('emptyDesc')}
         />
       ) : (
         <div data-testid="billing-history-table" className="overflow-x-auto rounded-lg border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="px-4 py-3">Data</th>
-                <th className="px-4 py-3">Descrição</th>
-                <th className="px-4 py-3 text-right">Valor</th>
-                <th className="px-4 py-3">Moeda</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Ações</th>
+                <th className="px-4 py-3">{t('colDate')}</th>
+                <th className="px-4 py-3">{t('colDescription')}</th>
+                <th className="px-4 py-3 text-right">{t('colAmount')}</th>
+                <th className="px-4 py-3">{t('colCurrency')}</th>
+                <th className="px-4 py-3">{t('colStatus')}</th>
+                <th className="px-4 py-3 text-right">{t('colActions')}</th>
               </tr>
             </thead>
             <tbody>
               {items.map((it) => (
                 <tr key={it.id} data-testid={`billing-history-row-${it.id}`} className="border-t border-border">
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {new Date(it.createdAt).toLocaleDateString()}
+                    {new Date(it.createdAt).toLocaleDateString(locale)}
                   </td>
                   <td className="px-4 py-3">{it.description}</td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {getRegionalDisplay(it.amount, toCurrency(it.currency), 'pt-BR').formatted}
+                    {getRegionalDisplay(it.amount, toCurrency(it.currency), locale).formatted}
                   </td>
                   <td className="px-4 py-3 uppercase">{it.currency}</td>
                   <td className={`px-4 py-3 font-medium ${STATUS_COLOR[it.status]}`}>
-                    {it.status}
+                    {tStatus(STATUS_LABEL_KEY[it.status])}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {it.receiptAvailable ? (
@@ -204,7 +220,7 @@ export function BillingHistoryClient() {
                         ) : (
                           <Download className="h-4 w-4" />
                         )}
-                        <span className="ml-2">Recibo</span>
+                        <span className="ml-2">{t('receipt')}</span>
                       </Button>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
@@ -221,7 +237,7 @@ export function BillingHistoryClient() {
       <div data-testid="billing-history-pagination" className="flex justify-center">
         {cursor && (
           <Button data-testid="billing-history-load-more-button" type="button" variant="outline" onClick={() => load(false)} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Carregar mais'}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('loadMore')}
           </Button>
         )}
         {loading && !cursor && items.length === 0 && (

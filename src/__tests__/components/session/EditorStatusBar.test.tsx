@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '@/test/utils'
 import { EditorStatusBar } from '@/components/session/EditorStatusBar'
 
 describe('EditorStatusBar', () => {
@@ -50,7 +50,7 @@ describe('EditorStatusBar', () => {
     expect(dot).toBeInTheDocument()
   })
 
-  it('exibe "Apenas voce" quando connectedUsers=0', () => {
+  it('exibe "Apenas você" quando connectedUsers=0', () => {
     render(
       <EditorStatusBar
         syncBannerText="Salvo"
@@ -58,7 +58,7 @@ describe('EditorStatusBar', () => {
         connectedUsers={0}
       />,
     )
-    expect(screen.getByText('Apenas voce')).toBeInTheDocument()
+    expect(screen.getByText('Apenas você')).toBeInTheDocument()
   })
 
   it('exibe "2 conectados" quando connectedUsers=2', () => {

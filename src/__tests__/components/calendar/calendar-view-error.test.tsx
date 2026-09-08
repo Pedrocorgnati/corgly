@@ -15,7 +15,7 @@
  *  3. a prop opcional nao mexeu no caminho feliz;
  *  4. erro vence carregamento (precedencia explicita, ST001).
  */
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/test/utils';
 import { describe, expect, it, vi } from 'vitest';
 import { CalendarView } from '@/components/calendar/CalendarView';
 

@@ -3,6 +3,7 @@ import { UI_TIMING } from '@/lib/constants';
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { Loader2, AlertTriangle } from 'lucide-react';
@@ -58,7 +59,12 @@ interface Recusa {
   lotes?: number;
 }
 
-const FALLBACK_RECUSA = 'Nao foi possivel excluir a conta. Tente novamente.';
+/**
+ * Ate 2026-09-07 o fallback e a mensagem de rede eram portugues cravado no
+ * modulo — fora do alcance do next-intl. Agora o tradutor do chamador entra como
+ * parametro e so a CLASSIFICACAO da recusa mora aqui.
+ */
+type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /** `details.batches` do envelope 409, quando presente e utilizavel. */
 function lotesAtivos(details: unknown): number | undefined {
@@ -67,11 +73,11 @@ function lotesAtivos(details: unknown): number | undefined {
   return typeof batches === 'number' && Number.isFinite(batches) ? batches : undefined;
 }
 
-function classificarRecusa(err: unknown): Recusa {
+function classificarRecusa(err: unknown, t: Translator): Recusa {
   if (!(err instanceof ApiError)) {
-    return { motivo: 'rede', detalhe: 'Erro de rede. Verifique sua conexao e tente de novo.' };
+    return { motivo: 'rede', detalhe: t('networkError') };
   }
-  const detalhe = err.message || FALLBACK_RECUSA;
+  const detalhe = err.message || t('fallbackError');
   if (err.code === 'AUTH_002') return { motivo: 'sessao', detalhe };
   if (err.status === 409) return { motivo: 'creditos', detalhe, lotes: lotesAtivos(err.details) };
   if (err.status === 400) return { motivo: 'dados', detalhe };
@@ -80,6 +86,9 @@ function classificarRecusa(err: unknown): Recusa {
 }
 
 export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps) {
+  // Ate 2026-09-07 toda a copy deste modal (inclusive as duas constantes de
+  // modulo) era portugues cravado e ignorava o idioma escolhido pelo usuario.
+  const t = useTranslations('auth.deleteAccount');
   const { logout } = useAuth();
   const [recusa, setRecusa] = React.useState<Recusa | null>(null);
 
@@ -110,15 +119,12 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
         { password: data.password },
         { skipAuthRedirect: true },
       );
-      toast.success(
-        'Conta marcada para exclusão. Você receberá um email de confirmação. A exclusão será efetivada em 30 dias.',
-        { duration: 8000 }
-      );
+      toast.success(t('successToast'), { duration: 8000 });
       reset();
       onClose();
       setTimeout(() => logout(), UI_TIMING.LOGOUT_REDIRECT);
     } catch (err) {
-      const classificada = classificarRecusa(err);
+      const classificada = classificarRecusa(err, t);
       setRecusa(classificada);
       toast.error(classificada.detalhe);
       if (classificada.motivo === 'sessao') {
@@ -136,26 +142,25 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
         <DialogHeader>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
-            <DialogTitle>Excluir minha conta</DialogTitle>
+            <DialogTitle>{t('title')}</DialogTitle>
           </div>
           <DialogDescription>
-            Esta ação é irreversível. Após a confirmação, sua conta entrará em um
-            período de carência de <strong>30 dias</strong>. Durante esse período,
-            você pode cancelar a exclusão fazendo login novamente. Após 30 dias,
-            todos os seus dados serão permanentemente removidos.
+            {t.rich('description', {
+              days: (chunks) => <strong>{chunks}</strong>,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <form data-testid="form-delete-account" onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2" noValidate>
           <div className="space-y-1.5">
             <Label htmlFor="delete-password" className="text-sm font-medium">
-              Confirme sua senha
+              {t('passwordLabel')}
             </Label>
             <Input
               data-testid="form-delete-account-password-input"
               id="delete-password"
               type="password"
-              placeholder="Digite sua senha"
+              placeholder={t('passwordPlaceholder')}
               autoComplete="current-password"
               disabled={isSubmitting}
               aria-invalid={!!errors.password}
@@ -171,7 +176,14 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
 
           <div className="space-y-1.5">
             <Label htmlFor="delete-confirmation" className="text-sm font-medium">
-              Digite <strong>EXCLUIR</strong> para confirmar
+              {/*
+                EXCLUIR fica literal de proposito: e o valor exigido pelo
+                `z.literal('EXCLUIR')` do DeleteAccountSchema, nao uma palavra
+                traduzivel — traduzi-la tornaria o formulario impossivel de enviar.
+              */}
+              {t.rich('confirmationLabel', {
+                word: (chunks) => <strong>{chunks}</strong>,
+              })}
             </Label>
             <Input
               data-testid="form-delete-account-confirmation-input"
@@ -202,28 +214,28 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
                 <p className="mt-1.5 text-xs">
                   {recusa.lotes !== undefined && (
                     <span data-testid="form-delete-account-refusal-batches">
-                      Lotes ativos: {recusa.lotes}.{' '}
+                      {t('activeBatches', { count: recusa.lotes })}{' '}
                     </span>
                   )}
-                  Use os créditos restantes agendando aulas — depois disso a exclusão fica liberada.{' '}
+                  {t('creditsHint')}{' '}
                   <Link
                     data-testid="form-delete-account-refusal-schedule-link"
                     href={ROUTES.SCHEDULE}
                     className="underline underline-offset-2"
                   >
-                    Agendar aula
+                    {t('scheduleLink')}
                   </Link>
                 </p>
               )}
               {recusa.motivo === 'senha' && (
-                <p className="mt-1.5 text-xs">Confirme a senha e tente novamente.</p>
+                <p className="mt-1.5 text-xs">{t('passwordHint')}</p>
               )}
             </div>
           )}
 
           <DialogFooter>
             <Button data-testid="form-delete-account-cancel-button" type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-              Cancelar
+              {t('cancel')}
             </Button>
             <Button
               data-testid="form-delete-account-submit-button"
@@ -232,7 +244,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
               disabled={isSubmitting || !isValid}
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Excluir conta
+              {t('submit')}
             </Button>
           </DialogFooter>
         </form>

@@ -15,10 +15,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AvailabilityService } from '../availability.service';
 import { AppError } from '@/lib/errors';
 
-type Linha = { id: string; isBlocked: number; version: number };
+type OrigemBloqueio = 'MANUAL' | 'GOOGLE' | 'BOTH' | null;
+
+type Linha = { id: string; isBlocked: number; version: number; blockOrigin: OrigemBloqueio };
 
 const estado = vi.hoisted(() => ({
-  linha: { id: 'slot-1', isBlocked: 0, version: 0 } as Linha,
+  linha: { id: 'slot-1', isBlocked: 0, version: 0, blockOrigin: null } as Linha,
 }));
 
 const mockPrisma = vi.hoisted(() => ({
@@ -43,6 +45,20 @@ function versionDoCas(values: unknown[]): number {
 }
 
 /**
+ * Liga cada valor interpolado a coluna que ele alimenta, lendo o fim do fragmento de SQL
+ * que antecede o placeholder (`... blockOrigin = ` -> `blockOrigin`). Necessario porque
+ * `unblockSlot` passou a emitir `isBlocked` e `blockOrigin` como parametros, nao literais.
+ */
+function ligacoesDoCas(strings: TemplateStringsArray, values: unknown[]): Record<string, unknown> {
+  const ligacoes: Record<string, unknown> = {};
+  values.forEach((valor, i) => {
+    const alvo = /([A-Za-z_][A-Za-z0-9_]*)\s*=\s*$/.exec(strings[i] ?? '');
+    if (alvo) ligacoes[alvo[1]] = valor;
+  });
+  return ligacoes;
+}
+
+/**
  * `$transaction` serializado: cada callback so comeca depois que o anterior terminou.
  * Dentro dele, `$queryRaw` devolve uma COPIA da linha (o segundo escritor nao pode
  * compartilhar referencia com o primeiro) e `$executeRaw` aplica o CAS real.
@@ -55,10 +71,18 @@ function armarTransacaoSerializada() {
       $executeRaw: vi.fn(async (strings: TemplateStringsArray, ...values: unknown[]) => {
         const esperada = versionDoCas(values);
         if (esperada !== estado.linha.version) return 0;
-        // O destino de isBlocked vem do proprio SQL emitido pelo metodo chamador,
-        // que ja decidiu sob o lock. Nao inferir por toggle.
+        // O destino de isBlocked e blockOrigin vem do proprio SQL emitido pelo metodo
+        // chamador, que ja decidiu sob o lock. Nao inferir por toggle.
         const sql = Array.from(strings).join('?');
-        estado.linha.isBlocked = sql.includes('isBlocked = true') ? 1 : 0;
+        const ligacoes = ligacoesDoCas(strings, values);
+        if (sql.includes('isBlocked = true')) {
+          estado.linha.isBlocked = 1;
+        } else if (sql.includes('isBlocked = false')) {
+          estado.linha.isBlocked = 0;
+        } else {
+          estado.linha.isBlocked = ligacoes.isBlocked ? 1 : 0;
+        }
+        estado.linha.blockOrigin = (ligacoes.blockOrigin ?? null) as OrigemBloqueio;
         estado.linha.version += 1;
         return 1;
       }),
@@ -78,7 +102,7 @@ describe('AvailabilityService — corrida de dois escritores no mesmo slot', () 
 
   beforeEach(() => {
     vi.clearAllMocks();
-    estado.linha = { id: 'slot-1', isBlocked: 0, version: 0 };
+    estado.linha = { id: 'slot-1', isBlocked: 0, version: 0, blockOrigin: null };
     service = new AvailabilityService();
     armarTransacaoSerializada();
   });
@@ -104,7 +128,7 @@ describe('AvailabilityService — corrida de dois escritores no mesmo slot', () 
   });
 
   it('dois unblockSlot concorrentes: um vence, o outro recebe 409 e a version sobe uma vez', async () => {
-    estado.linha = { id: 'slot-1', isBlocked: 1, version: 7 };
+    estado.linha = { id: 'slot-1', isBlocked: 1, version: 7, blockOrigin: 'MANUAL' };
 
     const resultados = await Promise.allSettled([
       service.unblockSlot('slot-1'),
@@ -122,7 +146,7 @@ describe('AvailabilityService — corrida de dois escritores no mesmo slot', () 
   });
 
   it('o perdedor nao sobrescreve o vencedor: block e unblock concorrentes deixam estado coerente', async () => {
-    estado.linha = { id: 'slot-1', isBlocked: 1, version: 4 };
+    estado.linha = { id: 'slot-1', isBlocked: 1, version: 4, blockOrigin: 'MANUAL' };
 
     const resultados = await Promise.allSettled([
       service.blockSlot('slot-1'),

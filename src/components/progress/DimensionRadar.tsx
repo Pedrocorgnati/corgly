@@ -8,6 +8,7 @@ import {
   Radar,
   ResponsiveContainer,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 import { BarChart3 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,11 +30,16 @@ interface DimensionRadarProps {
   isLoading?: boolean;
 }
 
-const DIMENSIONS: Array<{ key: keyof FeedbackScores; label: string; color: string }> = [
-  { key: 'listening',  label: 'Escuta',      color: '#4F46E5' },
-  { key: 'speaking',   label: 'Fala',        color: '#6366F1' },
-  { key: 'writing',    label: 'Escrita',     color: '#059669' },
-  { key: 'vocabulary', label: 'Vocabulário', color: '#D97706' },
+/**
+ * Ate 2026-09-07 o nome de cada dimensao morava aqui em portugues cravado, fora do
+ * alcance do next-intl. Sobrou o que nao tem idioma: a chave (que tambem indexa o
+ * catalogo em `progress.dimensions.*`) e a cor da serie.
+ */
+const DIMENSIONS: Array<{ key: keyof FeedbackScores; color: string }> = [
+  { key: 'listening',  color: '#4F46E5' },
+  { key: 'speaking',   color: '#6366F1' },
+  { key: 'writing',    color: '#059669' },
+  { key: 'vocabulary', color: '#D97706' },
 ];
 
 /** Recharts abre lacuna em `null`; nota invalida nunca vira vertice no radar. */
@@ -47,6 +53,10 @@ function formatScore(value: unknown): string {
 }
 
 export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('progress');
+
   if (isLoading) {
     return (
       <div data-testid="progress-dimension-radar-loading" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
@@ -59,19 +69,19 @@ export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
   if (!scores) {
     return (
       <div data-testid="progress-dimension-radar-empty-wrapper" className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <h2 className="font-semibold text-foreground mb-4">Perfil por Dimensao</h2>
+        <h2 className="font-semibold text-foreground mb-4">{t('radar.title')}</h2>
         <EmptyState
           data-testid="progress-dimension-radar-empty"
           icon={BarChart3}
-          title="Sem dados suficientes"
-          description="Faca ao menos uma avaliacao para ver seu perfil"
+          title={t('radar.empty')}
+          description={t('radar.emptyDesc')}
         />
       </div>
     );
   }
 
   const data = DIMENSIONS.map((d) => ({
-    dimension: d.label,
+    dimension: t(`dimensions.${d.key}`),
     value: toPoint(scores[d.key]),
   }));
 
@@ -79,9 +89,9 @@ export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
     <div
       data-testid="progress-dimension-radar"
       className="bg-card border border-border rounded-2xl p-6 shadow-sm"
-      aria-label="Grafico radar de dimensoes"
+      aria-label={t('radar.chartAria')}
     >
-      <h2 className="font-semibold text-foreground mb-4">Perfil por Dimensao</h2>
+      <h2 className="font-semibold text-foreground mb-4">{t('radar.title')}</h2>
       <ResponsiveContainer width="100%" height={360}>
         <RadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
           <PolarGrid stroke="hsl(var(--border))" />
@@ -120,7 +130,7 @@ export function DimensionRadar({ scores, isLoading }: DimensionRadarProps) {
               aria-hidden="true"
             />
             <span className="text-muted-foreground">
-              {d.label}:{' '}
+              {t(`dimensions.${d.key}`)}:{' '}
               <span className="font-medium text-foreground">
                 {formatScore(scores[d.key])}
               </span>

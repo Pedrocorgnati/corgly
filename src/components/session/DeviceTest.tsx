@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useDeviceCheck } from '@/hooks/useDeviceCheck'
+import { useTranslations } from 'next-intl'
+import { useDeviceCheck, type DeviceCheckErrorKind } from '@/hooks/useDeviceCheck'
 import { API } from '@/lib/constants/routes'
 import {
   runConnectivityCheck,
@@ -11,6 +12,31 @@ import type { IceServersConfig } from '@/types/sala-virtual'
 import type { EquipmentFailure } from '@/lib/equipment/last-check.client'
 
 export type OverallStatus = 'idle' | 'checking' | 'ok' | 'warning' | 'fail'
+
+/**
+ * Ate 2026-09-07 toda a copy deste arquivo era portugues cravado — inclusive no
+ * escopo do modulo (`fetchIceServers` e `Badge`), fora do alcance do next-intl.
+ * Agora as funcoes de modulo recebem o tradutor do componente e so as CHAVES
+ * moram aqui.
+ */
+type Translator = (key: string, values?: Record<string, string | number>) => string
+
+type BadgeState = 'ok' | 'warning' | 'fail' | 'checking' | 'idle'
+
+const BADGE_KEY: Record<BadgeState, string> = {
+  ok: 'badgeOk',
+  warning: 'badgeWarning',
+  fail: 'badgeFail',
+  checking: 'badgeChecking',
+  idle: 'badgeIdle',
+}
+
+const DEVICE_ERROR_KEY: Record<DeviceCheckErrorKind, string> = {
+  unsupported: 'errorUnsupported',
+  permission: 'errorPermission',
+  notfound: 'errorNotFound',
+  unknown: 'errorUnknown',
+}
 
 /** Resultado consolidado de uma rodada de teste, com o detalhe das falhas. */
 export interface EquipmentCheckResult {
@@ -36,6 +62,7 @@ interface DeviceTestProps {
  * Expoe status consolidado via onReady para o container habilitar o CTA.
  */
 export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
+  const t = useTranslations('sessionRoom.deviceTest')
   const device = useDeviceCheck()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [network, setNetwork] = useState<ConnectivityResult | null>(null)
@@ -70,15 +97,13 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
     onReady?.(overall)
   }, [overall, onReady])
 
-  // Detalha as falhas para onboarding/lobby. Classifica erro de dispositivo em
-  // permission vs camera ausente pela mensagem do hook (NotAllowed/NotFound).
+  // Detalha as falhas para onboarding/lobby. A classificacao permission vs camera
+  // ausente vem do discriminante `errorKind` do hook — ate 2026-09-07 ela lia a
+  // mensagem em portugues, o que quebraria assim que a copy fosse traduzida.
   const failedChecks: EquipmentFailure[] = (() => {
     const failed: EquipmentFailure[] = []
-    const errMsg = device.error ?? ''
     if (device.status === 'error') {
-      if (errMsg.includes('Permissao')) failed.push('permission')
-      else if (errMsg.includes('Nenhum dispositivo')) failed.push('camera')
-      else failed.push('camera')
+      failed.push(device.errorKind === 'permission' ? 'permission' : 'camera')
       return failed
     }
     if (!cameraOk) failed.push('camera')
@@ -111,11 +136,11 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
     setNetworkChecking(true)
     setNetworkError(null)
     try {
-      const ice = await fetchIceServers()
+      const ice = await fetchIceServers(t)
       const result = await runConnectivityCheck(ice, 10_000)
       setNetwork(result)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Nao foi possivel carregar a configuracao de rede.'
+      const message = err instanceof Error ? err.message : t('networkConfigError')
       setNetworkError(message)
       setNetwork({
         ok: false,
@@ -155,21 +180,21 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
     <div data-testid="device-test" className="space-y-6">
       <section data-testid="device-test-camera" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
-          <h3 className="font-semibold">Camera</h3>
-          <Badge testId="device-test-camera-status" state={cameraOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
+          <h3 className="font-semibold">{t('cameraTitle')}</h3>
+          <Badge t={t} testId="device-test-camera-status" state={cameraOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
         </header>
         <div className="aspect-video w-full overflow-hidden rounded bg-black/80">
           {device.stream ? (
             <video data-testid="device-test-camera-preview" ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Clique em &quot;Iniciar teste&quot; para pre-visualizar.
+              {t('cameraPlaceholder')}
             </div>
           )}
         </div>
         {device.cameras.length > 1 && (
           <label className="mt-3 block text-sm">
-            <span className="mb-1 block text-muted-foreground">Dispositivo</span>
+            <span className="mb-1 block text-muted-foreground">{t('device')}</span>
             <select
               data-testid="device-test-camera-select"
               className="w-full rounded border bg-background p-2 text-sm"
@@ -188,8 +213,8 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
 
       <section data-testid="device-test-microphone" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
-          <h3 className="font-semibold">Microfone</h3>
-          <Badge testId="device-test-microphone-status" state={micOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
+          <h3 className="font-semibold">{t('micTitle')}</h3>
+          <Badge t={t} testId="device-test-microphone-status" state={micOk ? 'ok' : device.status === 'error' ? 'fail' : 'idle'} />
         </header>
         <div data-testid="device-test-microphone-level" className="h-3 w-full overflow-hidden rounded bg-muted">
           <div
@@ -198,11 +223,11 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
           />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Fale algo: o nivel acima deve reagir. Se nao reagir, verifique permissoes.
+          {t('micHint')}
         </p>
         {device.microphones.length > 1 && (
           <label className="mt-3 block text-sm">
-            <span className="mb-1 block text-muted-foreground">Dispositivo</span>
+            <span className="mb-1 block text-muted-foreground">{t('device')}</span>
             <select
               data-testid="device-test-microphone-select"
               className="w-full rounded border bg-background p-2 text-sm"
@@ -221,8 +246,8 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
 
       <section data-testid="device-test-speaker" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
-          <h3 className="font-semibold">Audio de saida</h3>
-          <Badge testId="device-test-speaker-status" state={audioOutputOk === true ? 'ok' : audioOutputOk === false ? 'fail' : 'idle'} />
+          <h3 className="font-semibold">{t('speakerTitle')}</h3>
+          <Badge t={t} testId="device-test-speaker-status" state={audioOutputOk === true ? 'ok' : audioOutputOk === false ? 'fail' : 'idle'} />
         </header>
         <button
           data-testid="device-test-speaker-button"
@@ -230,17 +255,18 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
           onClick={handleTestSpeaker}
           className="rounded border px-3 py-1.5 text-sm hover:bg-accent"
         >
-          Tocar bip de teste
+          {t('speakerButton')}
         </button>
         <p className="mt-2 text-xs text-muted-foreground">
-          Voce deve ouvir um tom curto. Ajuste o volume do sistema se necessario.
+          {t('speakerHint')}
         </p>
       </section>
 
       <section data-testid="device-test-network" className="rounded-lg border bg-card p-4">
         <header className="mb-3 flex items-center justify-between">
-          <h3 className="font-semibold">Rede (STUN/TURN)</h3>
+          <h3 className="font-semibold">{t('networkTitle')}</h3>
           <Badge
+            t={t}
             testId="device-test-network-status"
             state={
               networkChecking
@@ -257,25 +283,27 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
         </header>
         {network ? (
           <ul data-testid="device-test-network-details" className="space-y-1 text-sm">
-            <li>Candidates: {network.candidateTypes.join(', ') || 'nenhum'}</li>
-            <li>STUN (srflx): {network.hasStun ? 'sim' : 'nao'}</li>
-            <li>TURN (relay): {network.hasTurn ? 'sim' : 'nao — algumas redes corporativas podem falhar'}</li>
+            <li>{t('candidates', { list: network.candidateTypes.join(', ') || t('none') })}</li>
+            <li>{t('stun', { value: network.hasStun ? t('yes') : t('no') })}</li>
+            <li>{t('turn', { value: network.hasTurn ? t('yes') : t('turnNo') })}</li>
             {typeof network.estimatedDownlinkMbps === 'number' && (
-              <li>Banda estimada: {network.estimatedDownlinkMbps.toFixed(1)} Mbps</li>
+              <li>{t('bandwidth', { mbps: network.estimatedDownlinkMbps.toFixed(1) })}</li>
             )}
-            {network.effectiveType && <li>Perfil de rede: {network.effectiveType}</li>}
-            <li>Duracao: {network.durationMs} ms {network.timedOut && '(timeout)'}</li>
+            {network.effectiveType && <li>{t('networkProfile', { type: network.effectiveType })}</li>}
+            <li>{t('duration', { ms: network.durationMs })} {network.timedOut && t('timeout')}</li>
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Probe sera executado apos iniciar o teste.
+            {t('probePending')}
           </p>
         )}
       </section>
 
-      {device.error && (
+      {device.errorKind && (
         <div data-testid="device-test-device-error" className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          {device.error}
+          {device.errorKind === 'unknown' && device.error
+            ? device.error
+            : t(DEVICE_ERROR_KEY[device.errorKind])}
         </div>
       )}
       {networkError && (
@@ -292,7 +320,7 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
           disabled={device.status === 'checking' || networkChecking}
           className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
-          {device.status === 'checking' || networkChecking ? 'Testando...' : 'Iniciar teste'}
+          {device.status === 'checking' || networkChecking ? t('testing') : t('start')}
         </button>
         {device.stream && (
           <button
@@ -301,7 +329,7 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
             onClick={device.stop}
             className="rounded border px-4 py-2 text-sm"
           >
-            Parar
+            {t('stop')}
           </button>
         )}
       </div>
@@ -309,29 +337,32 @@ export function DeviceTest({ onReady, onResult }: DeviceTestProps) {
   )
 }
 
-async function fetchIceServers(): Promise<IceServersConfig[]> {
+async function fetchIceServers(t: Translator): Promise<IceServersConfig[]> {
   const res = await fetch(API.ICE_CONFIG, { method: 'GET' })
   if (!res.ok) {
-    throw new Error('Nao foi possivel preparar o teste de rede. Tente novamente em instantes.')
+    throw new Error(t('iceError'))
   }
   const json = (await res.json()) as {
     data?: { iceServers?: IceServersConfig[] }
     error?: string | null
   }
   if (!Array.isArray(json.data?.iceServers)) {
-    throw new Error(json.error ?? 'Configuracao de rede invalida.')
+    throw new Error(json.error ?? t('iceInvalid'))
   }
   return json.data.iceServers
 }
 
-function Badge({ state, testId }: { state: 'ok' | 'warning' | 'fail' | 'checking' | 'idle'; testId?: string }) {
-  const map: Record<typeof state, { cls: string; label: string }> = {
-    ok: { cls: 'bg-green-500/15 text-green-700 dark:text-green-400', label: 'OK' },
-    warning: { cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-400', label: 'Atencao' },
-    fail: { cls: 'bg-red-500/15 text-red-700 dark:text-red-400', label: 'Falha' },
-    checking: { cls: 'bg-blue-500/15 text-blue-700 dark:text-blue-400', label: 'Testando' },
-    idle: { cls: 'bg-muted text-muted-foreground', label: 'Aguardando' },
+function Badge({ state, testId, t }: { state: BadgeState; testId?: string; t: Translator }) {
+  const cls: Record<BadgeState, string> = {
+    ok: 'bg-green-500/15 text-green-700 dark:text-green-400',
+    warning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+    fail: 'bg-red-500/15 text-red-700 dark:text-red-400',
+    checking: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+    idle: 'bg-muted text-muted-foreground',
   }
-  const s = map[state]
-  return <span data-testid={testId} className={`rounded px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>
+  return (
+    <span data-testid={testId} className={`rounded px-2 py-0.5 text-xs font-medium ${cls[state]}`}>
+      {t(BADGE_KEY[state])}
+    </span>
+  )
 }

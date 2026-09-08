@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getAuthUser } from '@/lib/data/auth';
 import { ROUTES } from '@/lib/constants/routes';
 import { UserRole } from '@/lib/constants/enums';
@@ -9,11 +10,16 @@ import { AuthPageWrapper } from '@/components/shared';
 import { MfaEnrollmentClient } from '@/components/auth/mfa-enrollment-client';
 import { MfaExitRow } from '@/components/auth/mfa-exit-row';
 
-export const metadata: Metadata = {
-  title: 'Configurar MFA',
-  description: 'Ative a autenticação em duas etapas do seu acesso administrativo.',
-  robots: { index: false, follow: false },
-};
+// Ate 2026-09-07 titulo, descricao e o cabecalho da pagina eram portugues
+// cravado e ignoravam o idioma escolhido pelo admin.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('pages.auth.mfaSetup');
+  return {
+    title: t('metaTitle'),
+    description: t('metaDesc'),
+    robots: { index: false, follow: false },
+  };
+}
 
 // Depende da sessao/DB: nao prerenderizar.
 export const dynamic = 'force-dynamic';
@@ -51,6 +57,7 @@ export default async function MfaSetupPage({
 }) {
   const params = await searchParams;
   const redirectTo = sanitizeAdminRedirectTo(firstParam(params.redirectTo));
+  const t = await getTranslations('pages.auth.mfaSetup');
 
   const user = await getAuthUser();
   if (!user?.id) {
@@ -76,11 +83,10 @@ export default async function MfaSetupPage({
       <div data-testid="page-auth-mfa-setup" className="w-full max-w-[480px]">
         <header data-testid="auth-mfa-setup-header" className="mb-6 text-center">
           <h1 className="text-2xl md:text-[26px] font-bold text-foreground">
-            Configurar autenticação em duas etapas
+            {t('title')}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Sua conta administrativa precisa do MFA ativo para acessar o painel. Leva
-            menos de um minuto.
+            {t('subtitle')}
           </p>
         </header>
 

@@ -52,6 +52,7 @@ export const ROUTES = {
   ADMIN_CREDITS: '/admin/credits',
   ADMIN_REPORTS: '/admin/reports',
   ADMIN_CONTENT: '/admin/content',
+  ADMIN_EXERCISES: '/admin/exercises',
   ADMIN_EMAIL_TEMPLATES: '/admin/emails/templates',
   ADMIN_SUPPORT: '/admin/support',
   ADMIN_HEALTH: '/admin/health',
@@ -118,6 +119,15 @@ export const API = {
   CONTENT: '/api/v1/content',
   CONTENT_DETAIL: (id: string) => `/api/v1/content/${id}`,
   CONTENT_NOTES: (id: string) => `/api/v1/content/${id}/notes`,
+  EXERCISES: {
+    LIST: '/api/v1/exercises',
+    DETAIL: (id: string) => `/api/v1/exercises/${id}`,
+    ATTEMPTS: (id: string) => `/api/v1/exercises/${id}/attempts`,
+    ATTEMPT_ANSWERS: (id: string, attemptId: string) =>
+      `/api/v1/exercises/${id}/attempts/${attemptId}/answers`,
+    ATTEMPT_FINISH: (id: string, attemptId: string) =>
+      `/api/v1/exercises/${id}/attempts/${attemptId}/finish`,
+  },
   REFERRALS: {
     ME: '/api/v1/referrals/me',
     INVITES: '/api/v1/referrals/invites',
@@ -140,6 +150,15 @@ export const API = {
     STUDENT_NOTES: (id: string) => `/api/v1/admin/students/${id}/notes`,
     CREDITS_NOTIFY_EXPIRING: '/api/v1/admin/credits/notify-expiring',
     BILLING_REFUNDS: '/api/v1/admin/billing/refunds',
+    EXERCISES: {
+      LIST: '/api/v1/admin/exercises',
+      DETAIL: (id: string) => `/api/v1/admin/exercises/${id}`,
+      PUBLISH: (id: string) => `/api/v1/admin/exercises/${id}/publish`,
+      ARCHIVE: (id: string) => `/api/v1/admin/exercises/${id}/archive`,
+      ASSIGNMENTS: (id: string) => `/api/v1/admin/exercises/${id}/assignments`,
+      ASSIGNMENT: (id: string, assignmentId: string) =>
+        `/api/v1/admin/exercises/${id}/assignments/${assignmentId}`,
+    },
     STRIPE_WEBHOOKS: '/api/v1/admin/webhooks/stripe',
   },
   WEBHOOKS: {

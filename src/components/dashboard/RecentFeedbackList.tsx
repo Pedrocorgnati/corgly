@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
 import { Calendar, MessageSquareText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,9 +28,15 @@ function scoreBadgeClasses(score: number): string {
   return 'bg-red-50 text-destructive border-red-200 dark:bg-red-950/20 dark:border-red-800';
 }
 
-function formatDate(dateStr: string): string {
+/**
+ * Data curta da aula no idioma ATIVO.
+ *
+ * O locale vem por parametro (nao ha `useLocale` fora de componente) porque
+ * `'pt-BR'` cravado aqui imprimia "07 set." mesmo com o site em ingles.
+ */
+function formatDate(dateStr: string, locale: string): string {
   try {
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
+    return new Date(dateStr).toLocaleDateString(locale, {
       day: '2-digit',
       month: 'short',
     });
@@ -39,11 +46,14 @@ function formatDate(dateStr: string): string {
 }
 
 export function RecentFeedbackList({ feedbacks, isLoading, className }: RecentFeedbackListProps) {
+  const t = useTranslations('dashboard.feedback');
+  const locale = useLocale();
+
   if (isLoading) {
     return (
       <WidgetCard
         data-testid="dashboard-recent-feedback"
-        title="Avaliacoes recentes"
+        title={t('title')}
         icon={MessageSquareText}
         className={className}
       >
@@ -59,7 +69,7 @@ export function RecentFeedbackList({ feedbacks, isLoading, className }: RecentFe
   return (
     <WidgetCard
       data-testid="dashboard-recent-feedback"
-      title="Avaliacoes recentes"
+      title={t('title')}
       icon={MessageSquareText}
       className={className}
       footer={
@@ -67,7 +77,7 @@ export function RecentFeedbackList({ feedbacks, isLoading, className }: RecentFe
           href={ROUTES.HISTORY}
           className="text-brand-500 text-[13.5px] font-semibold hover:underline"
         >
-          Ver tudo &rarr;
+          {t('viewAll')} &rarr;
         </Link>
       }
     >
@@ -79,9 +89,9 @@ export function RecentFeedbackList({ feedbacks, isLoading, className }: RecentFe
           <span className="flex h-12 w-12 items-center justify-center rounded-full border border-brand-200 text-brand-500 mb-3">
             <Calendar className="h-5 w-5" />
           </span>
-          <p className="text-[13.5px]">Nenhum feedback ainda</p>
+          <p className="text-[13.5px]">{t('empty')}</p>
           <Link href={ROUTES.PROGRESS} className="text-brand-500 text-[12px] font-medium mt-2 hover:underline">
-            Ver progresso &rarr;
+            {t('viewProgress')} &rarr;
           </Link>
         </div>
       ) : (
@@ -92,7 +102,7 @@ export function RecentFeedbackList({ feedbacks, isLoading, className }: RecentFe
               data-testid={`dashboard-recent-feedback-item-${fb.id}`}
               className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-lg border border-border hover:border-brand-300 hover:bg-brand-50 transition-colors"
             >
-              <span className="text-[13.5px] font-medium text-ink">{formatDate(fb.sessionDate)}</span>
+              <span className="text-[13.5px] font-medium text-ink">{formatDate(fb.sessionDate, locale)}</span>
               <div className="flex items-center gap-3">
                 <Badge variant="outline" className={scoreBadgeClasses(fb.averageScore)}>
                   &#9733; {fb.averageScore.toFixed(1)}
@@ -101,7 +111,7 @@ export function RecentFeedbackList({ feedbacks, isLoading, className }: RecentFe
                   href={`/session/${fb.sessionId}/feedback`}
                   className="text-brand-500 text-[12px] font-semibold hover:underline"
                 >
-                  Ver detalhes
+                  {t('details')}
                 </Link>
               </div>
             </div>

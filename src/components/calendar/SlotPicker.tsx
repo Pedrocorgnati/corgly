@@ -1,14 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { Clock, CreditCard, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TimezoneDisplay } from '@/components/ui/timezone-display';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
-
-const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-];
 
 const SESSION_DURATION_MINUTES = 50;
 const CREDITS_PER_SESSION = 1;
@@ -22,24 +19,20 @@ interface SlotPickerProps {
   selectedDate: string | null;
 }
 
-function formatSelectedDate(dateStr: string): string {
+/**
+ * Ate 2026-09-07 a lista de meses era uma constante de modulo em portugues e as
+ * duas formatacoes cravavam `'pt-BR'`: quem lia a tela em outro idioma via
+ * "quinta-feira, 4 de setembro" no meio de uma interface em ingles. Agora o
+ * locale do leitor entra como parametro.
+ */
+function formatSelectedDate(dateStr: string, locale: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const date = new Date(year, month - 1, day, 12, 0, 0);
-  return date.toLocaleDateString('pt-BR', {
+  return date.toLocaleDateString(locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
-}
-
-function formatTimeInTz(isoStr: string, tz: string): string {
-  const date = new Date(isoStr);
-  return new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: tz,
-  }).format(date);
 }
 
 export function SlotPicker({
@@ -50,6 +43,22 @@ export function SlotPicker({
   isLoading,
   selectedDate,
 }: SlotPickerProps) {
+  // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
+  // pelo aluno.
+  const t = useTranslations('calendar.slots');
+  const locale = useLocale();
+
+  const timeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: studentTz,
+      }),
+    [locale, studentTz],
+  );
+
   if (isLoading) {
     return (
       <div data-testid="schedule-loading" className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm animate-pulse">
@@ -69,7 +78,7 @@ export function SlotPicker({
       <div data-testid="schedule-slot-picker-idle" className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm">
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-muted-foreground">
           <p className="text-sm text-center">
-            Selecione um dia no calendário para ver os horários disponíveis
+            {t('idle')}
           </p>
         </div>
       </div>
@@ -78,20 +87,20 @@ export function SlotPicker({
 
   return (
     <div data-testid="schedule-slot-picker" className="lg:w-72 bg-card border border-border rounded-2xl p-4 shadow-sm">
-      <h3 className="font-semibold text-foreground mb-1">Horários disponíveis</h3>
+      <h3 className="font-semibold text-foreground mb-1">{t('title')}</h3>
       <p className="text-xs text-muted-foreground mb-4">
-        {formatSelectedDate(selectedDate)}
+        {formatSelectedDate(selectedDate, locale)}
       </p>
 
       {slots.length === 0 ? (
         <div data-testid="schedule-empty" className="py-8 text-center text-muted-foreground">
-          <p className="text-sm">Nenhum horário disponível neste dia.</p>
+          <p className="text-sm">{t('empty')}</p>
         </div>
       ) : (
-        <div data-testid="schedule-slot-list" className="space-y-2" role="listbox" aria-label="Horários disponíveis">
+        <div data-testid="schedule-slot-list" className="space-y-2" role="listbox" aria-label={t('listLabel')}>
           {slots.map((slot) => {
             const isSelected = selectedSlotId === slot.id;
-            const studentTime = formatTimeInTz(slot.startAt, studentTz);
+            const studentTime = timeFormatter.format(new Date(slot.startAt));
 
             return (
               <button
@@ -100,7 +109,11 @@ export function SlotPicker({
                 onClick={() => onSelectSlot(slot)}
                 role="option"
                 aria-selected={isSelected}
-                aria-label={`${studentTime}, ${SESSION_DURATION_MINUTES} minutos, ${CREDITS_PER_SESSION} crédito`}
+                aria-label={t('slotAria', {
+                  time: studentTime,
+                  minutes: SESSION_DURATION_MINUTES,
+                  count: CREDITS_PER_SESSION,
+                })}
                 className={cn(
                   'w-full p-4 rounded-xl border text-left transition-all duration-[120ms]',
                   !isSelected && 'border-border hover:border-primary hover:bg-primary/5',
@@ -127,14 +140,14 @@ export function SlotPicker({
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {SESSION_DURATION_MINUTES} min
+                      <Clock className="h-3 w-3" /> {t('minutes', { minutes: SESSION_DURATION_MINUTES })}
                     </p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CreditCard className="h-3 w-3" /> {CREDITS_PER_SESSION} crédito
+                      <CreditCard className="h-3 w-3" /> {t('credits', { count: CREDITS_PER_SESSION })}
                     </p>
                     {isSelected && (
                       <p className="text-xs text-primary flex items-center gap-1">
-                        <Check className="h-3 w-3" /> Selecionado
+                        <Check className="h-3 w-3" /> {t('selected')}
                       </p>
                     )}
                   </div>

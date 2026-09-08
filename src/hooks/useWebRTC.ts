@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { timeoutSignal } from '@/lib/timeout-signal'
 import type { SessionSignal, IceServersConfig } from '@/types/sala-virtual'
@@ -65,6 +66,9 @@ async function postSignal(
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useWebRTC(): UseWebRTCReturn {
+  // Ate 2026-09-07 os toasts deste hook eram portugues cravado e ignoravam o
+  // idioma escolhido pelo aluno.
+  const t = useTranslations('sessionRoom.media')
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null)
   const [connectionState, setConnectionState] = useState<RTCConnectionState>('new')
@@ -338,11 +342,11 @@ export function useWebRTC(): UseWebRTCReturn {
           stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true })
           audioOnly = true
           setIsAudioOnly(true)
-          toast.info('Câmera não disponível. Conectando apenas com áudio.')
+          toast.info(t('cameraUnavailable'))
         } catch (audioErr) {
           console.error('[useWebRTC] Permissão de mídia negada:', audioErr)
           setConnectionState('failed')
-          toast.error('Permissão de câmera/microfone negada. Verifique as configurações do navegador.')
+          toast.error(t('permissionDenied'))
           return
         }
       }
@@ -357,7 +361,7 @@ export function useWebRTC(): UseWebRTCReturn {
         localVideoTrack.onended = () => {
           console.warn('[useWebRTC] Track de vídeo local encerrado')
           setIsAudioOnly(true)
-          toast.info('Câmera desconectada. Continuando apenas com áudio.')
+          toast.info(t('cameraDisconnected'))
         }
       }
 
@@ -425,10 +429,10 @@ export function useWebRTC(): UseWebRTCReturn {
             // Force TURN relay after 3 ICE failures
             rebuildPeerConnectionWithRelay()
           } else {
-            toast.error('Falha na conexão WebRTC. Verifique sua conexão de rede.')
+            toast.error(t('connectionFailed'))
           }
         } else if (state === 'disconnected') {
-          toast.warning('Conexão interrompida. Aguardando reconexão...')
+          toast.warning(t('connectionInterrupted'))
         } else if (state === 'connected') {
           iceFailureCountRef.current = 0
         }
@@ -471,7 +475,7 @@ export function useWebRTC(): UseWebRTCReturn {
     },
     // `processSignal` saiu daqui junto com o wrapper orfao: quem o usa e o
     // `startPolling`, que ja o declara como dependencia propria.
-    [startPolling, rebuildPeerConnectionWithRelay],
+    [startPolling, rebuildPeerConnectionWithRelay, t],
   )
 
   // ── Disconnect ───────────────────────────────────────────────────────────────

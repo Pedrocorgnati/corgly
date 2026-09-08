@@ -62,3 +62,10 @@ export {
   type StaticExerciseOption,
   type StaticExerciseQuestion,
 } from './types';
+
+export {
+  matchesAnswerKey,
+  normalizeAnswer,
+  type NormalizeAnswerOptions,
+  type TextAnswerKey,
+} from './normalize-answer';

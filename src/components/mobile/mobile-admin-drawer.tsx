@@ -26,13 +26,16 @@ export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProp
   const pathname = usePathname();
   const t = useTranslations('nav');
   const tNav = useTranslations('sidebar.admin');
+  // Ate 2026-09-07 os aria-labels de navegacao eram portugues cravado e ignoravam
+  // o idioma escolhido pelo usuario, mesmo com o resto da barra ja traduzido.
+  const tA11y = useTranslations('a11y');
   const navItems = getAdminNavItems('drawer');
   const { logout } = useAuth();
 
   return (
     <Sheet open={open} onOpenChange={(o: boolean) => !o && onClose()}>
       <SheetContent data-testid="sidebar-mobile-drawer" side="left" className="w-72 p-0 flex flex-col lg:hidden">
-        <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+        <SheetTitle className="sr-only">{tA11y('mobileMenu')}</SheetTitle>
 
         {/* User info + Admin badge */}
         <div data-testid="sidebar-mobile-user-section" className="p-4 border-b border-border mt-10">
@@ -51,7 +54,7 @@ export function MobileAdminDrawer({ user, open, onClose }: MobileAdminDrawerProp
         </div>
 
         {/* Navigation */}
-        <nav data-testid="sidebar-mobile-nav" aria-label="Navegação do administrador" className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        <nav data-testid="sidebar-mobile-nav" aria-label={tA11y('adminNav')} className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {navItems.map(({ href, labelKey, icon: Icon }) => {
             const active = isAdminNavItemActive(href, pathname);
             return (
