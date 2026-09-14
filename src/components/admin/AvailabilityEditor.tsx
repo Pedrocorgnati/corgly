@@ -330,11 +330,15 @@ export function AvailabilityEditor({
       </form>
 
       {/* Existing slots list */}
-      {existingSlots.length > 0 && (
-        <div data-testid="admin-availability-existing" className="bg-card border border-border rounded-2xl p-6">
-          <h3 data-testid="admin-availability-existing-header" className="font-semibold text-foreground mb-4">
-            Slots existentes ({existingSlots.length})
-          </h3>
+      <div data-testid="admin-availability-existing" className="bg-card border border-border rounded-2xl p-6">
+        <h3 data-testid="admin-availability-existing-header" className="font-semibold text-foreground mb-4">
+          Slots existentes ({existingSlots.length})
+        </h3>
+        {existingSlots.length === 0 ? (
+          <p data-testid="admin-availability-existing-empty" className="text-sm text-muted-foreground">
+            Nenhum horário cadastrado. Use o formulário acima para gerar horários.
+          </p>
+        ) : (
           <div data-testid="admin-availability-slot-list" className="space-y-2 max-h-[400px] overflow-y-auto">
             {existingSlots.map((slot) => (
               <div
@@ -392,8 +396,8 @@ export function AvailabilityEditor({
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
