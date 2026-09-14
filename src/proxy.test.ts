@@ -271,3 +271,70 @@ describe('proxy: allowlist do callback OAuth do Google Calendar', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('proxy: aluno autenticado nas mutacoes de disponibilidade (GAP-04)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  // Construtor local: `apiReq` fica intacto; aqui o cliente manda headers proprios.
+  function apiReqComHeaders(path: string, method: string, headers: Record<string, string>) {
+    return new NextRequest(`http://localhost${path}`, { method, headers });
+  }
+
+  // O POST de aluno ja esta coberto no bloco de allowlist acima.
+  it.each([
+    ['PATCH', '/api/v1/availability/slot-1/block'],
+    ['PATCH', '/api/v1/availability/slot-1/unblock'],
+    ['DELETE', '/api/v1/availability/slot-1'],
+  ])('%s %s com sessao de aluno atravessa com a identidade do JWT (o 403 nasce no requireAdmin)', async (method, path) => {
+    mockGetPayload.mockReturnValue({ sub: 's1', role: 'STUDENT', version: 0 });
+    const res = await proxy(apiReq(path, method));
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBe('s1');
+    expect(forwarded(res, 'x-user-role')).toBe('STUDENT');
+    expect(forwarded(res, 'x-token-version')).toBe('0');
+  });
+
+  it.each([
+    ['POST', '/api/v1/availability'],
+    ['PATCH', '/api/v1/availability/slot-1/block'],
+    ['PATCH', '/api/v1/availability/slot-1/unblock'],
+    ['DELETE', '/api/v1/availability/slot-1'],
+  ])('%s %s: identidade de admin forjada pelo cliente e trocada pela do JWT do aluno', async (method, path) => {
+    mockGetPayload.mockReturnValue({ sub: 's1', role: 'STUDENT', version: 0 });
+    const res = await proxy(
+      apiReqComHeaders(path, method, { 'x-user-role': 'ADMIN', 'x-user-id': 'a1', 'x-token-version': '9' }),
+    );
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBe('s1');
+    expect(forwarded(res, 'x-user-role')).toBe('STUDENT');
+    expect(forwarded(res, 'x-token-version')).toBe('0');
+  });
+
+  it('GET /api/v1/admin/availability com sessao de aluno -> 403 no proxy (ADMIN_ONLY_PATHS)', async () => {
+    mockGetPayload.mockReturnValue({ sub: 's1', role: 'STUDENT', version: 0 });
+    const res = await proxy(apiReq('/api/v1/admin/availability?date=2030-06-15', 'GET'));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('Acesso restrito a administradores.');
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+  });
+
+  it('GET /api/v1/admin/availability com sessao de admin atravessa com os tres headers', async () => {
+    mockGetPayload.mockReturnValue({ sub: 'a1', role: 'ADMIN', version: 0 });
+    const res = await proxy(apiReq('/api/v1/admin/availability?date=2030-06-15', 'GET'));
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBe('a1');
+    expect(forwarded(res, 'x-user-role')).toBe('ADMIN');
+    expect(forwarded(res, 'x-token-version')).toBe('0');
+  });
+});
