@@ -271,7 +271,12 @@ export function BookingConfirmModal({
               <Button data-testid="modal-booking-confirm-credits-close-button" variant="outline" onClick={handleClose} className="flex-1">
                 {t('close')}
               </Button>
-              <Button data-testid="modal-booking-confirm-buy-credits-button" asChild className="flex-1">
+              <Button
+                data-testid="modal-booking-confirm-buy-credits-button"
+                asChild
+                nativeButton={false}
+                className="flex-1"
+              >
                 <Link href={ROUTES.CREDITS}>{t('buyCredits')}</Link>
               </Button>
             </div>

@@ -30,7 +30,23 @@ vi.mock('@/lib/feedback/window', () => ({
 import { prisma } from '@/lib/prisma';
 import { isFeedbackWindowOpen } from '@/lib/feedback/window';
 
-const mockPrisma  = vi.mocked(prisma);
+type MockedPrisma = {
+  session: {
+    findUnique: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
+  };
+  feedback: {
+    findUnique: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    upsert: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
+  };
+};
+
+const mockPrisma  = prisma as unknown as MockedPrisma;
 const mockWindow  = vi.mocked(isFeedbackWindowOpen);
 
 const SCORES = { listening: 4, speaking: 5, writing: 3, vocabulary: 4 };

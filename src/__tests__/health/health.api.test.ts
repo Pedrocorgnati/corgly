@@ -46,7 +46,7 @@ describe('GET /api/health', () => {
     vi.useFakeTimers()
 
     vi.mocked(prisma.$queryRaw).mockImplementation(
-      () => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10_000)),
+      () => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10_000)) as never,
     )
 
     const { GET } = await import('@/app/api/health/route')

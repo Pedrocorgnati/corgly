@@ -133,7 +133,8 @@ describe('createCreditBatch', () => {
 
   it('expiresAt está no futuro', () => {
     const credit = createCreditBatch();
-    const expiresAt = new Date(credit.expiresAt);
+    expect(credit.expiresAt).not.toBeNull();
+    const expiresAt = new Date(credit.expiresAt as string);
     expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 

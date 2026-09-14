@@ -328,7 +328,7 @@ describe('SessionService — bulkCancelPreview() (item 008)', () => {
     expect(mockTransactionClient.session.update).not.toHaveBeenCalled();
     expect(mockPrisma.availabilitySlot.updateMany).not.toHaveBeenCalled();
     const callbackCalls = mockPrisma.$transaction.mock.calls.filter(
-      ([arg]: [unknown]) => typeof arg === 'function',
+      (call) => typeof call[0] === 'function',
     );
     expect(callbackCalls).toHaveLength(0);
   });
