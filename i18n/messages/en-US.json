@@ -1992,6 +1992,15 @@
       "requestToast": "Reschedule request sent for approval.",
       "doneToast": "Class rescheduled successfully!"
     },
+    "availabilityEditor": {
+      "timezoneLoad": {
+        "alertFailOpen": "Could not load the schedule time zone. When generating, the server sets the time zone.",
+        "alertFailClosed": "Could not load the schedule time zone. Try again before generating slots.",
+        "retry": "Try again",
+        "toastGeneric": "Failed to load the schedule time zone.",
+        "toastNetwork": "No connection while loading the schedule time zone."
+      }
+    },
     "rescheduleOptions": {
       "forbiddenTitle": "Access denied",
       "forbiddenDesc": "This class does not belong to your account.",

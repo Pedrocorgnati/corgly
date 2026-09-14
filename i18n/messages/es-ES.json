@@ -1992,6 +1992,15 @@
       "requestToast": "Solicitud de reprogramación enviada para aprobación.",
       "doneToast": "¡Clase reprogramada correctamente!"
     },
+    "availabilityEditor": {
+      "timezoneLoad": {
+        "alertFailOpen": "No se pudo cargar la zona horaria de la agenda. Al generar, el servidor define la zona horaria.",
+        "alertFailClosed": "No se pudo cargar la zona horaria de la agenda. Vuelve a intentarlo antes de generar horarios.",
+        "retry": "Reintentar",
+        "toastGeneric": "Error al cargar la zona horaria de la agenda.",
+        "toastNetwork": "Sin conexión al cargar la zona horaria de la agenda."
+      }
+    },
     "rescheduleOptions": {
       "forbiddenTitle": "Acceso denegado",
       "forbiddenDesc": "Esta clase no pertenece a tu cuenta.",

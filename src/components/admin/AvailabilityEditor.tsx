@@ -1,7 +1,7 @@
 'use client';
 import { API } from '@/lib/constants/routes';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Plus, Trash2, Lock, Unlock, AlertTriangle } from 'lucide-react';
@@ -12,8 +12,8 @@ import {
   type GenerateSlotsFormValues,
 } from '@/schemas/availability.schema';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { apiClient, ApiError } from '@/lib/api-client';
-import { DEFAULT_CANONICAL_TIMEZONE } from '@/lib/canonical-timezone.shared';
 
 const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -51,27 +51,63 @@ export function AvailabilityEditor({
       days: [],
       ranges: [{ start: '09:00', end: '17:00' }],
       weeksAhead: 4,
-      timezone: DEFAULT_CANONICAL_TIMEZONE,
+      timezone: undefined,
     },
   });
 
   const selectedDays = watch('days');
   const ranges = watch('ranges');
 
-  // Sobrescreve o default com o fuso canonico persistido em app_settings
-  // (item 018) quando o operador ainda nao digitou nada no campo.
-  useEffect(() => {
+  // Fuso canonico persistido em app_settings (item 018). Ate o GAP-07 a falha
+  // desta leitura era engolida e o form seguia com um fuso fixo. Gate ST004 =
+  // opcao 1 (fail-open): a falha vira alerta com retry e toast do catalogo, e a
+  // geracao continua sem `timezone`, que o servidor resolve com
+  // `getCanonicalTimezone`. O toast nunca repete a mensagem do erro: no
+  // ApiError ela vem do corpo da resposta (api-client.ts).
+  const t = useTranslations('calendar.availabilityEditor.timezoneLoad');
+  const [estadoFuso, setEstadoFuso] = useState<'idle' | 'ok' | 'erro'>('idle');
+  const [lendoFuso, setLendoFuso] = useState(true);
+  // Cada leitura recebe um numero. Resposta de leitura antiga, ou que chega
+  // depois do unmount (o cleanup do efeito avanca o contador), e descartada:
+  // sem toast nem setState em componente desmontado.
+  const leituraFuso = useRef(0);
+
+  const carregarFuso = () => {
+    const minhaLeitura = ++leituraFuso.current;
+    const vigente = () => leituraFuso.current === minhaLeitura;
     apiClient
       .get<{ data: { timezone: string } }>('/api/v1/admin/settings')
       .then((json) => {
+        if (!vigente()) return;
         const tz = json?.data?.timezone;
-        if (tz && watch('timezone') === DEFAULT_CANONICAL_TIMEZONE) {
+        if (tz && !watch('timezone')) {
           setValue('timezone', tz, { shouldDirty: false });
         }
+        setEstadoFuso('ok');
+        setLendoFuso(false);
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if (!vigente()) return;
+        setEstadoFuso('erro');
+        setLendoFuso(false);
+        toast.error(
+          err instanceof ApiError && err.code === 'NETWORK_ERROR' ? t('toastNetwork') : t('toastGeneric'),
+        );
+      });
+  };
+
+  useEffect(() => {
+    carregarFuso();
+    return () => {
+      leituraFuso.current += 1;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const tentarFusoDeNovo = () => {
+    setLendoFuso(true);
+    carregarFuso();
+  };
 
   const toggleDay = (day: number) => {
     const current = selectedDays ?? [];
@@ -255,6 +291,29 @@ export function AvailabilityEditor({
               {skippedAlert.created} slot(s) criado(s).{' '}
               {skippedAlert.skipped} ignorado(s) (já existiam ou conflitavam).
             </span>
+          </div>
+        )}
+
+        {estadoFuso === 'erro' && (
+          <div
+            data-testid="form-generate-slots-timezone-load-error"
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden="true" />
+            <span className="flex-1">{t('alertFailOpen')}</span>
+            <Button
+              data-testid="form-generate-slots-timezone-load-error-retry-button"
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={tentarFusoDeNovo}
+              disabled={lendoFuso}
+              aria-busy={lendoFuso}
+            >
+              {lendoFuso && <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />}
+              {t('retry')}
+            </Button>
           </div>
         )}
 

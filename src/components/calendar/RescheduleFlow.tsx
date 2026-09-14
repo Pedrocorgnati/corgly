@@ -204,6 +204,7 @@ export function RescheduleFlow({
                     onPrevMonth={prevMonth}
                     onNextMonth={nextMonth}
                     isLoading={isLoading}
+                    timeZone={studentTimezone}
                   />
                   <SlotPicker
                     slots={slotsForDate}

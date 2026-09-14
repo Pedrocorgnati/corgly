@@ -9,14 +9,16 @@ export const GenerateSlotsSchema = z.object({
   days: z.array(z.number().int().min(0).max(6)).min(1),
   ranges: z.array(TimeRangeSchema).min(1),
   weeksAhead: z.number().int().min(1).max(12),
-  timezone: z.string().min(1).max(100).optional().default('America/Sao_Paulo'),
+  timezone: z.string().min(1).max(100).optional(),
 });
 
 export type GenerateSlotsInput = z.infer<typeof GenerateSlotsSchema>;
 
 /**
- * Forma do formulario ANTES do parse: `timezone` tem `.default()`, entao ele e
- * obrigatorio na saida (`GenerateSlotsInput`) e opcional na entrada. O
- * react-hook-form tipa os campos pela entrada e o `handleSubmit` pela saida.
+ * Forma do formulario ANTES do parse. `timezone` e opcional na entrada e na
+ * saida: corpo sem fuso e resolvido pelo servidor com `getCanonicalTimezone`
+ * (linha `timezone` de app_settings, item 018). Ate o GAP-07 um default fixo
+ * aqui mascarava o fuso persistido. O react-hook-form tipa os campos pela
+ * entrada e o `handleSubmit` pela saida.
  */
 export type GenerateSlotsFormValues = z.input<typeof GenerateSlotsSchema>;

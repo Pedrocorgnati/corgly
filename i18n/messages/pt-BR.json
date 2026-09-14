@@ -1992,6 +1992,15 @@
       "requestToast": "Pedido de reagendamento enviado para aprovação.",
       "doneToast": "Sessão reagendada com sucesso!"
     },
+    "availabilityEditor": {
+      "timezoneLoad": {
+        "alertFailOpen": "Não foi possível carregar o fuso da agenda. Ao gerar, o fuso é definido pelo servidor.",
+        "alertFailClosed": "Não foi possível carregar o fuso da agenda. Tente novamente antes de gerar horários.",
+        "retry": "Tentar novamente",
+        "toastGeneric": "Falha ao carregar o fuso da agenda.",
+        "toastNetwork": "Sem conexão ao carregar o fuso da agenda."
+      }
+    },
     "rescheduleOptions": {
       "forbiddenTitle": "Acesso negado",
       "forbiddenDesc": "Esta sessão não pertence à sua conta.",

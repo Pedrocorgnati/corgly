@@ -1992,6 +1992,15 @@
       "requestToast": "Richiesta di riprogrammazione inviata per l'approvazione.",
       "doneToast": "Lezione riprogrammata con successo!"
     },
+    "availabilityEditor": {
+      "timezoneLoad": {
+        "alertFailOpen": "Impossibile caricare il fuso orario dell'agenda. Durante la generazione, il fuso orario è definito dal server.",
+        "alertFailClosed": "Impossibile caricare il fuso orario dell'agenda. Riprova prima di generare gli orari.",
+        "retry": "Riprova",
+        "toastGeneric": "Errore nel caricamento del fuso orario dell'agenda.",
+        "toastNetwork": "Nessuna connessione durante il caricamento del fuso orario dell'agenda."
+      }
+    },
     "rescheduleOptions": {
       "forbiddenTitle": "Accesso negato",
       "forbiddenDesc": "Questa lezione non appartiene al tuo account.",

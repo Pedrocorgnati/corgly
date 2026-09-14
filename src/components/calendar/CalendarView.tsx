@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 import type { OwnReservedSlot } from '@/actions/sessions';
+import { getCivilDateParts } from '@/lib/civil-date-key';
 
 /**
  * Ate 2026-09-07 os nomes de mes e de dia da semana eram duas constantes de
@@ -56,6 +57,11 @@ interface CalendarViewProps {
    * (reagendamento, admin) a grade fica como antes, sem a legenda extra.
    */
   ownSlotsByDate?: Record<string, OwnReservedSlot[]>;
+  /**
+   * Fuso IANA do dia de hoje; ausente usa o fuso do runtime; o GAP-08 decide o
+   * `AdminCalendar`.
+   */
+  timeZone?: string;
 }
 
 export function CalendarView({
@@ -70,6 +76,7 @@ export function CalendarView({
   error,
   onRetry,
   ownSlotsByDate,
+  timeZone,
 }: CalendarViewProps) {
   // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
   // pelo aluno.
@@ -91,21 +98,19 @@ export function CalendarView({
     [locale],
   );
 
-  const today = new Date();
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
   const formatDateKey = (day: number) =>
     `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-  const isPast = (day: number) => {
-    const d = new Date(currentYear, currentMonth, day);
-    d.setHours(23, 59, 59, 999);
-    return d < today;
-  };
-
-  const isToday = (day: number) =>
-    day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+  // Hoje civil no fuso do aluno (item 028). Ate o GAP-07 vinha do relogio do
+  // navegador, e perto da meia-noite o aluno via o dia errado como hoje. As
+  // chaves YYYY-MM-DD comparam por texto na mesma ordem das datas.
+  const hoje = getCivilDateParts(new Date(), timeZone);
+  const todayKey = `${hoje.year}-${String(hoje.month).padStart(2, '0')}-${String(hoje.day).padStart(2, '0')}`;
+  const isPast = (day: number) => formatDateKey(day) < todayKey;
+  const isToday = (day: number) => formatDateKey(day) === todayKey;
 
   // Precedencia explicita: o erro vence o carregamento. Os hooks so publicam
   // `error` no `finally` que zera `isLoading`, entao na pratica os dois nunca

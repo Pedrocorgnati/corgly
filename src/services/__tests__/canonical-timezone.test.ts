@@ -10,6 +10,10 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock('@/lib/prisma', () => ({ prisma: mockPrisma }));
 
+// GAP-07 (item 018): a queda no fallback passa a deixar rastro no logger.
+const mockLogger = vi.hoisted(() => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }));
+vi.mock('@/lib/logger', () => ({ logger: mockLogger }));
+
 import {
   getCanonicalTimezone,
   canonicalLocalTimeToUtc,
@@ -17,12 +21,14 @@ import {
 } from '@/lib/canonical-timezone';
 import { localTimeToUtc } from '@/lib/canonical-timezone.shared';
 
+const MARCADOR = 'detalhe-interno-sintetico-gap07';
+
 describe('canonical-timezone (item 018)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('retorna o fuso persistido em app_settings', async () => {
+  it('CONTROLE: retorna o fuso persistido em app_settings', async () => {
     mockPrisma.appSetting.findUnique.mockResolvedValue({
       key: 'timezone',
       value: 'America/Sao_Paulo',
@@ -38,12 +44,61 @@ describe('canonical-timezone (item 018)', () => {
     await expect(getCanonicalTimezone()).resolves.toBe(DEFAULT_CANONICAL_TIMEZONE);
   });
 
-  it('cai no default quando o banco falha', async () => {
-    mockPrisma.appSetting.findUnique.mockRejectedValue(new Error('conn refused'));
+  it('RED 018 [ST007]: linha ausente registra warn com contexto fixo', async () => {
+    mockPrisma.appSetting.findUnique.mockResolvedValue(null);
     await expect(getCanonicalTimezone()).resolves.toBe(DEFAULT_CANONICAL_TIMEZONE);
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.any(String), {
+      action: 'canonical-timezone.read',
+      key: 'timezone',
+      fallback: 'America/Sao_Paulo',
+      reason: 'missing',
+    });
   });
 
-  it('paridade: o mesmo HH:mm atravessa os dois produtores no mesmo instante UTC', async () => {
+  it('RED 018 [ST007]: falha de leitura registra so nome e codigo', async () => {
+    // O logger serializa message e stack de um terceiro argumento
+    // (src/lib/logger.ts); o detalhe do driver nao pode chegar la.
+    mockPrisma.appSetting.findUnique.mockRejectedValue(
+      Object.assign(new Error(MARCADOR), { code: 'P1001' }),
+    );
+    await expect(getCanonicalTimezone()).resolves.toBe('America/Sao_Paulo');
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockLogger.error.mock.calls[0]).toHaveLength(2);
+    expect(mockLogger.error.mock.calls[0][1]).toEqual({
+      action: 'canonical-timezone.read',
+      key: 'timezone',
+      fallback: 'America/Sao_Paulo',
+      reason: 'read-failed',
+      errorName: 'Error',
+      errorCode: 'P1001',
+    });
+    expect(JSON.stringify(mockLogger.error.mock.calls)).not.toContain(MARCADOR);
+  });
+
+  it('CONTROLE: fuso persistido que o Intl nao conhece cai no default com log sem o valor', async () => {
+    // Review Codex F1: o valor chegava cru ao Intl e virava RangeError (500 no
+    // POST de disponibilidade, recorrencia sem agendar).
+    mockPrisma.appSetting.findUnique.mockResolvedValue({
+      key: 'timezone',
+      value: `Mars/${MARCADOR}`,
+    });
+    await expect(getCanonicalTimezone()).resolves.toBe(DEFAULT_CANONICAL_TIMEZONE);
+    expect(mockLogger.error).toHaveBeenCalledTimes(1);
+    expect(mockLogger.error.mock.calls[0]).toHaveLength(2);
+    expect(mockLogger.error.mock.calls[0][1]).toEqual({
+      action: 'canonical-timezone.read',
+      key: 'timezone',
+      fallback: 'America/Sao_Paulo',
+      reason: 'invalid-value',
+    });
+    expect(JSON.stringify(mockLogger.error.mock.calls)).not.toContain(MARCADOR);
+
+    // O conversor recebe o default em vez de lancar.
+    const instante = await canonicalLocalTimeToUtc(new Date(Date.UTC(2026, 2, 10)), '09:00');
+    expect(instante.toISOString()).toBe('2026-03-10T12:00:00.000Z');
+  });
+
+  it('CONTROLE: paridade: o mesmo HH:mm atravessa os dois produtores no mesmo instante UTC', async () => {
     mockPrisma.appSetting.findUnique.mockResolvedValue({
       key: 'timezone',
       value: 'America/Sao_Paulo',
@@ -62,7 +117,7 @@ describe('canonical-timezone (item 018)', () => {
     expect(viaCron.toISOString()).toBe('2026-03-10T12:00:00.000Z');
   });
 
-  it('sondagem Intl respeita DST do timezone persistido', async () => {
+  it('CONTROLE: sondagem Intl respeita DST do timezone persistido', async () => {
     mockPrisma.appSetting.findUnique.mockResolvedValue({
       key: 'timezone',
       value: 'America/New_York',

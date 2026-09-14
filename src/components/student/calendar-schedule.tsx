@@ -138,6 +138,7 @@ export function CalendarSchedule({
           onPrevMonth={prevMonth}
           onNextMonth={nextMonth}
           isLoading={isLoading}
+          timeZone={studentTimezone}
         />
 
         <div className="flex flex-col gap-4">
