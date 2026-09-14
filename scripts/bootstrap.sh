@@ -19,13 +19,19 @@ err()  { echo -e "${RED}[erro]${NC} $*" >&2; }
 # Conectividade com o banco que o `prisma migrate deploy` realmente alveja
 # (DATABASE_URL de .env), e nao com o servico `db` do docker-compose.
 # `prisma migrate status` sai != 0 tambem quando ha migration pendente, entao
-# aqui o criterio e apenas "o Prisma conseguiu falar com o servidor": qualquer
-# resposta que nao seja erro de conexao (P1001) conta como acessivel.
+# o criterio e "o Prisma conseguiu falar com o servidor". Retorno:
+#   0 = banco acessivel (em dia ou com migration pendente, que segue para o deploy);
+#   1 = sem conexao ou sem credencial: P1000 (autenticacao), P1001 (servidor
+#       inalcancavel), P1002 (timeout), P1017 (conexao encerrada) ou
+#       DATABASE_URL ausente;
+#   2 = Prisma CLI ausente (`npx --no-install prisma --version` falhou).
+# A saida do Prisma nunca e impressa. Coberto por scripts/tests/db-reachable.test.sh.
 db_reachable() {
   local out
+  npx --no-install prisma --version >/dev/null 2>&1 || return 2
   out="$(npx --no-install prisma migrate status 2>&1 || true)"
   case "$out" in
-    *P1001*|*"Can't reach database server"*|*"Environment variable not found: DATABASE_URL"*) return 1 ;;
+    *P1000*|*P1001*|*P1002*|*P1017*|*"Can't reach database server"*|*"Environment variable not found: DATABASE_URL"*) return 1 ;;
     *) return 0 ;;
   esac
 }

@@ -1,0 +1,109 @@
+# Provisionamento de banco em MySQL descartavel (GAP-01, loop 09-06).
+# Prova em CI, a cada push e pull request, que:
+#   - db_reachable de scripts/bootstrap.sh classifica P1000/P1001/P1002/P1017 como sem conexao;
+#   - as migrations sobem em banco vazio e o resultado bate com prisma/schema.prisma;
+#   - gerar a mesma faixa de slots duas vezes nao duplica horario (UNIQUE real em startAt);
+#   - o seed rodado duas vezes nao faz nenhuma tabela crescer;
+#   - migrate status do banco de CI fica registrado numa linha datada.
+# O banco e um container criado e removido dentro do run, com senha gerada no proprio run.
+# Nenhum secret do repositorio e usado. Relatorio no job summary e no artifact
+# db-provisioning-<sha>-<tentativa>, guardado por 30 dias.
+name: db-provisioning
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main, develop]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-provisioning-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrations-slots-seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: UTC
+      CI_MYSQL_IMAGE: mysql:8.4
+      CI_DB_HOST: 127.0.0.1
+      CI_DB_PORT: '3306'
+      CI_MYSQL_CONTAINER: corgly-ci-mysql
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      # --legacy-peer-deps: @tiptap/extension-collaboration-cursor@2.26.2 declara peer
+      # @tiptap/core@^2 e o lockfile resolve @tiptap/core@3.20.4; npm ci estrito para em
+      # ERESOLVE (medido com npm 10.9.9 e 11.6.2). O postinstall roda prisma generate.
+      - name: Install dependencies
+        id: install
+        run: npm ci --legacy-peer-deps
+
+      - name: Senha efemera do MySQL
+        run: |
+          pw="$(openssl rand -hex 24)"
+          echo "::add-mask::$pw"
+          echo "CI_DB_PASSWORD=$pw" >> "$GITHUB_ENV"
+
+      - name: MySQL descartavel
+        id: mysql
+        run: |
+          docker run -d --name "$CI_MYSQL_CONTAINER" \
+            -e MYSQL_ROOT_PASSWORD="$CI_DB_PASSWORD" \
+            -e MYSQL_DATABASE=corgly_ci \
+            -p 127.0.0.1:3306:3306 \
+            "$CI_MYSQL_IMAGE" > /dev/null
+          echo "container $CI_MYSQL_CONTAINER criado com $CI_MYSQL_IMAGE"
+
+      - name: Diretorio do relatorio
+        run: |
+          REPORT_DIR="$RUNNER_TEMP/db-provisioning/$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA::7}"
+          mkdir -p "$REPORT_DIR"
+          echo "REPORT_DIR=$REPORT_DIR" >> "$GITHUB_ENV"
+
+      - name: Migrations, slots, seed e migrate status
+        id: run
+        run: bash scripts/ci/db-provisioning-run.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          if [ -n "${REPORT_DIR:-}" ] && [ -f "$REPORT_DIR/summary.md" ]; then
+            cat "$REPORT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# db-provisioning"
+              echo
+              echo "summary.md nao foi gerado."
+              echo
+              echo "| passo | resultado |"
+              echo "|---|---|"
+              echo "| npm ci | ${{ steps.install.outcome }} |"
+              echo "| MySQL descartavel | ${{ steps.mysql.outcome }} |"
+              echo "| db-provisioning-run.sh | ${{ steps.run.outcome }} |"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Artifact do relatorio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-provisioning-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/db-provisioning/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Remove o MySQL descartavel
+        if: always()
+        run: docker rm -f "$CI_MYSQL_CONTAINER" || true
