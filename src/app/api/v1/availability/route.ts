@@ -4,6 +4,7 @@ import { availabilityService } from '@/services/availability.service';
 import { apiResponse } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
 import { requireAdmin } from '@/lib/auth-guard';
+import { fusoIanaValido } from '@/lib/canonical-timezone';
 
 /** GET /api/v1/availability?date=YYYY-MM-DD[&until=YYYY-MM-DD] */
 export async function GET(request: NextRequest) {
@@ -76,6 +77,12 @@ export async function POST(request: NextRequest) {
         apiResponse(null, 'Dados inválidos.', parsed.error.issues[0]?.message ?? null),
         { status: 400 },
       );
+    }
+
+    // Fuso explicito que o Intl deste runtime nao conhece e erro do cliente:
+    // sem este desvio ele vira RangeError em localTimeToUtc e 500 (codex-f1 do GAP-07).
+    if (parsed.data.timezone && !fusoIanaValido(parsed.data.timezone)) {
+      return NextResponse.json(apiResponse(null, 'Dados inválidos.', 'Fuso horário inválido.'), { status: 400 });
     }
 
     const result = await availabilityService.generateSlots(parsed.data);

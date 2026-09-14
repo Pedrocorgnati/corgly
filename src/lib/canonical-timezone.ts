@@ -27,7 +27,7 @@ export {
  * stack (logger.ts:74-76). O valor invalido tambem nao vai ao log: e texto
  * livre gravado fora do app.
  */
-function fusoIanaValido(fuso: string): boolean {
+export function fusoIanaValido(fuso: string): boolean {
   try {
     return Boolean(new Intl.DateTimeFormat('en-US', { timeZone: fuso }).resolvedOptions().timeZone);
   } catch {
