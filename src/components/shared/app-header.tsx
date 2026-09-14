@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { useTranslations } from 'next-intl';
-import { Menu, Bell } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { ROUTES } from '@/lib/constants/routes';
 import { Button } from '@/components/ui/button';
 import { AvatarInitials } from '@/components/ui/avatar-initials';
@@ -24,7 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface AppHeaderProps {
   user: { name: string; email: string; role: UserRole; creditBalance: number };
-  onMenuClick?: () => void;
+  onMenuClick: () => void;
 }
 
 export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
@@ -54,7 +54,7 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
           </Link>
         </div>
 
-        {/* Right: credits (student only) + notifications + avatar + theme */}
+        {/* Right: credits (student only) + language + avatar + theme */}
         <div data-testid="header-actions" className="flex items-center gap-2">
           {!isAdmin && (
             <CreditBadge data-testid="header-credit-badge" balance={user.creditBalance} className="hidden sm:inline-flex" />
@@ -64,10 +64,6 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
               ADMIN
             </Badge>
           )}
-          <Button data-testid="header-notification-button" variant="ghost" size="icon" className="h-9 w-9 relative" aria-label={t('notifications')}>
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
-          </Button>
           <LanguageFlags persist="profile" />
           <ThemeToggle data-testid="header-theme-toggle-button" />
           <DropdownMenu>

@@ -1863,14 +1863,19 @@
       "gridLabel": "Calendario",
       "today": "Oggi",
       "slotsAvailableShort": "orari disponibili",
-      "legend": "Giorni con orari disponibili"
+      "legend": "Giorni con orari disponibili",
+      "ownReservedShort": "orario prenotato da te",
+      "ownLegend": "Giorni con un orario prenotato da te"
     },
     "slots": {
+      "ownReserved": "Prenotato da te",
+      "ownReservedAria": "{time}, orario già prenotato da te",
       "idle": "Scegli un giorno sul calendario per vedere gli orari disponibili",
       "title": "Orari disponibili",
       "empty": "Nessun orario disponibile in questo giorno.",
       "listLabel": "Orari disponibili",
       "slotAria": "{time}, {minutes} minuti, {count, plural, one {# credito} other {# crediti}}",
+      "slotAriaNoDuration": "{time}, {count, plural, one {# credito} other {# crediti}}",
       "minutes": "{minutes} min",
       "credits": "{count, plural, one {# credito} other {# crediti}}",
       "selected": "Selezionato"
@@ -1893,6 +1898,9 @@
       "history": "Vedi lo storico",
       "errorTitle": "Errore nella prenotazione",
       "genericError": "Errore nella prenotazione. Riprova.",
+      "conflictTitle": "Questo orario non è più disponibile",
+      "conflictDescription": "Scegli un'alternativa per continuare senza perdere la prenotazione.",
+      "chooseAlternative": "Prenota questo orario alternativo",
       "close": "Chiudi",
       "retry": "Riprova",
       "insufficientTitle": "Crediti insufficienti",

@@ -8,6 +8,7 @@ const prismaMocks = vi.hoisted(() => ({
   sessionUpdateMany: vi.fn(),
   sessionFindMany: vi.fn(),
   sessionUpdate: vi.fn(),
+  googleCredentialFindMany: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({
@@ -21,7 +22,16 @@ vi.mock('@/lib/prisma', () => ({
       findMany:   prismaMocks.sessionFindMany,
       update:     prismaMocks.sessionUpdate,
     },
+    googleCalendarCredential: {
+      findMany: prismaMocks.googleCredentialFindMany,
+    },
   },
+}));
+
+const googlePushMocks = vi.hoisted(() => ({ renewChannel: vi.fn() }));
+
+vi.mock('@/services/google-calendar-push.service', () => ({
+  googleCalendarPushService: { renewChannel: googlePushMocks.renewChannel },
 }));
 
 // ─── Mock EmailService ────────────────────────────────────────────────────────
@@ -186,5 +196,53 @@ describe('CronService.runAutoConfirmation', () => {
 
     const result = await service.runAutoConfirmation();
     expect(result.confirmed).toBe(0);
+  });
+});
+
+describe('CronService.renewGoogleCalendarChannels', () => {
+  let service: CronService;
+
+  beforeEach(() => {
+    service = new CronService();
+    vi.clearAllMocks();
+    googlePushMocks.renewChannel.mockResolvedValue(true);
+  });
+
+  it('busca canais ausentes, sem baseline ou proximos de expirar', async () => {
+    prismaMocks.googleCredentialFindMany.mockResolvedValue([
+      { userId: 'user-without-channel' },
+      { userId: 'user-expiring' },
+    ]);
+
+    const result = await service.renewGoogleCalendarChannels();
+
+    expect(prismaMocks.googleCredentialFindMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { channelId: null },
+          { resourceId: null },
+          { channelExpiration: null },
+          { syncToken: null },
+          { channelExpiration: { lte: expect.any(Date) } },
+        ],
+      },
+      select: { userId: true },
+    });
+    expect(googlePushMocks.renewChannel).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ renewed: 2, errors: [] });
+  });
+
+  it('continua apos erro parcial sem expor detalhes no resultado', async () => {
+    prismaMocks.googleCredentialFindMany.mockResolvedValue([
+      { userId: 'user-failed' },
+      { userId: 'user-ok' },
+    ]);
+    googlePushMocks.renewChannel
+      .mockRejectedValueOnce(new Error('Google 503'))
+      .mockResolvedValueOnce(true);
+
+    const result = await service.renewGoogleCalendarChannels();
+
+    expect(result).toEqual({ renewed: 1, errors: ['user-failed'] });
   });
 });

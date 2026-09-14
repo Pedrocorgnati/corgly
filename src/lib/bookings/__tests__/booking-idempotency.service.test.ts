@@ -5,6 +5,7 @@ import {
   BookingIdempotencyService,
   type BookingResult,
 } from '../booking-idempotency.service';
+import { creditConsumptionService } from '@/lib/credits/credit-consumption.service';
 
 const mockPrisma = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
@@ -77,6 +78,17 @@ function bookingResult(): BookingResult {
   };
 }
 
+/**
+ * Junta o SQL de todas as chamadas de `$executeRaw` num texto unico. Existe
+ * porque o servico dispara duas limpezas de registros expirados FORA da
+ * transacao: contar chamadas nao distingue "nao mutou o slot" de "nao rodou".
+ */
+function executeRawSql(): string {
+  return mockPrisma.$executeRaw.mock.calls
+    .map((call) => (Array.isArray(call[0]) ? [...(call[0] as string[])].join(' ') : String(call[0])))
+    .join('\n');
+}
+
 describe('BookingIdempotencyService', () => {
   let service: BookingIdempotencyService;
 
@@ -130,6 +142,8 @@ describe('BookingIdempotencyService', () => {
         .mockResolvedValueOnce([
           { id: 'slot-2', startAt: new Date('2026-06-20T15:00:00Z'), endAt: new Date('2026-06-20T15:50:00Z') },
         ])
+        // Rechecagem de ocupacao externa: sem intervalo vigente cobrindo o slot.
+        .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
           {
             owner: 'student-2:key-87654321',
@@ -170,5 +184,106 @@ describe('BookingIdempotencyService', () => {
     });
 
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  // Item 024: o horario fica ocupado no Google DEPOIS do aluno abrir a tela e
+  // ANTES da confirmacao. O ledger `external_busy_intervals` ja tem a linha
+  // vigente; `availability_slots.isBlocked` ainda nao foi projetado, porque a
+  // projecao roda em transacao separada. Sem a rechecagem, esta reserva passa.
+  it('rejects the booking with SESSION_057 when an active external interval covers the locked slot', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      maxFutureSessions: 5,
+      preferredLanguage: 'PT_BR',
+      email: 'student@test.com',
+    });
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: BigInt(1) }]);
+
+    const consumeSpy = vi.spyOn(creditConsumptionService, 'consumeOneOrNullWithTx');
+
+    mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
+      const txQueryRaw = vi
+        .fn()
+        // slot travado com FOR UPDATE: isBlocked ainda 0 (projecao pendente)
+        .mockResolvedValueOnce([
+          { id: 'slot-1', isBlocked: 0, version: 1, startAt: START, endAt: END },
+        ])
+        // alternativas
+        .mockResolvedValueOnce([
+          { id: 'slot-2', startAt: new Date('2026-06-20T15:00:00Z'), endAt: new Date('2026-06-20T15:50:00Z') },
+        ])
+        // rechecagem de ocupacao externa: intervalo vigente cobre a janela
+        .mockResolvedValueOnce([{ id: 'busy-1' }]);
+      return cb({ ...mockPrisma, $queryRaw: txQueryRaw } as unknown as typeof mockPrisma);
+    });
+
+    await expect(
+      service.lockAndBook('student-1', { availabilitySlotId: 'slot-1' }, null),
+    ).rejects.toMatchObject({
+      code: 'SESSION_057',
+      status: 409,
+      message: 'Horário indisponível por ocupação externa.',
+      alternatives: [
+        {
+          id: 'slot-2',
+          startAt: '2026-06-20T15:00:00.000Z',
+          endAt: '2026-06-20T15:50:00.000Z',
+        },
+      ],
+    } satisfies Partial<BookingConflictError>);
+
+    // A reserva condenada nao pode deixar rastro: sem lock, sem CAS de version,
+    // sem consumo de credito e sem sessao criada. (`$executeRaw` ainda recebe
+    // as duas limpezas de expirados que rodam FORA da transacao, entao a
+    // asercao e por SQL, nao por contagem de chamadas.)
+    expect(executeRawSql()).not.toContain('UPDATE availability_slots');
+    expect(executeRawSql()).not.toContain('INSERT INTO booking_slot_locks');
+    expect(mockPrisma.session.findFirst).not.toHaveBeenCalled();
+    expect(consumeSpy).not.toHaveBeenCalled();
+    expect(mockPrisma.session.create).not.toHaveBeenCalled();
+  });
+
+  // Espelho do teste acima: ocupacao REVOGADA (`revokedAt` preenchido) nao e
+  // devolvida pelo predicado, entao a reserva segue normalmente. Sem este
+  // caso a rechecagem poderia ser implementada larga demais e travar horario
+  // que o professor liberou no Google.
+  it('books normally when the only external interval covering the slot is revoked', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      maxFutureSessions: 5,
+      preferredLanguage: 'PT_BR',
+      email: 'student@test.com',
+    });
+    mockPrisma.$queryRaw.mockResolvedValueOnce([{ total: BigInt(1) }]);
+    mockPrisma.session.findFirst.mockResolvedValue(null);
+    mockPrisma.session.count.mockResolvedValue(0);
+    mockPrisma.session.create.mockResolvedValue(session());
+
+    const consumeSpy = vi
+      .spyOn(creditConsumptionService, 'consumeOneOrNullWithTx')
+      .mockResolvedValue('batch-1');
+
+    mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
+      const txQueryRaw = vi
+        .fn()
+        .mockResolvedValueOnce([
+          { id: 'slot-1', isBlocked: 0, version: 1, startAt: START, endAt: END },
+        ])
+        .mockResolvedValueOnce([])
+        // rechecagem: a unica linha que cobre a janela esta revogada, e o
+        // `revokedAt IS NULL` do predicado a exclui — retorno vazio.
+        .mockResolvedValueOnce([])
+        // nenhum lock vigente no slot
+        .mockResolvedValueOnce([]);
+      return cb({ ...mockPrisma, $queryRaw: txQueryRaw } as unknown as typeof mockPrisma);
+    });
+
+    const result = await service.lockAndBook(
+      'student-1',
+      { availabilitySlotId: 'slot-1' },
+      null,
+    );
+
+    expect(result.session.id).toBe('session-1');
+    expect(consumeSpy).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.session.create).toHaveBeenCalledTimes(1);
   });
 });

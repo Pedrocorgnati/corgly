@@ -21,6 +21,19 @@ const PUBLIC_API_PATHS = [
   // futura. O CONSUMO do token nao passa por aqui — mora na pagina
   // `(public)/auth/magic-link/callback`, que nao e rota de API.
   '/api/v1/auth/magic-link/request',
+  // Callback OAuth do Google Calendar: GET de redirect do navegador do
+  // professor voltando do consentimento, chega sem sessao por construcao. Sem
+  // esta entrada o proxy responderia 401 antes do handler (mesma classe de
+  // defeito que o magic-link acima e que o item 002 corrigiu para
+  // availability). Caminho COMPLETO de proposito: `matchesPrefix` casa `p` e
+  // tudo sob `p + '/'`, entao listar o prefixo abriria o namespace inteiro.
+  // Vai em PUBLIC_API_PATHS e nao em PUBLIC_API_READ_ONLY_PATHS porque o
+  // callback muda estado (upsert da credencial) apesar de ser GET.
+  '/api/v1/google/calendar/callback',
+  // Webhook de push notifications do Google Calendar: POST de Google para
+  // notificar mudancas na agenda. Chega sem sessao por construcao; autenticacao
+  // por channelId + channelToken. Caminho COMPLETO de proposito.
+  '/api/v1/google/calendar/webhook',
   '/api/v1/auth/cancel-deletion',
   '/api/v1/auth/cookie-consent', // Unauthenticated visitors must be able to set cookie consent (LGPD)
   '/api/v1/webhooks/stripe',

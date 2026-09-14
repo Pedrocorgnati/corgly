@@ -6,6 +6,16 @@ import { z } from 'zod';
  * limitado, mas bloqueia script, handlers inline e URLs executáveis.
  */
 
+/**
+ * Tipos que podem ter template PERSISTIDO em `email_templates`. E um subconjunto
+ * do enum `EmailType` do Prisma (coluna `email_templates.type`), entao so entra
+ * aqui valor que exista naquele enum.
+ *
+ * Tipos renderizados exclusivamente em codigo (`TEMPLATES` do `email.service`)
+ * ficam de fora: `MAGIC_LINK` e, desde o item 025, `EXTERNAL_BUSY_CONFLICT`.
+ * Adiciona-los aqui obrigaria a mexer no enum do banco sem que exista linha de
+ * template para guardar.
+ */
 export const EMAIL_TEMPLATE_TYPES = [
   'CONFIRM_EMAIL',
   'BOOKING_CONFIRMED',

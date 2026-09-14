@@ -54,8 +54,18 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
+
+/**
+ * `getAvailability` corta horario com `startAt` no passado (item 033). Casos com
+ * data fixa congelam so o `Date` antes dela, para nao depender do dia da execucao.
+ */
+function congelarRelogio(instante: string) {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(instante));
+}
 
 describe('apiFetch — corpo ilegivel devolve par, nunca rejeita (item 009)', () => {
   it('C-A: 405 sem corpo devolve { data: null, error: "Erro 405" }', async () => {
@@ -117,6 +127,7 @@ describe('apiFetch — corpo ilegivel devolve par, nunca rejeita (item 009)', ()
   });
 
   it('C-F: 200 com envelope valido devolve data e error null', async () => {
+    congelarRelogio('2026-03-01T00:00:00.000Z');
     stubFetch(
       resposta(
         200,
@@ -162,6 +173,72 @@ describe('apiFetch — corpo ilegivel devolve par, nunca rejeita (item 009)', ()
   });
 });
 
+describe('getAvailability — piso no agora (item 033)', () => {
+  function slot(id: string, startAt: string) {
+    return {
+      id,
+      startAt,
+      endAt: new Date(new Date(startAt).getTime() + 50 * 60 * 1000).toISOString(),
+      isBlocked: false,
+    };
+  }
+
+  it('consulta no meio do dia: horario de hoje que ja passou nao chega a tela', async () => {
+    congelarRelogio('2026-03-21T15:20:00.000Z');
+    stubFetch(
+      resposta(
+        200,
+        JSON.stringify({
+          data: [
+            slot('ontem', '2026-03-20T17:00:00.000Z'),
+            slot('hoje-manha', '2026-03-21T13:00:00.000Z'),
+            slot('agora-exato', '2026-03-21T15:20:00.000Z'),
+            slot('hoje-tarde', '2026-03-21T17:00:00.000Z'),
+            slot('amanha', '2026-03-22T13:00:00.000Z'),
+          ],
+          error: null,
+        }),
+      ),
+    );
+
+    const result = await getAvailability('2026-03');
+
+    expect(result.error).toBeNull();
+    expect(result.data?.map((s) => s.id)).toEqual(['hoje-tarde', 'amanha']);
+  });
+
+  it('instante ilegivel sai da lista em vez de virar horario clicavel', async () => {
+    congelarRelogio('2026-03-21T15:20:00.000Z');
+    stubFetch(
+      resposta(
+        200,
+        JSON.stringify({
+          data: [
+            { id: 'quebrado', startAt: 'nao-e-data', endAt: '', isBlocked: false },
+            slot('hoje-tarde', '2026-03-21T17:00:00.000Z'),
+          ],
+          error: null,
+        }),
+      ),
+    );
+
+    const result = await getAvailability('2026-03');
+
+    expect(result.data?.map((s) => s.id)).toEqual(['hoje-tarde']);
+  });
+
+  it('falha da API atravessa intacta, sem passar pelo corte', async () => {
+    congelarRelogio('2026-03-21T15:20:00.000Z');
+    stubFetch(resposta(500, JSON.stringify({ data: null, error: 'Erro interno.', code: null })));
+
+    await expect(getAvailability('2026-03')).resolves.toEqual({
+      data: null,
+      error: 'Erro interno.',
+      code: null,
+    });
+  });
+});
+
 describe('chamadores recebem par, nao rejeicao (item 009)', () => {
   it('C-I: getSessions com 405 devolve a pagina vazia', async () => {
     stubFetch(resposta(405, null));
@@ -178,7 +255,7 @@ describe('chamadores recebem par, nao rejeicao (item 009)', () => {
   it('C-J: bookSession com 502 HTML nao revalida rota', async () => {
     stubFetch(resposta(502, HTML_GATEWAY, 'text/html'));
 
-    const result = await bookSession('slot-1');
+    const result = await bookSession('slot-1', 'booking-key-12345678');
 
     expect(result).toEqual({ data: null, error: 'Erro 502', code: null });
     expect(revalidatePath).not.toHaveBeenCalled();
@@ -187,9 +264,48 @@ describe('chamadores recebem par, nao rejeicao (item 009)', () => {
   it('C-K: bookSession com erro de credito preserva a mensagem e nao revalida', async () => {
     stubFetch(resposta(400, JSON.stringify({ data: null, error: 'Créditos insuficientes.' })));
 
-    const result = await bookSession('slot-1');
+    const result = await bookSession('slot-1', 'booking-key-12345678');
 
     expect(result.error).toBe('Créditos insuficientes.');
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it('C-L: bookSession preserva alternativas estruturadas de um conflito 409', async () => {
+    const alternatives = [
+      {
+        id: 'slot-2',
+        startAt: '2026-06-20T15:00:00.000Z',
+        endAt: '2026-06-20T15:50:00.000Z',
+      },
+    ];
+    const fetchSpy = stubFetch(
+      resposta(
+        409,
+        JSON.stringify({
+          data: { alternatives },
+          error: 'Horário indisponível por ocupação externa.',
+          code: 'SESSION_057',
+        }),
+      ),
+    );
+
+    const result = await bookSession('slot-1', 'booking-key-12345678');
+
+    expect(result).toEqual({
+      data: { alternatives },
+      error: 'Horário indisponível por ocupação externa.',
+      code: 'SESSION_057',
+    });
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/bookings/lock'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ availabilitySlotId: 'slot-1' }),
+        headers: expect.objectContaining({
+          'Idempotency-Key': 'booking-key-12345678',
+        }),
+      }),
+    );
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

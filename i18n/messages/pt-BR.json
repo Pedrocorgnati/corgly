@@ -1863,14 +1863,19 @@
       "gridLabel": "Calendário",
       "today": "Hoje",
       "slotsAvailableShort": "horários disponíveis",
-      "legend": "Dias com horários disponíveis"
+      "legend": "Dias com horários disponíveis",
+      "ownReservedShort": "horário reservado por você",
+      "ownLegend": "Dias com horário reservado por você"
     },
     "slots": {
+      "ownReserved": "Reservado por você",
+      "ownReservedAria": "{time}, horário já reservado por você",
       "idle": "Selecione um dia no calendário para ver os horários disponíveis",
       "title": "Horários disponíveis",
       "empty": "Nenhum horário disponível neste dia.",
       "listLabel": "Horários disponíveis",
       "slotAria": "{time}, {minutes} minutos, {count, plural, one {# crédito} other {# créditos}}",
+      "slotAriaNoDuration": "{time}, {count, plural, one {# crédito} other {# créditos}}",
       "minutes": "{minutes} min",
       "credits": "{count, plural, one {# crédito} other {# créditos}}",
       "selected": "Selecionado"
@@ -1893,6 +1898,9 @@
       "history": "Ver histórico",
       "errorTitle": "Erro ao agendar",
       "genericError": "Erro ao agendar. Tente novamente.",
+      "conflictTitle": "Este horário acabou de ficar indisponível",
+      "conflictDescription": "Escolha uma alternativa para continuar sem perder o agendamento.",
+      "chooseAlternative": "Agendar este horário alternativo",
       "close": "Fechar",
       "retry": "Tentar novamente",
       "insufficientTitle": "Créditos insuficientes",

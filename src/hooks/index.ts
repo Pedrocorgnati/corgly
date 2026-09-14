@@ -11,6 +11,7 @@ export { useTimezone } from './useTimezone';
 export { useLocalStorage } from './useLocalStorage';
 export { useMediaQuery } from './useMediaQuery';
 export { useDisclosure } from './useDisclosure';
+export { useDialogA11y } from './useDialogA11y';
 
 export { useWebRTC } from './useWebRTC';
 export { useSessionAccess } from './useSessionAccess';
@@ -22,6 +23,7 @@ export type { UseCreditsReturn } from './useCredits';
 export type { UseTimezoneReturn } from './useTimezone';
 export type { UseMediaQueryReturn } from './useMediaQuery';
 export type { UseDisclosureReturn } from './useDisclosure';
+export type { UseDialogA11yOptions, UseDialogA11yReturn } from './useDialogA11y';
 export type { UsePaginationParams, UsePaginationReturn } from './usePagination';
 export type { UseWebRTCReturn, RTCConnectionState } from './useWebRTC';
 export type { UseSessionAccessReturn } from './useSessionAccess';

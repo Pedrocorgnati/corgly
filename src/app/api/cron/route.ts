@@ -1,13 +1,22 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { cronService } from '@/services/cron.service'
 
-type CronJob = 'credit-expiration' | 'reminders' | 'auto-confirmation'
-const VALID_JOBS: CronJob[] = ['credit-expiration', 'reminders', 'auto-confirmation']
+type CronJob =
+  | 'credit-expiration'
+  | 'reminders'
+  | 'auto-confirmation'
+  | 'google-calendar-reconciliation'
+const VALID_JOBS: CronJob[] = [
+  'credit-expiration',
+  'reminders',
+  'auto-confirmation',
+  'google-calendar-reconciliation',
+]
 
 /**
  * POST /api/cron
  * Endpoint unificado para disparo de cron jobs.
- * Body: { job: 'credit-expiration' | 'reminders' | 'auto-confirmation' }
+ * Body: { job: 'credit-expiration' | 'reminders' | 'auto-confirmation' | 'google-calendar-reconciliation' }
  * Auth: Authorization: Bearer ${CRON_SECRET}
  *
  * Usado por: PM2 scripts/trigger-cron.js e testes E2E (E2E-008).
@@ -51,6 +60,9 @@ export async function POST(request: NextRequest) {
         break
       case 'auto-confirmation':
         result = await cronService.runAutoConfirmation()
+        break
+      case 'google-calendar-reconciliation':
+        result = await cronService.runGoogleCalendarReconciliation()
         break
     }
 

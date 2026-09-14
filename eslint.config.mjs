@@ -37,6 +37,43 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    /**
+     * Debito de lint pre-existente: 29 erros em 13 arquivos legados, rebaixados
+     * para warning por decisao do operador em 2026-09-09 (loop
+     * 09-06-corgly-saas-agenda-google-bloqueio-ocupado, decisao pendente dos itens
+     * 019/020, que travavam no gate `npm run lint` por causa destes arquivos).
+     *
+     * O rebaixamento e por arquivo E por regra: fora desta lista as mesmas regras
+     * continuam erro, entao codigo novo segue barrado pelo gate. Corrigir um dos
+     * arquivos abaixo permite remover a entrada correspondente desta lista.
+     */
+    files: [
+      "scripts/trigger-cron.js",
+      "src/components/admin/AnalyticsFunnel.tsx",
+      "src/components/calendar/CancelConfirmDialog.tsx",
+      "src/components/content/ContentResourcePanel.tsx",
+      "src/components/credits/credit-expiry-alert.tsx",
+      "src/components/dev/DataTestOverlay.tsx",
+      "src/components/landing/language-flags.tsx",
+      "src/components/session/VideoPanel.tsx",
+      "src/components/shared/language-selector.tsx",
+      "src/components/shared/public-footer.tsx",
+      "src/hooks/useLandingLocale.ts",
+      "src/hooks/useSessionTimer.ts",
+      "src/hooks/useYjsProvider.ts",
+    ],
+    rules: {
+      "react-hooks/rules-of-hooks": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/refs": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
+      "@typescript-eslint/no-require-imports": "warn",
+      "prefer-const": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

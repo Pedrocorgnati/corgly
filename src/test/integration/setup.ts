@@ -60,7 +60,11 @@ export async function cleanDatabase(): Promise<void> {
     'subscriptions',
     'recurring_patterns',
     'cookie_consents',
+    // Item 025: filha de intervals/slots/sessions — trunca antes das tres.
+    'external_busy_conflicts',
     'availability_slots',
+    'external_busy_intervals',
+    'google_calendar_credentials',
     'contents',
     'users',
   ]

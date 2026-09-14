@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAvailability } from '@/actions/sessions';
+import { getCivilDateParts, toDateKey } from '@/lib/civil-date-key';
 
 export interface AvailabilitySlot {
   id: string;
@@ -30,13 +31,19 @@ export interface UseCalendarOptions {
    * redundante e sem quebrar a regra dos hooks.
    */
   enabled?: boolean;
+  /** Fuso IANA usado para transformar cada instante UTC em dia civil. */
+  timeZone?: string;
 }
+
+/** Maior atraso aceito pelo `setTimeout` (2^31 - 1 ms). */
+const MAX_TIMEOUT_MS = 2_147_483_647;
 
 export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
   const enabled = options?.enabled ?? true;
-  const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const timeZone = options?.timeZone;
+  const today = getCivilDateParts(new Date(), timeZone);
+  const [currentMonth, setCurrentMonth] = useState(today.month - 1);
+  const [currentYear, setCurrentYear] = useState(today.year);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,15 +91,38 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
     void fetchSlots();
   }, [fetchSlots]);
 
+  /**
+   * O corte de `getAvailability` vale so no instante da resposta. Com a tela
+   * aberta, um horario carregado como futuro passaria e continuaria listado e
+   * clicavel ate o proximo fetch. `now` avanca sozinho no vencimento do proximo
+   * slot, e a lista devolvida nunca contem horario com `startAt <= agora`.
+   */
+  const [now, setNow] = useState(() => Date.now());
+  const upcomingSlots = useMemo(
+    () => slots.filter((slot) => new Date(slot.startAt).getTime() > now),
+    [slots, now],
+  );
+
+  useEffect(() => {
+    if (upcomingSlots.length === 0) return;
+    const nextStart = Math.min(
+      ...upcomingSlots.map((slot) => new Date(slot.startAt).getTime()),
+    );
+    // Teto do setTimeout (~24,8 dias): acima disso o timer dispara antes e reagenda.
+    const delay = Math.min(Math.max(nextStart - Date.now(), 0), MAX_TIMEOUT_MS);
+    const timer = setTimeout(() => setNow(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [upcomingSlots]);
+
   const slotsByDate = useMemo(() => {
     const map: Record<string, AvailabilitySlot[]> = {};
-    for (const slot of slots) {
-      const dateKey = slot.startAt.slice(0, 10);
+    for (const slot of upcomingSlots) {
+      const dateKey = toDateKey(slot.startAt, timeZone);
       if (!map[dateKey]) map[dateKey] = [];
       map[dateKey].push(slot);
     }
     return map;
-  }, [slots]);
+  }, [upcomingSlots, timeZone]);
 
   const prevMonth = useCallback(() => {
     if (currentMonth === 0) {
@@ -118,7 +148,7 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
   return {
     currentMonth,
     currentYear,
-    slots,
+    slots: upcomingSlots,
     slotsByDate,
     isLoading,
     error,

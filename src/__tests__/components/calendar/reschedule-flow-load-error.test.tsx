@@ -88,6 +88,8 @@ function renderizar({ comBoundary = false } = {}) {
   const tela = (
     <RescheduleFlow
       session={SESSAO}
+      studentTimezone="America/Sao_Paulo"
+      adminTimezone="Europe/Rome"
       open
       onOpenChange={onOpenChange}
       onRescheduled={onRescheduled}

@@ -28,7 +28,7 @@ interface SessionData {
 
 interface SessionCardProps {
   session: SessionData
-  studentTimezone?: string
+  studentTimezone: string
   adminTimezone?: string
   onEnter?: () => void
   onCancel?: () => void
@@ -58,7 +58,7 @@ const ENTER_WINDOW_MINUTES = 5
 
 function SessionCard({
   session,
-  studentTimezone = "America/Sao_Paulo",
+  studentTimezone,
   adminTimezone,
   onEnter,
   onCancel,

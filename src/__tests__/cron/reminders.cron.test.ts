@@ -30,7 +30,7 @@ describe('CronService.runReminders', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.resetAllMocks()
-    vi.mocked(emailService.send).mockResolvedValue(undefined)
+    vi.mocked(emailService.send).mockResolvedValue({ sent: true })
     vi.mocked(prisma.session.update).mockResolvedValue({} as never)
   })
 

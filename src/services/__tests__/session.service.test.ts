@@ -100,9 +100,16 @@ describe('SessionService', () => {
       mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
         const tx = {
           ...mockPrisma,
-          $queryRaw: vi.fn().mockResolvedValue([
-            { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
-          ]),
+          $queryRaw: vi
+            .fn()
+            // Primeira chamada: slot livre sob FOR UPDATE
+            .mockResolvedValueOnce([
+              { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
+            ])
+            // Segunda chamada: sem ocupação externa
+            .mockResolvedValueOnce([])
+            // Terceira chamada: credit batches para consumo
+            .mockResolvedValueOnce([{ id: 'batch-1', totalCredits: 10, usedCredits: 5 }]),
           session: {
             ...mockPrisma.session,
             findUnique: vi.fn().mockResolvedValue(null),
@@ -133,9 +140,13 @@ describe('SessionService', () => {
       mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
         const tx = {
           ...mockPrisma,
-          $queryRaw: vi.fn().mockResolvedValue([
-            { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
-          ]),
+          $queryRaw: vi
+            .fn()
+            .mockResolvedValueOnce([
+              { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
+            ])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([{ id: 'batch-1', totalCredits: 10, usedCredits: 5 }]),
           session: {
             ...mockPrisma.session,
             findFirst,
@@ -175,9 +186,13 @@ describe('SessionService', () => {
       mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
         const tx = {
           ...mockPrisma,
-          $queryRaw: vi.fn().mockResolvedValue([
-            { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
-          ]),
+          $queryRaw: vi
+            .fn()
+            .mockResolvedValueOnce([
+              { id: 'slot-1', isBlocked: 0, version: 1, startAt: FUTURE_START, endAt: FUTURE_END },
+            ])
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([{ id: 'batch-1', totalCredits: 10, usedCredits: 5 }]),
           session: {
             ...mockPrisma.session,
             findFirst,
@@ -303,6 +318,101 @@ describe('SessionService', () => {
         service.create('student-1', { availabilitySlotId: 'slot-1' }),
       ).rejects.toThrow(AppError);
     });
+
+    // ── rechecagem de ocupação externa ──
+    it('deve falhar com SESSION_057 quando slot fica ocupado externamente entre leitura e reserva', async () => {
+      const queryRaw = vi
+        .fn()
+        // Primeira leitura: slot livre sob FOR UPDATE.
+        .mockResolvedValueOnce([
+          {
+            id: 'slot-1',
+            isBlocked: 0,
+            version: 1,
+            startAt: FUTURE_START,
+            endAt: FUTURE_END,
+          },
+        ])
+        // Segunda leitura: ledger ganhou ocupacao antes da confirmacao.
+        .mockResolvedValueOnce([
+          {
+            id: 'busy-1',
+            externalEventId: 'google-event-123',
+          },
+        ]);
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        maxFutureSessions: 5,
+        preferredLanguage: 'PT_BR',
+        email: 'student@test.com',
+      });
+
+      mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
+        const tx = {
+          ...mockPrisma,
+          $queryRaw: queryRaw,
+          session: {
+            ...mockPrisma.session,
+            findFirst: vi.fn().mockResolvedValue(null),
+          },
+        };
+        return cb(tx as unknown as typeof mockPrisma);
+      });
+
+      await expect(service.create('student-1', { availabilitySlotId: 'slot-1' })).rejects.toMatchObject({
+        code: 'SESSION_057',
+        status: 409,
+      });
+
+      expect(queryRaw).toHaveBeenCalledTimes(2);
+      expect(queryRaw.mock.calls[1][0].join('?')).toContain('revokedAt IS NULL');
+    });
+
+    it('deve permitir reserva quando ocupacao externa foi revogada', async () => {
+      const newSession = makeSession();
+      const queryRaw = vi
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: 'slot-1',
+            isBlocked: 0,
+            version: 1,
+            startAt: FUTURE_START,
+            endAt: FUTURE_END,
+          },
+        ])
+        // A query filtra revokedAt IS NULL, portanto a ocupacao revogada nao retorna.
+        .mockResolvedValueOnce([])
+        // Credit batches para consumo
+        .mockResolvedValueOnce([{ id: 'batch-1', totalCredits: 10, usedCredits: 5 }]);
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        maxFutureSessions: 5,
+        preferredLanguage: 'PT_BR',
+        email: 'student@test.com',
+      });
+
+      mockPrisma.$transaction.mockImplementation(async (cb: (tx: typeof mockPrisma) => Promise<unknown>) => {
+        const tx = {
+          ...mockPrisma,
+          $queryRaw: queryRaw,
+          session: {
+            ...mockPrisma.session,
+            findFirst: vi.fn().mockResolvedValue(null),
+            count: vi.fn().mockResolvedValue(0),
+            create: vi.fn().mockResolvedValue(newSession),
+          },
+          $executeRaw: vi.fn().mockResolvedValue(1),
+        };
+        return cb(tx as unknown as typeof mockPrisma);
+      });
+
+      const session = await service.create('student-1', {
+        availabilitySlotId: 'slot-1',
+      });
+      expect(session.status).toBe('SCHEDULED');
+      expect(queryRaw.mock.calls[1][0].join('?')).toContain('revokedAt IS NULL');
+    });
   });
 
   // ── cancel ──
@@ -404,6 +514,115 @@ describe('SessionService', () => {
 
       const result = await service.autoConfirm();
       expect(result.confirmed).toBe(3);
+    });
+  });
+
+  // ── reschedule / approveReschedule: rechecagem de ocupacao externa (item 024) ──
+  //
+  // Reagendar move a sessao para DENTRO de outro slot, exatamente como `create`.
+  // A janela nao-atomica e a mesma: o ledger `external_busy_intervals` ja tem a
+  // linha vigente e `availability_slots.isBlocked` ainda nao foi projetado,
+  // porque a projecao roda em transacao separada. Sem a rechecagem sob o
+  // `FOR UPDATE`, o aluno cai num horario que o professor ja ocupou no Google.
+  describe('reagendamento e ocupacao externa', () => {
+    const NEW_START = new Date('2026-03-26T14:00:00Z');
+    const NEW_END = new Date('2026-03-26T14:50:00Z');
+
+    /** Linha do slot de destino como o `SELECT ... FOR UPDATE` a devolve. */
+    function slotDestinoTravado() {
+      return [{ id: 'slot-2', isBlocked: 0, version: 7, startAt: NEW_START, endAt: NEW_END }];
+    }
+
+    /**
+     * Monta o `tx` com `$queryRaw` roteando por SQL: o `FOR UPDATE` do slot de
+     * destino devolve a linha travada, a rechecagem devolve `ocupacoes`.
+     * Discriminar pelo SQL (e nao por ordem de chamada) mantem o teste valido
+     * se outra leitura entrar na transacao.
+     */
+    function txComOcupacao(ocupacoes: Array<{ id: string }>) {
+      const queryRaw = vi.fn(async (strings: TemplateStringsArray) =>
+        [...strings].join(' ').includes('external_busy_intervals')
+          ? ocupacoes
+          : slotDestinoTravado(),
+      );
+      const executeRaw = vi.fn().mockResolvedValue(1);
+      const sessionFindFirst = vi.fn().mockResolvedValue(null);
+      const sessionUpdate = vi.fn().mockResolvedValue(
+        makeSession({ availabilitySlotId: 'slot-2', startAt: NEW_START, endAt: NEW_END }),
+      );
+
+      mockPrisma.$transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) =>
+        cb({
+          ...mockPrisma,
+          $queryRaw: queryRaw,
+          $executeRaw: executeRaw,
+          session: { ...mockPrisma.session, findFirst: sessionFindFirst, update: sessionUpdate },
+        }),
+      );
+
+      return { queryRaw, executeRaw, sessionFindFirst, sessionUpdate };
+    }
+
+    it('reschedule imediato falha com SESSION_057 quando ha ocupacao externa vigente no slot de destino', async () => {
+      mockPrisma.session.findUnique.mockResolvedValue(makeSession());
+      const { executeRaw, sessionUpdate } = txComOcupacao([{ id: 'busy-1' }]);
+
+      await expect(
+        service.reschedule('session-1', 'student-1', 'STUDENT', {
+          newAvailabilitySlotId: 'slot-2',
+        }),
+      ).rejects.toMatchObject({ code: 'SESSION_057', status: 409 });
+
+      // A troca condenada nao pode deixar rastro: sem CAS de version e sem
+      // update da sessao.
+      expect(executeRaw).not.toHaveBeenCalled();
+      expect(sessionUpdate).not.toHaveBeenCalled();
+    });
+
+    it('reschedule imediato prossegue quando a ocupacao que cobria o slot de destino foi revogada', async () => {
+      mockPrisma.session.findUnique.mockResolvedValue(makeSession());
+      // `revokedAt IS NULL` no predicado: linha revogada nao volta na consulta.
+      const { queryRaw, sessionUpdate } = txComOcupacao([]);
+
+      const result = await service.reschedule('session-1', 'student-1', 'STUDENT', {
+        newAvailabilitySlotId: 'slot-2',
+      });
+
+      expect(result.availabilitySlotId).toBe('slot-2');
+      expect(sessionUpdate).toHaveBeenCalledTimes(1);
+      const sqlRechecagem = queryRaw.mock.calls
+        .map((call) => [...(call[0] as unknown as string[])].join(' '))
+        .find((sql) => sql.includes('external_busy_intervals'));
+      expect(sqlRechecagem).toContain('revokedAt IS NULL');
+    });
+
+    it('approveReschedule falha com SESSION_057 quando o horario foi ocupado enquanto o pedido esperava o admin', async () => {
+      mockPrisma.session.findUnique.mockResolvedValue(
+        makeSession({ status: 'RESCHEDULE_PENDING', rescheduleRequestSlotId: 'slot-2' }),
+      );
+      const { executeRaw, sessionUpdate } = txComOcupacao([{ id: 'busy-1' }]);
+
+      await expect(service.approveReschedule('session-1')).rejects.toMatchObject({
+        code: 'SESSION_057',
+        status: 409,
+      });
+
+      expect(executeRaw).not.toHaveBeenCalled();
+      expect(sessionUpdate).not.toHaveBeenCalled();
+    });
+
+    it('approveReschedule aprova quando a ocupacao que cobria o slot de destino foi revogada', async () => {
+      mockPrisma.session.findUnique.mockResolvedValue(
+        makeSession({ status: 'RESCHEDULE_PENDING', rescheduleRequestSlotId: 'slot-2' }),
+      );
+      // O e-mail de reagendamento e fire-and-forget: sem aluno, nao dispara.
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      const { sessionUpdate } = txComOcupacao([]);
+
+      const result = await service.approveReschedule('session-1');
+
+      expect(result.availabilitySlotId).toBe('slot-2');
+      expect(sessionUpdate).toHaveBeenCalledTimes(1);
     });
   });
 });

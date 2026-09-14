@@ -9,7 +9,7 @@
  *
  * Cenários POST:
  *   4. Happy path: agendamento com slot disponível e crédito suficiente → 201
- *   5. Erro: créditos insuficientes → 400 (CREDIT_050)
+ *   5. Erro: créditos insuficientes → 402 (BOOKING_005)
  *   6. Erro: slot já ocupado → 409 (SESSION_050)
  *   7. Validação: availabilitySlotId inválido → 400 (VAL_005)
  *   8. Autenticação: sem headers → 401
@@ -80,10 +80,10 @@ describe('GET /api/v1/sessions', () => {
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body.error).toBeNull()
-    expect(Array.isArray(body.data.sessions ?? body.data)).toBe(true)
+    expect(Array.isArray(body.data.data)).toBe(true)
 
     // Todas as sessões retornadas pertencem ao estudante
-    const sessions = body.data.sessions ?? body.data
+    const sessions = body.data.data
     for (const s of sessions) {
       expect(s.studentId).toBe(student.id)
     }
@@ -95,7 +95,7 @@ describe('GET /api/v1/sessions', () => {
 
     expect(response.status).toBe(200)
     const body = await response.json()
-    const sessions = body.data.sessions ?? body.data
+    const sessions = body.data.data
     expect(Array.isArray(sessions)).toBe(true)
   })
 
@@ -113,7 +113,7 @@ describe('GET /api/v1/sessions', () => {
 
     expect(response.status).toBe(200)
     const body = await response.json()
-    const sessions = body.data.sessions ?? body.data
+    const sessions = body.data.data
     for (const s of sessions) {
       expect(s.status).toBe('SCHEDULED')
     }
@@ -149,7 +149,7 @@ describe('POST /api/v1/sessions (book)', () => {
     expect(dbSession!.studentId).toBe(student.id)
   })
 
-  it('retorna 400 quando estudante não tem créditos (CREDIT_050)', async () => {
+  it('retorna 402 quando estudante não tem créditos (BOOKING_005)', async () => {
     const slot = await createTestSlot({ startAt: getFutureDate(110) })
 
     const request = buildAuthRequest('/api/v1/sessions', studentNoCredits.id, 'STUDENT', {
@@ -158,7 +158,7 @@ describe('POST /api/v1/sessions (book)', () => {
     })
     const response = await POST(request)
 
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(402)
     const body = await response.json()
     expect(body.error).toBeDefined()
 

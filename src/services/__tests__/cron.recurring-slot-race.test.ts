@@ -90,7 +90,14 @@ describe('CronService.runRecurringBookings - re-check de ocupacao dentro da tran
     creditMocks.getBalance.mockResolvedValue(5);
     emailMocks.send.mockResolvedValue(undefined);
 
-    txMocks.queryRaw.mockResolvedValue([{ id: 'slot-1', version: 1 }]);
+    // `$queryRaw` da transacao serve dois SELECTs distintos: o `FOR UPDATE` do
+    // slot e a rechecagem de ocupacao externa (item 024). Discriminar pelo SQL
+    // e o unico jeito de nao devolver a linha do slot como se fosse ocupacao.
+    txMocks.queryRaw.mockImplementation(async (strings: TemplateStringsArray) =>
+      [...strings].join(' ').includes('external_busy_intervals')
+        ? []
+        : [{ id: 'slot-1', version: 1, startAt: slot.startAt, endAt: slot.endAt }],
+    );
     txMocks.executeRaw.mockResolvedValue(1);
     txMocks.consumeOrNullWithTx.mockResolvedValue({ batchIds: ['batch-1'] });
     txMocks.sessionCreate.mockResolvedValue({ id: 'session-1' });
@@ -126,9 +133,14 @@ describe('CronService.runRecurringBookings - re-check de ocupacao dentro da tran
 
   it('faz o re-check depois de tomar o lock do slot, nunca antes', async () => {
     const ordem: string[] = [];
-    txMocks.queryRaw.mockImplementation(async () => {
+    const slot = futureSlot();
+    txMocks.queryRaw.mockImplementation(async (strings: TemplateStringsArray) => {
+      if ([...strings].join(' ').includes('external_busy_intervals')) {
+        ordem.push('EXTERNAL');
+        return [];
+      }
       ordem.push('FOR_UPDATE');
-      return [{ id: 'slot-1', version: 1 }];
+      return [{ id: 'slot-1', version: 1, startAt: slot.startAt, endAt: slot.endAt }];
     });
     txMocks.sessionFindFirst.mockImplementation(async () => {
       ordem.push('RECHECK');
@@ -141,6 +153,9 @@ describe('CronService.runRecurringBookings - re-check de ocupacao dentro da tran
 
     await service.runRecurringBookings();
 
-    expect(ordem).toEqual(['FOR_UPDATE', 'RECHECK', 'CREATE']);
+    // A rechecagem externa (item 024) entra depois do re-check de ocupante e
+    // ainda antes do CAS/credito/create: nenhuma das duas pode rodar antes do
+    // `FOR UPDATE`, senao le estado que outra transacao ainda pode mudar.
+    expect(ordem).toEqual(['FOR_UPDATE', 'RECHECK', 'EXTERNAL', 'CREATE']);
   });
 });

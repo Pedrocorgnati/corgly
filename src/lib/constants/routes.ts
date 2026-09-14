@@ -56,6 +56,7 @@ export const ROUTES = {
   ADMIN_EMAIL_TEMPLATES: '/admin/emails/templates',
   ADMIN_SUPPORT: '/admin/support',
   ADMIN_HEALTH: '/admin/health',
+  ADMIN_GOOGLE_CALENDAR: '/admin/google-calendar',
   ADMIN_ACCOUNT_SECURITY: '/admin/account/security',
   ADMIN_FEEDBACK: (sessionId: string) => `/admin/feedback/${sessionId}`,
   ADMIN_STUDENT_NOTES: (id: string) => `/admin/students/${id}/notes`,
@@ -134,6 +135,10 @@ export const API = {
     CREDITS: '/api/v1/referrals/credits',
     ACCEPT: '/api/v1/referrals/accept',
   },
+  // Namespace google/calendar (item 019): nao leva prefixo /admin, fica no nivel superior.
+  GOOGLE_CALENDAR_CONNECT: '/api/v1/google/calendar/connect',
+  GOOGLE_CALENDAR_REVOKE: '/api/v1/google/calendar/revoke',
+  GOOGLE_CALENDAR_STATUS: '/api/v1/google/calendar/status',
   ADMIN: {
     AVAILABILITY: '/api/v1/admin/availability',
     DASHBOARD: '/api/v1/admin/dashboard',

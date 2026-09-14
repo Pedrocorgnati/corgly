@@ -237,3 +237,37 @@ describe('proxy: allowlist do pedido de magic-link', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('proxy: allowlist do callback OAuth do Google Calendar', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('GET anonimo para /api/v1/google/calendar/callback atravessa sem 401 e sem headers internos', async () => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq('/api/v1/google/calendar/callback?code=x&state=y', 'GET'));
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+    expect(forwarded(res, 'x-user-role')).toBeNull();
+  });
+
+  it.each([
+    // O namespace pai NAO entrou na lista: so o caminho completo do callback e
+    // publico, entao connect/revoke e rotas futuras continuam exigindo sessao.
+    '/api/v1/google/calendar',
+    '/api/v1/google/calendar/connect',
+    '/api/v1/google/calendar/revoke',
+    '/api/v1/google/calendar/sync',
+  ])('vizinha protegida %s sem sessao -> 401', async (path) => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq(path, 'POST'));
+    expect(res.status).toBe(401);
+  });
+});

@@ -58,6 +58,20 @@ export const BOOKING_RULES = {
   AUTO_CONFIRM_MINUTES: 15, // after session end
 } as const;
 
+/**
+ * Passo da grade de disponibilidade: largura, em minutos, de cada horario que
+ * `availabilityService.generateSlots` grava (`endAt = startAt + passo`).
+ *
+ * Ate 2026-09-11 este 50 vivia como literal local em tres arquivos. Quem EXIBE a
+ * duracao ao aluno (`SlotPicker`, `BookingConfirmModal`) nao consulta esta
+ * constante: le `endAt - startAt` do proprio horario via `slotDurationMinutes`.
+ *
+ * Nao confundir com `BOOKING_RULES.SESSION_DURATION_MINUTES` (55), que estima o fim
+ * da sessao em `src/actions/dashboard.ts`. Usar aquele valor como passo geraria
+ * aulas de 55 minutos.
+ */
+export const AVAILABILITY_SLOT_STEP_MINUTES = 50;
+
 // Timezone default
 export const DEFAULT_TIMEZONE = 'America/Sao_Paulo';
 

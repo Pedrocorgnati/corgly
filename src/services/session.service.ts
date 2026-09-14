@@ -10,6 +10,7 @@ import { EmailType, SupportedLanguage } from '@/types/enums';
 import { logger } from '@/lib/logger';
 import { SessionStatus } from '@/lib/constants/enums';
 import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
+import { hasActiveOverlapWithTx } from '@/services/external-busy.repository';
 import type {
   BookSessionInput,
   CancelSessionInput,
@@ -356,6 +357,14 @@ export class SessionService {
           throw new Error('SLOT_UNAVAILABLE');
         }
 
+        // Passo 2.5: Rechecagem de ocupacao externa sob o FOR UPDATE do Passo 1.
+        // A SQL vive no repositorio folha (`hasActiveOverlapWithTx`) porque os
+        // tres caminhos de reserva precisam do MESMO predicado meio-aberto —
+        // duplicar aqui deixaria os caminhos divergirem em silencio.
+        if (await hasActiveOverlapWithTx(tx, { startAt: slot.startAt, endAt: slot.endAt })) {
+          throw new Error('EXTERNAL_OCCUPANCY');
+        }
+
         // Passo 3: Verificar limite de sessões futuras
         const futureSessions = await tx.session.count({
           where: {
@@ -411,6 +420,13 @@ export class SessionService {
         }
         if (err.message === 'SLOT_UNAVAILABLE') {
           throw new AppError('SESSION_003', 'SLOT_UNAVAILABLE', 409);
+        }
+        if (err.message === 'EXTERNAL_OCCUPANCY') {
+          throw new AppError(
+            'SESSION_057',
+            'Horário indisponível por ocupação externa.',
+            409
+          );
         }
         if (err.message === 'MAX_FUTURE_SESSIONS') {
           throw new AppError('SESSION_004', 'Limite de sessões futuras atingido.', 422);
@@ -573,6 +589,14 @@ export class SessionService {
       if (!newSlot) throw new Error('SLOT_NOT_FOUND');
       if (newSlot.isBlocked) throw new Error('SLOT_UNAVAILABLE');
 
+      // Rechecagem de ocupacao externa no slot de DESTINO (item 024). Reagendar
+      // e agendar: vale a mesma janela nao-atomica entre a escrita do ledger e a
+      // projecao do `isBlocked`. `AppError` direto (e nao sentinel) porque este
+      // metodo nao tem catch de traducao — sentinel aqui viraria 500.
+      if (await hasActiveOverlapWithTx(tx, { startAt: newSlot.startAt, endAt: newSlot.endAt })) {
+        throw new AppError('SESSION_057', 'Horário indisponível por ocupação externa.', 409);
+      }
+
       const existingOnNewSlot = await tx.session.findFirst({
         where: {
           availabilitySlotId: data.newAvailabilitySlotId,
@@ -635,6 +659,15 @@ export class SessionService {
       const newSlot = newSlots[0];
       if (!newSlot) throw new AppError('SESSION_033', 'Slot de destino não encontrado.', 404);
       if (newSlot.isBlocked) throw new AppError('SESSION_034', 'Slot de destino está bloqueado.', 409);
+
+      // Rechecagem de ocupacao externa no slot de destino (item 024). O pedido
+      // ficou pendente esperando o admin — quanto mais tempo entre o pedido e a
+      // aprovacao, maior a chance de o horario ter sido ocupado no Google nesse
+      // meio-tempo. `SESSION_034` cobre bloqueio projetado; este cobre a janela
+      // em que o ledger ja vale e a projecao ainda nao rodou.
+      if (await hasActiveOverlapWithTx(tx, { startAt: newSlot.startAt, endAt: newSlot.endAt })) {
+        throw new AppError('SESSION_057', 'Horário indisponível por ocupação externa.', 409);
+      }
 
       const existingOnNewSlot = await tx.session.findFirst({
         where: {

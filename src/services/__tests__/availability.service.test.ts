@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AvailabilityService, SLOT_OCCUPYING_STATUSES } from '../availability.service';
 import { AppError } from '@/lib/errors';
 
@@ -12,6 +12,13 @@ const mockPrisma = vi.hoisted(() => ({
     createMany: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+  },
+  // Ledger de ocupacao externa (item 016): `generateSlots` o consulta antes do
+  // createMany. Entra no mock por model, como os demais; sem ele, os seis
+  // testes preexistentes de generateSlots quebram com `undefined is not a
+  // function` no primeiro await.
+  externalBusyInterval: {
+    findMany: vi.fn(),
   },
 }));
 
@@ -101,10 +108,33 @@ describe('AvailabilityService', () => {
   beforeEach(() => {
     service = new AvailabilityService();
     vi.clearAllMocks();
+    // Ledger vazio por default: a unica coisa que os casos preexistentes de
+    // generateSlots podem observar e a ausencia de consulta (caso travado em
+    // 'nao consulta o ledger quando nao ha slot novo').
+    mockPrisma.externalBusyInterval.findMany.mockResolvedValue([]);
   });
 
   // ── getAvailable ──
   describe('getAvailable', () => {
+    /**
+     * Congela so o `Date`: o piso de `getAvailable` depende do relogio (item 033) e
+     * os mocks do Prisma resolvem por microtask, que segue real.
+     */
+    function congelarRelogio(instante: string) {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(instante));
+    }
+
+    beforeEach(() => {
+      // Relogio ANTES das janelas dos casos preexistentes: o piso deles continua
+      // sendo o inicio do dia pedido, como quando foram escritos.
+      congelarRelogio('2026-02-20T12:00:00.000Z');
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('should query exactly the window received and return non-blocked slots without sessions', async () => {
       mockPrisma.availabilitySlot.findMany.mockResolvedValue([makeSlot()]);
 
@@ -114,6 +144,7 @@ describe('AvailabilityService', () => {
       // dias sobrevive dentro do servico.
       const [args] = mockPrisma.availabilitySlot.findMany.mock.calls[0];
       expect(args.where.startAt.gte).toEqual(new Date('2026-03-01T00:00:00.000Z'));
+      expect(args.where.startAt.gt).toBeUndefined();
       expect(args.where.startAt.lt).toEqual(new Date('2026-04-01T00:00:00.000Z'));
       expect(args.where.isBlocked).toBe(false);
       expect(args.where.sessions).toEqual({
@@ -146,6 +177,113 @@ describe('AvailabilityService', () => {
       const result = await service.getAvailable('2026-05-01', '2026-06-01');
       expect(result).toEqual([]);
     });
+
+    // Item 036 - trava de regressao da ocultacao para o aluno. O mock do Prisma nao
+    // aplica `where` sozinho: o `findMany` abaixo filtra as linhas pelo `where`
+    // recebido, como o banco faria, entao a exclusao so acontece se a consulta
+    // carregar os dois filtros. As linhas trazem `blockOrigin` e `sessions` de
+    // proposito: o shape devolvido ao aluno nao pode repassar nenhum dos dois.
+    it('exclui horario bloqueado pelo Google e horario de outro aluno, sem vazar blockOrigin nem sessao', async () => {
+      type LinhaDoBanco = ReturnType<typeof makeSlot> & {
+        blockOrigin: 'GOOGLE' | null;
+        sessions: Array<{ id: string; studentId: string; status: string }>;
+      };
+      type Consulta = {
+        where: { isBlocked: boolean; sessions: { none: { status: { in: string[] } } } };
+      };
+      const linhas: LinhaDoBanco[] = [
+        { ...makeSlot({ id: 'slot-livre' }), blockOrigin: null, sessions: [] },
+        { ...makeSlot({ id: 'slot-google', isBlocked: true }), blockOrigin: 'GOOGLE', sessions: [] },
+        {
+          ...makeSlot({ id: 'slot-outro-aluno' }),
+          blockOrigin: null,
+          sessions: [{ id: 'sessao-b', studentId: 'aluno-b', status: 'SCHEDULED' }],
+        },
+      ];
+      mockPrisma.availabilitySlot.findMany.mockImplementation(async ({ where }: Consulta) =>
+        linhas.filter(
+          (linha) =>
+            linha.isBlocked === where.isBlocked &&
+            !linha.sessions.some((sessao) => where.sessions.none.status.in.includes(sessao.status)),
+        ),
+      );
+
+      const result = await service.getAvailable('2026-03-01', '2026-04-01');
+
+      expect(result.map((slot) => slot.id)).toEqual(['slot-livre']);
+      const [args] = mockPrisma.availabilitySlot.findMany.mock.calls[0];
+      expect(args.where.isBlocked).toBe(false);
+      expect(args.where.sessions.none.status.in).toContain('SCHEDULED');
+      for (const slot of result) {
+        expect(Object.keys(slot).sort()).toEqual(['endAt', 'id', 'isBlocked', 'startAt']);
+        expect(slot).not.toHaveProperty('blockOrigin');
+        expect(slot).not.toHaveProperty('session');
+        expect(slot).not.toHaveProperty('sessions');
+        expect(slot).not.toHaveProperty('studentName');
+      }
+    });
+
+    // O mock do Prisma nao filtra por `where`: o que prova o piso e a FORMA da
+    // consulta. O corte observado pela tela esta travado em sessions-apifetch.test.ts.
+    describe('piso no agora (item 033)', () => {
+      const MEIO_DO_DIA = '2026-03-21T15:20:00.000Z';
+
+      it('consulta no meio do dia usa o agora como piso exclusivo, nao o inicio do dia', async () => {
+        congelarRelogio(MEIO_DO_DIA);
+        mockPrisma.availabilitySlot.findMany.mockResolvedValue([
+          makeSlot({
+            id: 'slot-tarde',
+            startAt: new Date('2026-03-21T17:00:00Z'),
+            endAt: new Date('2026-03-21T17:50:00Z'),
+          }),
+        ]);
+
+        const result = await service.getAvailable('2026-03-21', '2026-03-28');
+
+        const [args] = mockPrisma.availabilitySlot.findMany.mock.calls[0];
+        expect(args.where.startAt).toEqual({
+          gt: new Date(MEIO_DO_DIA),
+          lt: new Date('2026-03-28T00:00:00.000Z'),
+        });
+        expect(args.where.startAt.gte).toBeUndefined();
+        expect(result.map((s) => s.id)).toEqual(['slot-tarde']);
+      });
+
+      it('mes corrente pedido pelo calendario (dia 1) corta tambem os dias ja passados', async () => {
+        congelarRelogio(MEIO_DO_DIA);
+        mockPrisma.availabilitySlot.findMany.mockResolvedValue([]);
+
+        await service.getAvailable('2026-03-01', '2026-04-01');
+
+        const [args] = mockPrisma.availabilitySlot.findMany.mock.calls[0];
+        expect(args.where.startAt).toEqual({
+          gt: new Date(MEIO_DO_DIA),
+          lt: new Date('2026-04-01T00:00:00.000Z'),
+        });
+      });
+
+      it('janela que comeca em dia futuro mantem o inicio do dia como piso inclusivo', async () => {
+        congelarRelogio(MEIO_DO_DIA);
+        mockPrisma.availabilitySlot.findMany.mockResolvedValue([]);
+
+        await service.getAvailable('2026-03-22', '2026-03-29');
+
+        const [args] = mockPrisma.availabilitySlot.findMany.mock.calls[0];
+        expect(args.where.startAt).toEqual({
+          gte: new Date('2026-03-22T00:00:00.000Z'),
+          lt: new Date('2026-03-29T00:00:00.000Z'),
+        });
+      });
+
+      it('janela inteira no passado devolve lista vazia sem consultar o banco', async () => {
+        congelarRelogio(MEIO_DO_DIA);
+
+        const result = await service.getAvailable('2026-02-01', '2026-03-01');
+
+        expect(result).toEqual([]);
+        expect(mockPrisma.availabilitySlot.findMany).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // ── generateSlots ──
@@ -168,6 +306,11 @@ describe('AvailabilityService', () => {
     beforeEach(() => {
       mockPrisma.availabilitySlot.findMany.mockReset();
       mockPrisma.availabilitySlot.createMany.mockReset();
+      // Consulta de sobreposicao (item 017): segunda chamada de findMany em
+      // generateSlots. Default vazio cobre os casos preexistentes, que so
+      // observam a consulta de deduplicacao (primeira chamada); os casos do
+      // item 017 armam ...Once adicional.
+      mockPrisma.availabilitySlot.findMany.mockResolvedValue([]);
     });
 
     it('emite um parametro por startAt distinto na consulta de deduplicacao', async () => {
@@ -185,7 +328,9 @@ describe('AvailabilityService', () => {
         timezone: 'America/Sao_Paulo',
       });
 
-      expect(mockPrisma.availabilitySlot.findMany).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.availabilitySlot.findMany).toHaveBeenCalledTimes(2);
+      // Primeira chamada: deduplicacao por startAt. A segunda e a consulta de
+      // sobreposicao do item 017, fora do escopo deste caso.
       const consulta = mockPrisma.availabilitySlot.findMany.mock.calls[0][0] as ConsultaDedup;
       const parametros = consulta.where.startAt.in;
 
@@ -305,6 +450,238 @@ describe('AvailabilityService', () => {
       expect(result.skipped).toBeGreaterThan(0);
       expect(mockPrisma.availabilitySlot.createMany).not.toHaveBeenCalled();
     });
+
+    // ── Ocupacao externa vigente (item 016) ──
+    //
+    // O aceite e sobre o ARGUMENTO do createMany (a linha que nasce), nao sobre
+    // o retorno. A ocupacao de cada caso e derivada da propria janela consultada,
+    // como nos casos de deduplicacao: `localTimeToUtc` resolve offset via Intl
+    // sobre a data corrente, entao literal de UTC tornaria o teste dependente do
+    // dia em que ele roda.
+    describe('ocupacao externa vigente', () => {
+      it('slot dentro da ocupacao vai ao createMany bloqueado com origem GOOGLE, vizinho vai livre', async () => {
+        mockPrisma.availabilitySlot.findMany.mockResolvedValueOnce([]);
+        // Ocupacao cobrindo so o PRIMEIRO slot do lote (25 min dentro dos 50).
+        mockPrisma.externalBusyInterval.findMany.mockImplementationOnce(async (args: {
+          where: { startAt: { lt: Date }; endAt: { gt: Date } };
+        }) => {
+          const inicio = args.where.endAt.gt;
+          return [
+            {
+              id: 'int-1',
+              externalEventId: 'evt-1',
+              startAt: inicio,
+              endAt: new Date(inicio.getTime() + 25 * 60 * 1000),
+              revokedAt: null,
+              syncedAt: inicio,
+              createdAt: inicio,
+              updatedAt: inicio,
+            },
+          ];
+        });
+        mockPrisma.availabilitySlot.createMany.mockResolvedValueOnce({ count: 2 });
+
+        // 09:00-10:40 produz dois slots de 50 min: 09:00 e 09:50.
+        await service.generateSlots({
+          days: [1],
+          ranges: [{ start: '09:00', end: '10:40' }],
+          weeksAhead: 1,
+          timezone: 'America/Sao_Paulo',
+        });
+
+        const insercao = mockPrisma.availabilitySlot.createMany.mock.calls[0][0] as {
+          data: Array<{ startAt: Date; endAt: Date; isBlocked?: boolean; blockOrigin?: string }>;
+          skipDuplicates: boolean;
+        };
+        expect(insercao.data).toHaveLength(2);
+
+        const [coberto, livre] = insercao.data;
+        expect(coberto.isBlocked).toBe(true);
+        expect(coberto.blockOrigin).toBe('GOOGLE');
+        // Linha fora da ocupacao nasce exatamente como antes da existencia do ledger.
+        expect(livre.isBlocked).toBeUndefined();
+        expect(livre.blockOrigin).toBeUndefined();
+        expect(insercao.skipDuplicates).toBe(true);
+      });
+
+      it('created e skipped continuam somando totalPedido quando ha cobertura', async () => {
+        mockPrisma.availabilitySlot.findMany.mockResolvedValueOnce([]);
+        mockPrisma.externalBusyInterval.findMany.mockImplementationOnce(async (args: {
+          where: { endAt: { gt: Date } };
+        }) => {
+          const inicio = args.where.endAt.gt;
+          return [
+            {
+              id: 'int-1',
+              externalEventId: 'evt-1',
+              startAt: inicio,
+              endAt: new Date(inicio.getTime() + 25 * 60 * 1000),
+              revokedAt: null,
+              syncedAt: inicio,
+              createdAt: inicio,
+              updatedAt: inicio,
+            },
+          ];
+        });
+        mockPrisma.availabilitySlot.createMany.mockResolvedValueOnce({ count: 2 });
+
+        const result = await service.generateSlots({
+          days: [1],
+          ranges: [{ start: '09:00', end: '10:40' }],
+          weeksAhead: 1,
+          timezone: 'America/Sao_Paulo',
+        });
+
+        // Cobrir slot nao muda a contabilidade: a linha coberta continua sendo
+        // linha criada, e o professor continua vendo o mesmo total.
+        expect(result.created).toBe(2);
+        expect(result.created + result.skipped).toBe(2);
+      });
+
+      it('ledger vazio nao muda nada do comportamento atual', async () => {
+        mockPrisma.availabilitySlot.findMany.mockResolvedValueOnce([]);
+        mockPrisma.externalBusyInterval.findMany.mockResolvedValueOnce([]);
+        mockPrisma.availabilitySlot.createMany.mockResolvedValueOnce({ count: 2 });
+
+        await service.generateSlots({
+          days: [1],
+          ranges: [{ start: '09:00', end: '10:40' }],
+          weeksAhead: 1,
+          timezone: 'America/Sao_Paulo',
+        });
+
+        const insercao = mockPrisma.availabilitySlot.createMany.mock.calls[0][0] as {
+          data: Array<{ startAt: Date; endAt: Date; isBlocked?: boolean; blockOrigin?: string }>;
+        };
+        for (const linha of insercao.data) {
+          expect(linha.isBlocked).toBeUndefined();
+          expect(linha.blockOrigin).toBeUndefined();
+        }
+      });
+
+      it('nao consulta o ledger quando nao ha slot novo (tudo ja existia)', async () => {
+        mockPrisma.availabilitySlot.findMany.mockImplementationOnce(
+          async (args: ConsultaDedup) => args.where.startAt.in.map((startAt) => ({ startAt })),
+        );
+
+        await service.generateSlots({
+          days: [1],
+          ranges: [{ start: '09:00', end: '12:00' }],
+          weeksAhead: 1,
+          timezone: 'America/Sao_Paulo',
+        });
+
+        expect(mockPrisma.externalBusyInterval.findMany).not.toHaveBeenCalled();
+        expect(mockPrisma.availabilitySlot.createMany).not.toHaveBeenCalled();
+      });
+
+      it('consulta o ledger na janela [min(startAt), max(endAt)] do lote, nao na janela pedida', async () => {
+        mockPrisma.availabilitySlot.findMany.mockResolvedValueOnce([]);
+        mockPrisma.externalBusyInterval.findMany.mockResolvedValueOnce([]);
+        mockPrisma.availabilitySlot.createMany.mockResolvedValueOnce({ count: 2 });
+
+        await service.generateSlots({
+          days: [1],
+          ranges: [{ start: '09:00', end: '10:40' }],
+          weeksAhead: 1,
+          timezone: 'America/Sao_Paulo',
+        });
+
+        const consulta = mockPrisma.externalBusyInterval.findMany.mock.calls[0][0] as {
+          where: {
+            revokedAt: null;
+            startAt: { lt: Date };
+            endAt: { gt: Date };
+          };
+        };
+        expect(consulta.where.revokedAt).toBeNull();
+        const insercao = mockPrisma.availabilitySlot.createMany.mock.calls[0][0] as {
+          data: Array<{ startAt: Date; endAt: Date }>;
+        };
+        const inicios = insercao.data.map((s) => s.startAt.getTime());
+        const fins = insercao.data.map((s) => s.endAt.getTime());
+        expect(consulta.where.endAt.gt.getTime()).toBe(Math.min(...inicios));
+        expect(consulta.where.startAt.lt.getTime()).toBe(Math.max(...fins));
+      });
+    });
+
+    // ── Sobreposicao de intervalo (item 017) ──
+    //
+    // Duas fontes de rejeicao, ambas observadas no argumento do createMany:
+    // candidato sobreposto a outro candidato do mesmo lote e candidato
+    // sobreposto a slot ja bloqueado / com sessao viva lido do banco. A
+    // ocupacao externa (LEDGER) nao rejeita: faz o slot nascer bloqueado, e
+    // os casos dela ficam na suite do item 016.
+    describe('sobreposicao de intervalo (item 017)', () => {
+      it('rejeita candidato sobreposto a outro candidato do mesmo lote', async () => {
+        mockPrisma.availabilitySlot.findMany.mockResolvedValueOnce([]);
+        mockPrisma.availabilitySlot.createMany.mockResolvedValueOnce({ count: 2 });
+
+        // 09:00-10:40 gera 09:00 e 09:50; a faixa 10:00-11:00 gera 10:00,
+        // que intersecta 09:50-10:40 e precisa cair para skipped.
+        const result = await service.generateSlots({
+          days: [1],
+          ranges: [
+            { start: '09:00', end: '10:40' },
+            { start: '10:00', end: '11:00' },
+          ],
+          weeksAhead: 1,
+          timezone: 'America/Sao_Paulo',
+        });
+
+        expect(result.created).toBe(2);
+        expect(result.skipped).toBe(1);
+
+        const insercao = mockPrisma.availabilitySlot.createMany.mock.calls[0][0] as InsercaoLote;
+        expect(insercao.data).toHaveLength(2);
+        // Nenhum par sobreposto sobrevive ao lote enviado ao banco.
+        for (const a of insercao.data) {
+          for (const b of insercao.data) {
+            if (a === b) continue;
+            const sobreposto = a.startAt < b.endAt && a.endAt > b.startAt;
+            expect(sobreposto).toBe(false);
+          }
+        }
+      });
+
+      it('rejeita candidato sobreposto a slot bloqueado existente de startAt distinto', async () => {
+        let solicitados: Date[] = [];
+        // Primeira chamada: deduplicacao. Segunda: consulta de sobreposicao,
+        // com um slot bloqueado cobrindo os 25 primeiros minutos da janela,
+        // derivada do proprio argumento como nos casos do ledger.
+        mockPrisma.availabilitySlot.findMany.mockImplementationOnce(async (args: ConsultaDedup) => {
+          solicitados = args.where.startAt.in;
+          return [];
+        });
+        mockPrisma.availabilitySlot.findMany.mockImplementationOnce(
+          async (args: { where: { endAt: { gt: Date } } }) => {
+            const inicio = args.where.endAt.gt;
+            return [
+              {
+                startAt: inicio,
+                endAt: new Date(inicio.getTime() + 25 * 60 * 1000),
+              },
+            ];
+          },
+        );
+        mockPrisma.availabilitySlot.createMany.mockResolvedValueOnce({ count: 1 });
+
+        // 09:00-11:00 gera 09:00 e 09:50; o bloqueio cobre so o primeiro.
+        const result = await service.generateSlots({
+          days: [1],
+          ranges: [{ start: '09:00', end: '11:00' }],
+          weeksAhead: 1,
+          timezone: 'America/Sao_Paulo',
+        });
+
+        expect(result.created).toBe(1);
+        expect(result.skipped).toBe(1);
+
+        const insercao = mockPrisma.availabilitySlot.createMany.mock.calls[0][0] as InsercaoLote;
+        expect(insercao.data).toHaveLength(1);
+        expect(insercao.data[0].startAt.getTime()).not.toBe(solicitados[0].getTime());
+      });
+    });
   });
 
   // ── blockSlot ──
@@ -388,6 +765,7 @@ describe('AvailabilityService', () => {
       } catch (err) {
         expect((err as AppError).code).toBe('AVAILABILITY_051');
         expect((err as AppError).status).toBe(409);
+        expect((err as AppError).details).toEqual({ sessionId: 'session-1' });
       }
       expect(tx.$executeRaw).not.toHaveBeenCalled();
     });

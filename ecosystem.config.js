@@ -88,5 +88,21 @@ module.exports = {
       error_file: 'logs/cron-autoconfirm-error.log',
       out_file: 'logs/cron-autoconfirm-out.log',
     },
+
+    // ── Cron: Google Calendar Reconciliation (a cada hora) ───────────────────────
+    {
+      name: 'corgly-cron-google-calendar-reconciliation',
+      script: 'scripts/trigger-cron.js',
+      cron_restart: '0 * * * *',
+      watch: false,
+      autorestart: false,
+      env: {
+        NODE_ENV: 'production',
+        JOB: 'google-calendar-reconciliation',
+      },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: 'logs/cron-google-calendar-reconciliation-error.log',
+      out_file: 'logs/cron-google-calendar-reconciliation-out.log',
+    },
   ],
 }

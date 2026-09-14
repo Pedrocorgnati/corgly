@@ -148,6 +148,8 @@ export const EmailType = {
   MAGIC_LINK: 'MAGIC_LINK',
   // Added by T-055 (AD-33: broadcasts de marketing + logs de envio em massa)
   MARKETING_BROADCAST: 'MARKETING_BROADCAST',
+  // Added by 025 (conflito entre ocupacao externa e aula ja vendida)
+  EXTERNAL_BUSY_CONFLICT: 'EXTERNAL_BUSY_CONFLICT',
 } as const;
 export type EmailType = (typeof EmailType)[keyof typeof EmailType];
 

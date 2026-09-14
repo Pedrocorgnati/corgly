@@ -41,6 +41,22 @@ vi.mock('sonner', () => ({
 
 /** Recorte das chaves consumidas pelo card (fragmento i18n `fx-5.json`). */
 const messages = {
+  calendar: {
+    cancel: {
+      dialogLabel: 'Cancelar aula',
+      title: 'Cancelar aula',
+      lateTitle: 'Cancelamento tardio',
+      lateDesc: 'Cancelamentos com menos de {hours} horas podem não gerar reembolso.',
+      refundNotice: 'O crédito será devolvido.',
+      reasonLabel: 'Motivo',
+      reasonPlaceholder: 'Conte o motivo do cancelamento',
+      back: 'Voltar',
+      cancelling: 'Cancelando...',
+      submit: 'Confirmar cancelamento',
+      successToast: 'Aula cancelada',
+      errorToast: 'Não foi possível cancelar a aula',
+    },
+  },
   dashboard: {
     nextSessionCard: {
       title: 'Próxima aula',

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { PAGINATION } from '@/lib/constants';
 import { History } from 'lucide-react';
@@ -6,6 +7,9 @@ import { getSessions } from '@/actions/sessions';
 import { HistoryClient } from './history-client';
 import { DocumentSearch } from '@/components/session/DocumentSearch';
 import { PageWrapper } from '@/components/shared';
+import { getAuthUser } from '@/lib/data/auth';
+import { ROUTES } from '@/lib/constants/routes';
+import { getCanonicalTimezone } from '@/lib/canonical-timezone';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('history');
@@ -30,10 +34,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const page = Number(params.page) || 1;
   const status = params.status || undefined;
 
-  const [t, sessions] = await Promise.all([
+  const [t, sessions, user, adminTimezone] = await Promise.all([
     getTranslations('history'),
     getSessions({ page, limit: PAGINATION.STUDENT_HISTORY, status }),
+    getAuthUser(),
+    getCanonicalTimezone(),
   ]);
+  if (!user) redirect(ROUTES.LOGIN);
 
   return (
     <PageWrapper data-testid="page-history" className="max-w-4xl">
@@ -53,6 +60,8 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
         sessions={sessions}
         currentPage={page}
         currentStatus={status ?? null}
+        studentTimezone={user.timezone}
+        adminTimezone={adminTimezone}
       />
     </PageWrapper>
   );

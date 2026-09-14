@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
+import type { OwnReservedSlot } from '@/actions/sessions';
 
 /**
  * Ate 2026-09-07 os nomes de mes e de dia da semana eram duas constantes de
@@ -49,6 +50,12 @@ interface CalendarViewProps {
   error?: string | null;
   /** Repete a busca sem recarregar a rota; normalmente o `refresh` do hook. */
   onRetry?: () => void;
+  /**
+   * Horarios que o proprio aluno ja reservou, por dia civil (item 036). Ganham
+   * marcador proprio e NUNCA contam como horario disponivel. Opcional: sem a prop
+   * (reagendamento, admin) a grade fica como antes, sem a legenda extra.
+   */
+  ownSlotsByDate?: Record<string, OwnReservedSlot[]>;
 }
 
 export function CalendarView({
@@ -62,6 +69,7 @@ export function CalendarView({
   isLoading,
   error,
   onRetry,
+  ownSlotsByDate,
 }: CalendarViewProps) {
   // Ate 2026-09-07 esta copy era portugues cravado e ignorava o idioma escolhido
   // pelo aluno.
@@ -172,7 +180,13 @@ export function CalendarView({
           const dateKey = formatDateKey(day);
           const past = isPast(day);
           const todayMark = isToday(day);
-          const hasSlots = !past && (slotsByDate[dateKey]?.length ?? 0) > 0;
+          const ownSlots = ownSlotsByDate?.[dateKey] ?? [];
+          const ownIds = new Set(ownSlots.map((slot) => slot.id));
+          // So horario LIVRE conta como disponivel: um id que chegue nas duas
+          // listas (leituras fora de ordem) e reserva propria, nao oferta.
+          const freeCount = (slotsByDate[dateKey] ?? []).filter((slot) => !ownIds.has(slot.id)).length;
+          const hasSlots = !past && freeCount > 0;
+          const hasOwn = !past && ownSlots.length > 0;
           const isSelected = selectedDate === dateKey;
           // Montado por juncao em vez de uma chave unica com tres buracos: cada
           // pedaco e opcional, e o separador some junto com ele.
@@ -180,6 +194,7 @@ export function CalendarView({
             todayMark ? t('today') : null,
             dayFormatter.format(new Date(currentYear, currentMonth, day)),
             hasSlots ? t('slotsAvailableShort') : null,
+            hasOwn ? t('ownReservedShort') : null,
           ]
             .filter(Boolean)
             .join(', ');
@@ -202,13 +217,27 @@ export function CalendarView({
               )}
             >
               <span>{day}</span>
-              {hasSlots && (
-                <span
-                  className={cn(
-                    'w-1.5 h-1.5 rounded-full mt-0.5',
-                    isSelected ? 'bg-primary-foreground' : 'bg-emerald-500',
+              {(hasSlots || hasOwn) && (
+                <span className="flex items-center gap-0.5 mt-0.5">
+                  {hasSlots && (
+                    <span
+                      data-testid={`calendar-view-day-available-${dateKey}`}
+                      className={cn(
+                        'w-1.5 h-1.5 rounded-full',
+                        isSelected ? 'bg-primary-foreground' : 'bg-emerald-500',
+                      )}
+                    />
                   )}
-                />
+                  {hasOwn && (
+                    <span
+                      data-testid={`calendar-view-day-own-${dateKey}`}
+                      className={cn(
+                        'w-1.5 h-1.5 rounded-full border',
+                        isSelected ? 'border-primary-foreground' : 'border-primary',
+                      )}
+                    />
+                  )}
+                </span>
               )}
             </button>
           );
@@ -219,6 +248,12 @@ export function CalendarView({
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
         {t('legend')}
       </p>
+      {ownSlotsByDate && (
+        <p className="text-xs text-muted-foreground mt-1 text-center flex items-center justify-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full border border-primary inline-block" />
+          {t('ownLegend')}
+        </p>
+      )}
     </div>
   );
 }

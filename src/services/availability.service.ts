@@ -1,10 +1,14 @@
 import { prisma } from '@/lib/prisma';
+import { getCanonicalTimezone, localTimeToUtc } from '@/lib/canonical-timezone';
 import { AppError } from '@/lib/errors';
-import { SessionStatus } from '@/lib/constants/enums';
+import { AVAILABILITY_SLOT_STEP_MINUTES } from '@/lib/constants';
+import { SLOT_OCCUPYING_STATUSES } from '@/lib/bookings/slot-occupying-statuses';
 import type { GenerateSlotsInput } from '@/schemas/availability.schema';
 import type { BlockOrigin } from '@prisma/client';
-
-const SESSION_DURATION_MINUTES = 50;
+// Repositorio FOLHA do ledger (item 016): importar so ele, nunca o servico de
+// projecao — `external-busy.service` importa ESTE arquivo, e importa-lo de
+// volta reabriria o ciclo que a separacao em camadas existe para evitar.
+import { listActiveOverlapping, cobre, type Intervalo } from './external-busy.repository';
 
 /**
  * Origem que um chamador PODE pedir ao bloquear ou desbloquear.
@@ -21,30 +25,11 @@ function outraOrigem(origin: BlockRequestOrigin): BlockRequestOrigin {
 }
 
 /**
- * Status em que uma `Session` ainda OCUPA o `AvailabilitySlot`.
- *
- * Lista POSITIVA de proposito (fail-closed). So os dois cancelamentos
- * (`CANCELLED_BY_STUDENT`, `CANCELLED_BY_ADMIN`) devolvem o horario ao pool;
- * qualquer outro estado — inclusive um status novo que venha a ser adicionado ao
- * enum — mantem o slot ocupado ate alguem decidir o contrario explicitamente.
- * Uma lista negativa (`notIn: [cancelados]`) faria o oposto: status futuro
- * liberaria o slot em silencio e permitiria dupla reserva.
- *
- * Desde a remocao do `@unique` de `Session.availabilitySlotId`, esta constante e
- * a definicao operacional de "slot ocupado" em toda a base. O banco nao garante
- * mais no-maximo-uma-sessao-viva-por-slot; quem garante e esta lista somada a
- * transacao SERIALIZABLE com `SELECT ... FOR UPDATE` no slot e CAS em
- * `availability_slots.version` (ver `SessionService.create`).
+ * Definicao operacional de "slot ocupado". Mora em
+ * `@/lib/bookings/slot-occupying-statuses` (item 036) e continua reexportada daqui
+ * para os importadores do servico.
  */
-export const SLOT_OCCUPYING_STATUSES: readonly SessionStatus[] = [
-  SessionStatus.SCHEDULED,
-  SessionStatus.IN_PROGRESS,
-  SessionStatus.COMPLETED,
-  SessionStatus.NO_SHOW_STUDENT,
-  SessionStatus.NO_SHOW_ADMIN,
-  SessionStatus.INTERRUPTED,
-  SessionStatus.RESCHEDULE_PENDING,
-];
+export { SLOT_OCCUPYING_STATUSES };
 
 /**
  * Erros de CONTENCAO do driver, distintos da perda de CAS.
@@ -150,51 +135,6 @@ async function withContentionMapping<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Converte "HH:mm" + Date (UTC midnight) + timezone offset → UTC Date */
-function localTimeToUtc(date: Date, timeHHmm: string, ianaTimezone: string): Date {
-  const [hours, minutes] = timeHHmm.split(':').map(Number);
-
-  // Construir string ISO local sem offset e usar Intl para calcular offset real
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hh = String(hours).padStart(2, '0');
-  const mm = String(minutes).padStart(2, '0');
-
-  // Usa Intl.DateTimeFormat para descobrir o offset do timezone na data/hora dada
-  const localIso = `${year}-${month}-${day}T${hh}:${mm}:00`;
-  const probe = new Date(`${localIso}Z`); // Trata como UTC temporariamente
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: ianaTimezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(probe);
-  const getPart = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
-
-  const tzYear = getPart('year');
-  const tzMonth = getPart('month') - 1;
-  const tzDay = getPart('day');
-  const tzHour = getPart('hour') % 24; // hora12:false pode retornar 24 para meia-noite
-  const tzMinute = getPart('minute');
-  const tzSecond = getPart('second');
-
-  // Offset = UTC epoch da probe - epoch local interpretado como UTC
-  const localAsUtcMs = Date.UTC(tzYear, tzMonth, tzDay, tzHour, tzMinute, tzSecond);
-  const offsetMs = probe.getTime() - localAsUtcMs;
-
-  // Hora local desejada → UTC
-  const desiredLocalMs = Date.UTC(year, date.getUTCMonth(), date.getUTCDate(), hours, minutes, 0);
-  return new Date(desiredLocalMs + offsetMs);
-}
-
 /** Retorna a data UTC correspondente ao início do dia (00:00 UTC) para N dias a partir de hoje */
 function utcDatePlusDays(daysFromNow: number): Date {
   const d = new Date();
@@ -206,6 +146,15 @@ function utcDatePlusDays(daysFromNow: number): Date {
 export class AvailabilityService {
   /**
    * Retorna slots disponíveis (não bloqueados, sem sessão associada) na janela recebida.
+   *
+   * O piso da janela e o MAIOR entre o inicio do dia pedido (00:00 UTC de `from`) e o
+   * instante atual (item 033). Com o piso so no inicio do dia, uma consulta feita no
+   * meio do dia devolvia os horarios de hoje que ja passaram, e o calendario do aluno
+   * os listava clicaveis ate `SessionService.create` recusar com `SESSION_006`. Quando
+   * o piso e o agora ele e EXCLUSIVO (`gt`), espelhando a guarda `slot.startAt <= new
+   * Date()` da reserva: horario que comeca exatamente agora ja nao e reservavel e nao
+   * pode ser oferecido. Janela inteira no passado nao vai ao banco.
+   *
    * @param from ISO date string "YYYY-MM-DD" — início da janela (inclusivo)
    * @param untilExclusive ISO date string "YYYY-MM-DD" — limite superior exclusivo da janela
    */
@@ -219,10 +168,16 @@ export class AvailabilityService {
   > {
     const fromDate = new Date(`${from}T00:00:00.000Z`);
     const untilDate = new Date(`${untilExclusive}T00:00:00.000Z`);
+    const agora = new Date();
+
+    if (untilDate <= agora) return [];
+
+    const startAt =
+      fromDate > agora ? { gte: fromDate, lt: untilDate } : { gt: agora, lt: untilDate };
 
     const slots = await prisma.availabilitySlot.findMany({
       where: {
-        startAt: { gte: fromDate, lt: untilDate },
+        startAt,
         isBlocked: false,
         sessions: { none: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } },
       },
@@ -244,7 +199,9 @@ export class AvailabilityService {
    * Deliberadamente NÃO aplica os dois filtros de `getAvailable`
    * (`isBlocked: false` e `sessions: { none: ... }`): o painel do professor
    * precisa justamente do que aquele método remove — sem isso a cor por status
-   * do calendário e o botão de desbloquear do editor ficam sem dado.
+   * do calendário e o botão de desbloquear do editor ficam sem dado. Tambem nao
+   * aplica o piso no agora (item 033): o professor precisa ver os horarios de hoje
+   * que ja passaram, com a sessao concluida ou o no-show que ocupou cada um.
    *
    * @param from ISO date string "YYYY-MM-DD" — início da janela (inclusivo)
    * @param untilExclusive ISO date string "YYYY-MM-DD" — limite superior exclusivo
@@ -298,6 +255,55 @@ export class AvailabilityService {
   }
 
   /**
+   * Ocupacoes EXISTENTES que intersectam a janela recebida, pelo predicado de
+   * sobreposicao meio-aberto `startAt < fim AND endAt > inicio` (item 017).
+   *
+   * Cobre as duas fontes que `generateSlots` precisa para decidir bloqueio:
+   *  - `SLOT`: slots bloqueados (`isBlocked`) ou com sessao viva
+   *    (`SLOT_OCCUPYING_STATUSES`), com `startAt` distinto do candidato;
+   *  - `LEDGER`: ocupacoes externas vigentes do item 016, reaproveitando
+   *    `listActiveOverlapping` do repositorio folha.
+   *
+   * Nao cola em `startAt` exato: um evento ocupado de duracao arbitraria
+   * intersecta (e portanto bloqueia) todo slot que atravessa, nao apenas o
+   * slot cujo inicio coincide com o inicio do evento. O discriminador
+   * `origem` separa as fontes porque `generateSlots` trata cada uma de forma
+   * distinta: SLOT rejeita o candidato, LEDGER faz o slot nascer bloqueado.
+   */
+  async listOccupiedOverlapping(
+    from: Date,
+    untilExclusive: Date,
+  ): Promise<Array<Intervalo & { origem: 'SLOT' | 'LEDGER' }>> {
+    const [slotsOcupados, ledger] = await Promise.all([
+      prisma.availabilitySlot.findMany({
+        where: {
+          startAt: { lt: untilExclusive },
+          endAt: { gt: from },
+          OR: [
+            { isBlocked: true },
+            { sessions: { some: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } } },
+          ],
+        },
+        select: { startAt: true, endAt: true },
+      }),
+      listActiveOverlapping(from, untilExclusive),
+    ]);
+
+    return [
+      ...slotsOcupados.map((s) => ({
+        startAt: s.startAt,
+        endAt: s.endAt,
+        origem: 'SLOT' as const,
+      })),
+      ...ledger.map((l) => ({
+        startAt: l.startAt,
+        endAt: l.endAt,
+        origem: 'LEDGER' as const,
+      })),
+    ];
+  }
+
+  /**
    * Gera slots de disponibilidade para as próximas N semanas.
    * Slots existentes (por startAt) são ignorados (upsert semântica: skip duplicates).
    * ADMIN only — validar na rota.
@@ -306,7 +312,7 @@ export class AvailabilityService {
     data: GenerateSlotsInput,
   ): Promise<{ created: number; skipped: number }> {
     const { days, ranges, weeksAhead, timezone } = data;
-    const tz = timezone ?? 'America/Sao_Paulo';
+    const tz = timezone ?? (await getCanonicalTimezone());
 
     const slotsToCreate: Array<{ startAt: Date; endAt: Date }> = [];
 
@@ -321,17 +327,19 @@ export class AvailabilityService {
         const targetDate = utcDatePlusDays(daysUntil + week * 7);
 
         for (const range of ranges) {
-          // Gera slots de SESSION_DURATION_MINUTES entre range.start e range.end
+          // Gera slots de AVAILABILITY_SLOT_STEP_MINUTES entre range.start e range.end.
+          // Este e o unico lugar que PRODUZ `endAt`; quem exibe duracao le `endAt`.
           const rangeStart = localTimeToUtc(targetDate, range.start, tz);
           const rangeEnd = localTimeToUtc(targetDate, range.end, tz);
+          const stepMs = AVAILABILITY_SLOT_STEP_MINUTES * 60 * 1000;
 
           let cursor = rangeStart.getTime();
-          while (cursor + SESSION_DURATION_MINUTES * 60 * 1000 <= rangeEnd.getTime()) {
+          while (cursor + stepMs <= rangeEnd.getTime()) {
             slotsToCreate.push({
               startAt: new Date(cursor),
-              endAt: new Date(cursor + SESSION_DURATION_MINUTES * 60 * 1000),
+              endAt: new Date(cursor + stepMs),
             });
-            cursor += SESSION_DURATION_MINUTES * 60 * 1000;
+            cursor += stepMs;
           }
         }
       }
@@ -347,7 +355,7 @@ export class AvailabilityService {
     if (slotsToCreate.length === 0) {
       throw new AppError(
         'AVAILABILITY_070',
-        `Nenhum horário de ${SESSION_DURATION_MINUTES} minutos cabe nas faixas informadas.`,
+        `Nenhum horário de ${AVAILABILITY_SLOT_STEP_MINUTES} minutos cabe nas faixas informadas.`,
         400,
       );
     }
@@ -367,27 +375,83 @@ export class AvailabilityService {
     }
     const slotsUnicos = Array.from(porStartAt.values());
 
+    // Faixas sobrepostas no MESMO pedido geram candidatos de `startAt` distinto
+    // que o dedupe acima nao coleta: 09:00-10:40 e 10:00-11:00 produzem
+    // 09:50-10:40 e 10:00-10:50, duas linhas livres sobrepostas sem que nada
+    // no codigo detectasse (item 017). Varredura em ordem de geracao rejeitando
+    // o candidato que intersecta um ja aceito; o predicado meio-aberto `cobre`
+    // mantem o encadeamento legitimo (fim == inicio) aceito. Candidato
+    // rejeitado aqui cai na conta de `skipped` como as demais origens.
+    const aceitos: Array<{ startAt: Date; endAt: Date }> = [];
+    for (const slot of slotsUnicos) {
+      if (aceitos.some((anterior) => cobre(slot, anterior))) continue;
+      aceitos.push(slot);
+    }
+
     // Buscar slots já existentes para calcular skipped.
     // Não usar $queryRaw com `IN (${array})`: o template tag do Prisma envia o array
     // como UM parâmetro e o MySQL responde "Arrays are not supported in MySQL",
     // derrubando todo POST /api/v1/availability em 500. O filtro `in` do query builder
     // expande a lista corretamente.
     const existingStartAts = await prisma.availabilitySlot.findMany({
-      where: { startAt: { in: slotsUnicos.map((s) => s.startAt) } },
+      where: { startAt: { in: aceitos.map((s) => s.startAt) } },
       select: { startAt: true },
     });
     const existingSet = new Set(existingStartAts.map((r) => r.startAt.getTime()));
 
-    const newSlots = slotsUnicos.filter((s) => !existingSet.has(s.startAt.getTime()));
+    const newSlots = aceitos.filter((s) => !existingSet.has(s.startAt.getTime()));
+
+    // Slot que nasce DENTRO de uma ocupacao externa vigente ja nasce bloqueado.
+    // Sem isto, `generateSlots` cria linha livre em horario que a ultima
+    // sincronizacao ja sabia ocupado, e o horario so fecha na proxima passagem
+    // do job — a janela que o ledger de intervalo (item 016) existe para nao
+    // ter. As linhas ainda nao existem aqui, entao nao ha FOR UPDATE a tomar
+    // nem CAS a disputar; a corrida restante com `recordBusy` concorrente fica
+    // declarada (consistencia eventual, zerada pelo item 023), nao fechada por
+    // transacao inventada.
+    //
+    // Candidato que intersecta um slot ja BLOQUEADO ou com SESSAO VIVA (consulta
+    // de sobreposicao do item 017) nao e gravado de forma nenhuma: o horario ja
+    // existe ocupado na base, e uma linha livre sobreposta criaria dupla
+    // reserva em fatia do horario. Vai para `skipped` como duplicata.
+    let dadosParaGravar: Array<{
+      startAt: Date;
+      endAt: Date;
+      isBlocked?: boolean;
+      blockOrigin?: BlockOrigin;
+    }> = newSlots;
+
+    if (newSlots.length > 0) {
+      // A guarda nao e cosmetica: `Math.min()` sobre lista vazia devolve
+      // `Infinity` e produziria `new Date(Infinity)` invalido na consulta.
+      // A janela consultada e a do lote que vai nascer ([min(startAt),
+      // max(endAt)]), nao a janela pedida pelo professor.
+      const janelaInicio = new Date(Math.min(...newSlots.map((s) => s.startAt.getTime())));
+      const janelaFim = new Date(Math.max(...newSlots.map((s) => s.endAt.getTime())));
+      const ocupacoes = await this.listOccupiedOverlapping(janelaInicio, janelaFim);
+      const slotsOcupados = ocupacoes.filter((o) => o.origem === 'SLOT');
+      const ocupacoesExternas = ocupacoes.filter((o) => o.origem === 'LEDGER');
+
+      dadosParaGravar = newSlots
+        .filter((slot) => !slotsOcupados.some((ocupado) => cobre(slot, ocupado)))
+        .map((slot) =>
+          ocupacoesExternas.some((ocupacao) => cobre(slot, ocupacao))
+            ? { ...slot, isBlocked: true, blockOrigin: 'GOOGLE' as BlockOrigin }
+            : slot,
+        );
+    }
 
     // `created` e o numero de linhas que o banco realmente gravou, nao o tamanho
-    // do lote enviado. `skipped` agora soma tres origens: duplicata dentro do
-    // pedido, horario ja existente no banco e colisao absorvida pelo
-    // `skipDuplicates`. Invariante: created + skipped === totalPedido.
+    // do lote enviado. `skipped` agora soma quatro origens: duplicata dentro do
+    // pedido, candidato sobreposto a outro do mesmo lote ou a slot bloqueado /
+    // com sessao viva, horario ja existente no banco e colisao absorvida pelo
+    // `skipDuplicates`. Invariante: created + skipped === totalPedido. A linha
+    // coberta pelo ledger continua sendo linha criada (created a conta), e o
+    // professor continua vendo o mesmo total.
     let created = 0;
     if (newSlots.length > 0) {
       const inserted = await prisma.availabilitySlot.createMany({
-        data: newSlots,
+        data: dadosParaGravar,
         skipDuplicates: true,
       });
       created = inserted.count;
@@ -459,10 +523,15 @@ export class AvailabilityService {
             select: { id: true },
           });
           if (ocupante) {
+            // `details.sessionId` nomeia a sessao vendida para quem registra o
+            // conflito (item 025). A leitura acontece DENTRO desta transacao de
+            // proposito: reler a sessao depois do throw seria corrida — ela pode
+            // ser cancelada no intervalo e o conflito gravaria a sessao errada.
             throw new AppError(
               'AVAILABILITY_051',
               'Não é possível bloquear slot com sessão ativa.',
               409,
+              { sessionId: ocupante.id },
             );
           }
         }

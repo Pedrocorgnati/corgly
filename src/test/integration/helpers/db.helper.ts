@@ -8,7 +8,7 @@
  */
 
 import bcrypt from 'bcryptjs'
-import type { User, AvailabilitySlot, Session, CreditBatch, BlockOrigin } from '@prisma/client'
+import type { User, AvailabilitySlot, Session, CreditBatch, BlockOrigin, ExternalBusyInterval } from '@prisma/client'
 import { testPrisma } from '../setup'
 
 // ── Senha padrão de teste (pré-hasheada para reutilização) ────────────────────
@@ -85,6 +85,40 @@ export async function createTestSlot(options: CreateSlotOptions = {}): Promise<A
       // existentes que passam `isBlocked: true` sem origem.
       blockOrigin: options.blockOrigin ?? ((options.isBlocked ?? false) ? 'MANUAL' : null),
       version: 0,
+    },
+  })
+}
+
+// ── ExternalBusyInterval (item 016) ───────────────────────────────────────────
+
+interface CreateBusyIntervalOptions {
+  externalEventId?: string
+  startAt?: Date
+  endAt?: Date
+  revokedAt?: Date | null
+  syncedAt?: Date
+}
+
+/**
+ * Ocupacao externa vigente para as suites de integracao do ledger. O sufixo
+ * aleatorio no `externalEventId` segue o padrao de `createTestUser` e existe
+ * porque a coluna e `@unique`: id fixo faria a segunda chamada dentro da mesma
+ * suite quebrar por colisao.
+ */
+export async function createTestBusyInterval(
+  options: CreateBusyIntervalOptions = {},
+): Promise<ExternalBusyInterval> {
+  const start = options.startAt ?? getFutureDate(48)
+  const end = options.endAt ?? new Date(start.getTime() + 50 * 60 * 1000)
+  return testPrisma.externalBusyInterval.create({
+    data: {
+      externalEventId:
+        options.externalEventId ??
+        `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      startAt: start,
+      endAt: end,
+      revokedAt: options.revokedAt ?? null,
+      syncedAt: options.syncedAt ?? new Date(),
     },
   })
 }

@@ -9,6 +9,7 @@ import {
 } from '@/lib/credits/credit-consumption.service';
 import { SessionStatus } from '@/lib/constants/enums';
 import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
+import { hasActiveOverlapWithTx } from '@/services/external-busy.repository';
 import { emailService } from '@/services/email.service';
 import { EmailType, SupportedLanguage } from '@/types/enums';
 import { logger } from '@/lib/logger';
@@ -266,6 +267,21 @@ export class BookingIdempotencyService {
 
       if (Boolean(slot.isBlocked)) {
         throw new BookingConflictError('BOOKING_003', 'Horário não disponível. Selecione outro.', 409, alternatives);
+      }
+
+      // Rechecagem de ocupacao externa sob o FOR UPDATE acima (item 024). O
+      // `isBlocked` logo acima NAO cobre a janela entre a escrita do ledger e a
+      // projecao do bloqueio no slot: sao transacoes separadas. Sem esta
+      // leitura, o aluno reserva horario que o professor ja ocupou no Google.
+      // Vem ANTES do lock, do CAS e do consumo de credito, para que a reserva
+      // condenada nao deixe efeito colateral nenhum.
+      if (await hasActiveOverlapWithTx(tx, { startAt: slot.startAt, endAt: slot.endAt })) {
+        throw new BookingConflictError(
+          'SESSION_057',
+          'Horário indisponível por ocupação externa.',
+          409,
+          alternatives,
+        );
       }
 
       // `findFirst` + filtro de status: `availabilitySlotId` deixou de ser unico

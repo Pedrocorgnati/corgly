@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AppError } from '@/lib/errors';
 
 const envSchema = z.object({
   // Ambiente
@@ -28,6 +29,16 @@ const envSchema = z.object({
     .string()
     .min(32, 'ASSET_URL_SIGNING_SECRET deve ter no mínimo 32 caracteres')
     .optional(),
+
+  // Google Calendar (OAuth somente leitura). Opcionais no boot para nao quebrar
+  // a coleta de testes nem ambientes sem a integracao; o formato ja e validado
+  // aqui quando presentes, e o helper `src/lib/google/oauth-config.ts` exige as
+  // tres variaveis do fluxo OAuth no ponto de uso (500 GOOGLE_CALENDAR_CONFIG_MISSING).
+  GOOGLE_CALENDAR_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CALENDAR_CLIENT_SECRET: z.string().min(1).optional(),
+  GOOGLE_CALENDAR_REDIRECT_URI: z.string().url().optional(),
+  GOOGLE_CALENDAR_WEBHOOK_URL: z.string().url().optional(),
+  GOOGLE_CALENDAR_API_KEY: z.string().optional(),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().startsWith('sk_', 'STRIPE_SECRET_KEY deve começar com sk_'),
@@ -98,6 +109,14 @@ const envSchema = z.object({
   // Este guard existe para o erro voltar como build quebrado, nao como deploy
   // silenciosamente quebrado.
   if (data.NODE_ENV === 'production') {
+    if (!data.GOOGLE_CALENDAR_WEBHOOK_URL) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['GOOGLE_CALENDAR_WEBHOOK_URL'],
+        message: 'GOOGLE_CALENDAR_WEBHOOK_URL e obrigatoria em producao.',
+      });
+    }
+
     for (const key of ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'] as const) {
       const value = data[key];
       let hostname: string;
@@ -139,3 +158,20 @@ if (!_parsed.success) {
 }
 
 export const env = _parsed.data;
+
+export interface GoogleCalendarWebhookConfig {
+  webhookUrl: string;
+}
+
+/** Exige a URL publica do webhook no ponto de uso. */
+export function getGoogleCalendarWebhookConfig(): GoogleCalendarWebhookConfig {
+  const webhookUrl = env.GOOGLE_CALENDAR_WEBHOOK_URL;
+  if (!webhookUrl) {
+    throw new AppError(
+      'GOOGLE_CALENDAR_CONFIG_MISSING',
+      'URL publica do webhook Google Calendar nao configurada.',
+      500,
+    );
+  }
+  return { webhookUrl };
+}

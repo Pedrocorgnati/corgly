@@ -228,6 +228,7 @@ enum JobType {
   EMAIL_DELIVERY
   REPORT_EXPORT
   CLEANUP
+  GOOGLE_CALENDAR_RECONCILIATION
 }
 
 enum JobStatus {
@@ -284,33 +285,34 @@ model User {
   createdAt                   DateTime          @default(now())
   updatedAt                   DateTime          @updatedAt
 
-  creditBatches           CreditBatch[]
-  sessions                Session[]
-  payments                Payment[]
-  refundRequests          RefundRequest[]
-  subscriptions           Subscription[]
-  recurringPatterns       RecurringPattern[]
-  cookieConsents          CookieConsent[]
-  cookieConsentHistory    CookieConsentHistory[]
-  feedbacksAsAdmin        Feedback[]                  @relation("FeedbackAdmin")
-  supportTickets          SupportTicket[]             @relation("SupportTicketUser")
-  supportMessages         SupportMessage[]            @relation("SupportMessageAuthor")
-  referrals               Referral[]                  @relation("ReferralReferrer")
-  referralInvitesReceived ReferralInvite[]            @relation("ReferralInvitedUser")
-  referralCredits         ReferralCredit[]            @relation("ReferralCreditBeneficiary")
-  featureFlagOverrides    FeatureFlagOverride[]       @relation("FeatureFlagOverrideUser")
-  dataRequests            DataRequest[]               @relation("DataRequestUser")
-  assets                  Asset[]                     @relation("AssetOwner")
-  emailDeliveries         EmailDelivery[]             @relation("EmailDeliveryUser")
-  createdJobs             Job[]                       @relation("JobCreatedBy")
-  termAcceptances         TermAcceptance[]            @relation("TermAcceptanceUser")
-  onboardingProfile       OnboardingProfile?
-  mfa                     UserMfa?
-  sessionHealthEvents     SessionHealth[]             @relation("SessionHealthParticipant")
-  impersonationsAsAdmin   AdminImpersonationSession[] @relation("AdminImpersonationAdmin")
-  impersonationsAsStudent AdminImpersonationSession[] @relation("AdminImpersonationStudent")
-  impersonationsEnded     AdminImpersonationSession[] @relation("AdminImpersonationEndedBy")
-  magicLinkTokens         MagicLinkToken[]            @relation("MagicLinkTokenUser")
+  creditBatches            CreditBatch[]
+  sessions                 Session[]
+  payments                 Payment[]
+  refundRequests           RefundRequest[]
+  subscriptions            Subscription[]
+  recurringPatterns        RecurringPattern[]
+  cookieConsents           CookieConsent[]
+  cookieConsentHistory     CookieConsentHistory[]
+  feedbacksAsAdmin         Feedback[]                  @relation("FeedbackAdmin")
+  supportTickets           SupportTicket[]             @relation("SupportTicketUser")
+  supportMessages          SupportMessage[]            @relation("SupportMessageAuthor")
+  referrals                Referral[]                  @relation("ReferralReferrer")
+  referralInvitesReceived  ReferralInvite[]            @relation("ReferralInvitedUser")
+  referralCredits          ReferralCredit[]            @relation("ReferralCreditBeneficiary")
+  featureFlagOverrides     FeatureFlagOverride[]       @relation("FeatureFlagOverrideUser")
+  dataRequests             DataRequest[]               @relation("DataRequestUser")
+  assets                   Asset[]                     @relation("AssetOwner")
+  emailDeliveries          EmailDelivery[]             @relation("EmailDeliveryUser")
+  createdJobs              Job[]                       @relation("JobCreatedBy")
+  termAcceptances          TermAcceptance[]            @relation("TermAcceptanceUser")
+  onboardingProfile        OnboardingProfile?
+  mfa                      UserMfa?
+  googleCalendarCredential GoogleCalendarCredential?
+  sessionHealthEvents      SessionHealth[]             @relation("SessionHealthParticipant")
+  impersonationsAsAdmin    AdminImpersonationSession[] @relation("AdminImpersonationAdmin")
+  impersonationsAsStudent  AdminImpersonationSession[] @relation("AdminImpersonationStudent")
+  impersonationsEnded      AdminImpersonationSession[] @relation("AdminImpersonationEndedBy")
+  magicLinkTokens          MagicLinkToken[]            @relation("MagicLinkTokenUser")
 
   exercisesCreated           Exercise[]           @relation("ExerciseAuthor")
   exerciseAssignments        ExerciseAssignment[] @relation("ExerciseAssignmentStudent")
@@ -384,8 +386,71 @@ model AvailabilitySlot {
 
   bookingSlotLocks BookingSlotLock[] @relation("BookingSlotLockSlot")
 
+  externalBusyConflicts ExternalBusyConflict[]
+
   @@index([startAt, isBlocked], name: "IDX_availability_startAt_isBlocked")
+  // Suporte a consulta de sobreposicao (item 017): slots bloqueados que
+  // intersectam a janela `startAt < fim AND endAt > inicio`.
+  @@index([isBlocked, startAt, endAt], name: "IDX_availability_blocked_overlap")
   @@map("availability_slots")
+}
+
+/// Ocupacao externa (agenda do professor) registrada como INTERVALO proprio.
+/// Nao e bandeira em slot: a linha existe mesmo quando ainda nao ha slot no
+/// horario, e sobrevive a delecao e regeneracao dos slots que ela cobre.
+model ExternalBusyInterval {
+  id              String    @id @default(uuid())
+  externalEventId String    @unique(map: "UNIQUE_external_busy_externalEventId") @db.VarChar(255)
+  startAt         DateTime
+  endAt           DateTime
+  revokedAt       DateTime? // NULL = ocupacao vigente
+  syncedAt        DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  conflicts ExternalBusyConflict[]
+
+  @@index([revokedAt, startAt], name: "IDX_external_busy_revokedAt_startAt")
+  // Suporte a consulta de sobreposicao (item 017): ocupacoes vigentes que
+  // intersectam a janela `startAt < fim AND endAt > inicio`, cobertura total.
+  @@index([startAt, endAt], name: "IDX_external_busy_overlap")
+  @@map("external_busy_intervals")
+}
+
+/// Conflito entre uma ocupacao externa e uma sessao JA VENDIDA no mesmo slot.
+/// Existe porque o job de sincronizacao nunca cancela aula vendida (F8): ele
+/// registra o conflito aqui e avisa o professor, que decide manualmente.
+/// O ciclo normal fecha por resolvedAt; hard delete das entidades-fonte aplica
+/// a politica de retencao via cascade.
+model ExternalBusyConflict {
+  id                    String    @id @default(uuid())
+  intervalId            String
+  slotId                String
+  sessionId             String
+  motivo                String    @default("SESSAO_VIVA") @db.VarChar(32)
+  detectedAt            DateTime  @default(now())
+  notifiedAt            DateTime? // NULL = professor ainda nao avisado
+  notificationClaimId   String?   @db.VarChar(191)
+  notificationClaimedAt DateTime?
+  notificationAttempts  Int       @default(0)
+  notificationLastError String?   @db.VarChar(500)
+  resolvedAt            DateTime? // NULL = conflito aberto
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  interval ExternalBusyInterval @relation(fields: [intervalId], references: [id], onDelete: Cascade)
+  slot     AvailabilitySlot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  session  Session              @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Um conflito por par (ocupacao, sessao): re-sync do mesmo evento reencontra
+  // a linha em vez de criar duplicata e re-notificar.
+  // Somente `map:` (nome da constraint no MySQL). `name:` renomearia tambem a
+  // chave composta do client, e o repositorio faz upsert por
+  // `intervalId_sessionId` — o default.
+  @@unique([intervalId, sessionId], map: "UNIQUE_external_busy_conflict_interval_session")
+  @@index([resolvedAt, detectedAt], name: "IDX_external_busy_conflict_open")
+  @@index([slotId], name: "IDX_external_busy_conflict_slotId")
+  @@map("external_busy_conflicts")
 }
 
 model RecurringPattern {
@@ -434,6 +499,8 @@ model Session {
   supportTickets   SupportTicket[]
   assets           Asset[]
   healthEvents     SessionHealth[]
+
+  externalBusyConflicts ExternalBusyConflict[]
 
   @@index([studentId, status])
   @@index([startAt])
@@ -822,6 +889,46 @@ model UserMfa {
   recoveryCodes MfaRecoveryCode[]
 
   @@map("user_mfa")
+}
+
+/// Credencial OAuth do Google Calendar por professor (loop 09-06, item 019).
+/// Um registro por professor; o refresh token NUNCA fica em claro.
+model GoogleCalendarCredential {
+  id              String   @id @default(uuid())
+  userId          String   @unique(map: "UNIQUE_google_calendar_credential_userId")
+  user            User     @relation(fields: [userId], references: [id])
+  /// Refresh token cifrado: formato ivHex:tagHex:ctHex. NUNCA em claro.
+  refreshTokenEnc String   @db.Text
+  /// Escopo efetivamente concedido no consentimento; esperado calendar.readonly.
+  scope           String   @db.VarChar(255)
+  connectedAt     DateTime @default(now())
+
+  // Push channel fields (item 022)
+  /// Token de sincronizacao incremental retornado pelo Google.
+  syncToken          String?   @db.VarChar(512)
+  /// ID globalmente unico do canal push (escolhido pelo servidor).
+  channelId          String?   @unique @db.VarChar(255)
+  /// ID do recurso retornado pelo Google no events.watch.
+  resourceId         String?   @db.VarChar(255)
+  /// Data de expiracao do canal (~7 dias).
+  channelExpiration  DateTime?
+  /// Hash SHA-256 do token aleatorio enviado no events.watch.
+  channelTokenHash   String?   @db.Char(64)
+  /// Token do canal cifrado enquanto o watch esta pendente; limpo apos sucesso.
+  channelTokenEnc    String?   @db.Text
+  /// Ultimo X-Goog-Message-Number concluido no canal atual.
+  lastMessageNumber  BigInt?
+  /// Dono atual do lease distribuido de sincronizacao.
+  syncLeaseId        String?   @db.VarChar(36)
+  /// Vencimento do lease para recuperar crash sem lock permanente.
+  syncLeaseExpiresAt DateTime?
+  /// Timestamp da ultima sincronizacao bem sucedida.
+  lastSyncAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("google_calendar_credentials")
 }
 
 /// Codigos de recuperacao MFA de uso unico (armazenados apenas como hash bcrypt).
@@ -1768,4 +1875,16 @@ model BookingSlotLock {
 
   @@index([expiresAt], name: "IDX_booking_slot_locks_expiresAt")
   @@map("booking_slot_locks")
+}
+
+// Configuracao canonica do app (item 018): pares chave/valor singleton.
+// Nasce com o fuso canonico da agenda ('timezone'), unico valor que os dois
+// produtores de horario (conversao Intl de availability.service e o agendamento
+// de cron.service) leem para converter o mesmo "HH:mm" no mesmo instante UTC.
+model AppSetting {
+  key       String   @id @db.VarChar(100)
+  value     String   @db.VarChar(255)
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
 }

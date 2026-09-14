@@ -17,6 +17,7 @@ const VALID_ENV: Record<string, string> = {
   NEXT_PUBLIC_APP_URL: 'https://app.corgly.test',
   NEXT_PUBLIC_SITE_URL: 'https://app.corgly.test',
   NEXT_PUBLIC_HOCUSPOCUS_URL: 'ws://localhost:1234',
+  GOOGLE_CALENDAR_WEBHOOK_URL: 'https://corgly.test/api/v1/google/calendar/webhook',
 };
 
 async function loadEnv(overrides: Record<string, string | undefined>) {

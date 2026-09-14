@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Plus, ShieldBan } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, ShieldBan, CalendarSync } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminCalendar } from '@/components/admin/AdminCalendar';
 import { AvailabilityEditor } from '@/components/admin/AvailabilityEditor';
 import { BulkBlockModal } from '@/components/admin/BulkBlockModal';
 import { useAdminSchedule } from '@/hooks/useAdminSchedule';
+import { ROUTES } from '@/lib/constants/routes';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 
 export function AdminScheduleClient() {
@@ -43,6 +45,15 @@ export function AdminScheduleClient() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" asChild nativeButton={false}>
+            <Link
+              href={ROUTES.ADMIN_GOOGLE_CALENDAR}
+              data-testid="admin-schedule-google-connection-link"
+            >
+              <CalendarSync className="h-4 w-4" />
+              Conexão Google
+            </Link>
+          </Button>
           <Button data-testid="admin-schedule-bulk-block-button" variant="outline" onClick={() => setShowBulkBlock(true)} className="gap-2">
             <ShieldBan className="h-4 w-4" />
             Bloquear período

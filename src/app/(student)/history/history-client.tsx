@@ -37,6 +37,8 @@ interface HistoryClientProps {
   sessions: PaginatedData;
   currentPage: number;
   currentStatus: string | null;
+  studentTimezone: string;
+  adminTimezone: string;
 }
 
 const FILTER_STATUSES = [
@@ -51,6 +53,8 @@ export function HistoryClient({
   sessions,
   currentPage,
   currentStatus,
+  studentTimezone,
+  adminTimezone,
 }: HistoryClientProps) {
   const t = useTranslations('history');
   const tPagination = useTranslations('pagination');
@@ -139,6 +143,8 @@ export function HistoryClient({
               <RescheduleRequestBadge status={session.status} />
               <SessionCard
                 session={session}
+                studentTimezone={studentTimezone}
+                adminTimezone={adminTimezone}
                 onCancel={
                   session.status === SessionStatus.SCHEDULED
                     ? () => setCancelSession(session)
@@ -200,6 +206,8 @@ export function HistoryClient({
       {rescheduleSession && (
         <RescheduleFlow
           session={rescheduleSession}
+          studentTimezone={studentTimezone}
+          adminTimezone={adminTimezone}
           open={!!rescheduleSession}
           onOpenChange={(open) => !open && setRescheduleSession(null)}
           onRescheduled={handleRescheduled}

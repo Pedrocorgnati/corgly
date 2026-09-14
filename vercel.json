@@ -23,6 +23,14 @@
     {
       "path": "/api/v1/cron/jobs",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/v1/cron/google-calendar-channels",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/v1/cron/google-calendar-reconciliation",
+      "schedule": "0 * * * *"
     }
   ]
 }

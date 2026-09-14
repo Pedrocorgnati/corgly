@@ -1,7 +1,7 @@
 'use client';
 import { API } from '@/lib/constants/routes';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Plus, Trash2, Lock, Unlock, AlertTriangle } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
 } from '@/schemas/availability.schema';
 import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { DEFAULT_CANONICAL_TIMEZONE } from '@/lib/canonical-timezone.shared';
 
 const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -50,12 +51,27 @@ export function AvailabilityEditor({
       days: [],
       ranges: [{ start: '09:00', end: '17:00' }],
       weeksAhead: 4,
-      timezone: 'America/Sao_Paulo',
+      timezone: DEFAULT_CANONICAL_TIMEZONE,
     },
   });
 
   const selectedDays = watch('days');
   const ranges = watch('ranges');
+
+  // Sobrescreve o default com o fuso canonico persistido em app_settings
+  // (item 018) quando o operador ainda nao digitou nada no campo.
+  useEffect(() => {
+    apiClient
+      .get<{ data: { timezone: string } }>('/api/v1/admin/settings')
+      .then((json) => {
+        const tz = json?.data?.timezone;
+        if (tz && watch('timezone') === DEFAULT_CANONICAL_TIMEZONE) {
+          setValue('timezone', tz, { shouldDirty: false });
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleDay = (day: number) => {
     const current = selectedDays ?? [];

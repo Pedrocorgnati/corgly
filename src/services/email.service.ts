@@ -42,6 +42,9 @@ const EMAIL_CATEGORIES: Record<EmailType, EmailCategory> = {
   [EmailType.MAGIC_LINK]: 'transactional',
   // T-055: broadcasts em massa sao marketing -> exigem opt-in + unsubscribe.
   [EmailType.MARKETING_BROADCAST]: 'marketing',
+  // 025: aviso operacional sobre a agenda do proprio professor -> transacional
+  // (nao pede opt-in, nao leva unsubscribe).
+  [EmailType.EXTERNAL_BUSY_CONFLICT]: 'transactional',
 };
 
 export function getEmailCategory(type: EmailType): EmailCategory {
@@ -90,6 +93,7 @@ const SendEmailParamsSchema = z.object({
   data: z.record(z.string(), z.unknown()),
   locale: z.string().refine((v) => VALID_LOCALES.has(v as SupportedLanguage), { message: 'Locale inválido.' }).optional(),
   userId: z.string().optional(),
+  idempotencyKey: z.string().min(1).max(256).optional(),
 });
 
 export type SendEmailParams = {
@@ -99,6 +103,8 @@ export type SendEmailParams = {
   locale?: SupportedLanguage;
   /** Obrigatorio para emails de categoria 'marketing' — usado para checar opt-in e gerar token de unsubscribe. */
   userId?: string;
+  /** Chave estavel do side effect para deduplicacao de retries no provider. */
+  idempotencyKey?: string;
 };
 
 export type SendEmailResult = { sent: true } | { sent: false; skipped: 'marketing_opt_out' | 'user_not_found' };
@@ -452,6 +458,31 @@ const TEMPLATES: Record<EmailType, TemplateRenderer> = {
     const body = typeof data.html === 'string' ? data.html : '';
     return { subject, html: wrapLayout(body) };
   },
+
+  // 025: a agenda externa do professor marcou ocupado uma faixa onde ja existe
+  // aula VENDIDA. O job nao cancela nada (F8) — este email existe justamente
+  // porque a decisao e humana. O corpo diz, nas 4 linguas: (a) o Google marcou
+  // ocupado, (b) ha aula vendida ali, (c) a aula CONTINUA marcada, (d) resolver
+  // e com o professor.
+  [EmailType.EXTERNAL_BUSY_CONFLICT]: (data, locale) => {
+    const inicio = typeof data.inicio === 'string' ? data.inicio : '';
+    const fim = typeof data.fim === 'string' ? data.fim : '';
+    const sessionId = typeof data.sessionId === 'string' ? data.sessionId : '';
+
+    const subjects: Record<SupportedLanguage, string> = {
+      PT_BR: 'Conflito de agenda: aula vendida em horario marcado como ocupado',
+      EN_US: 'Calendar conflict: a sold class overlaps a busy slot',
+      ES_ES: 'Conflicto de agenda: clase vendida en un horario marcado como ocupado',
+      IT_IT: 'Conflitto di agenda: lezione venduta in un orario segnato come occupato',
+    };
+    const bodies: Record<SupportedLanguage, string> = {
+      PT_BR: `<p>Ola!</p><p>Sua agenda do Google marcou como <strong>ocupado</strong> o periodo de ${inicio} ate ${fim}, mas ja existe uma <strong>aula vendida</strong> nesse horario.</p><p><strong>A aula continua marcada</strong> — nada foi cancelado nem remarcado automaticamente. A decisao e sua: mantenha a aula e ajuste o compromisso externo, ou fale com o aluno para remarcar.</p><p>Referencia da aula: ${sessionId}</p>`,
+      EN_US: `<p>Hi,</p><p>Your Google calendar marked ${inicio} to ${fim} as <strong>busy</strong>, but there is already a <strong>sold class</strong> in that slot.</p><p><strong>The class is still booked</strong> — nothing was cancelled or rescheduled automatically. The call is yours: keep the class and move the external commitment, or talk to the student about rescheduling.</p><p>Class reference: ${sessionId}</p>`,
+      ES_ES: `<p>Hola:</p><p>Tu agenda de Google marco como <strong>ocupado</strong> el periodo de ${inicio} a ${fim}, pero ya hay una <strong>clase vendida</strong> en ese horario.</p><p><strong>La clase sigue reservada</strong>: no se cancelo ni se reprogramo nada automaticamente. La decision es tuya: manten la clase y mueve el compromiso externo, o habla con el alumno para reprogramar.</p><p>Referencia de la clase: ${sessionId}</p>`,
+      IT_IT: `<p>Ciao,</p><p>La tua agenda Google ha segnato come <strong>occupato</strong> il periodo da ${inicio} a ${fim}, ma esiste gia una <strong>lezione venduta</strong> in quell'orario.</p><p><strong>La lezione resta prenotata</strong>: nulla e stato annullato o riprogrammato automaticamente. La decisione e tua: mantieni la lezione e sposta l'impegno esterno, oppure parla con l'allievo per riprogrammare.</p><p>Riferimento della lezione: ${sessionId}</p>`,
+    };
+    return { subject: subjects[locale], html: wrapLayout(bodies[locale]) };
+  },
 };
 
 // ── Helpers do template de recorrencia ──
@@ -511,8 +542,14 @@ function wrapLayout(body: string): string {
 
 // ── Provider interface ──
 
-interface IEmailProvider {
-  send(params: { to: string; subject: string; html: string; from: string }): Promise<void>;
+export interface IEmailProvider {
+  send(params: {
+    to: string;
+    subject: string;
+    html: string;
+    from: string;
+    idempotencyKey?: string;
+  }): Promise<void>;
 }
 
 // ── Resend provider (fetch-based, sem SDK) ──
@@ -524,16 +561,23 @@ const resendBreaker = getCircuitBreaker('resend-email', {
   timeoutMs: 60_000,
 });
 
-class ResendProvider implements IEmailProvider {
+export class ResendProvider implements IEmailProvider {
   constructor(private readonly apiKey: string) {}
 
-  async send(params: { to: string; subject: string; html: string; from: string }): Promise<void> {
+  async send(params: {
+    to: string;
+    subject: string;
+    html: string;
+    from: string;
+    idempotencyKey?: string;
+  }): Promise<void> {
     await resendBreaker.execute(async () => {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
+          ...(params.idempotencyKey ? { 'Idempotency-Key': params.idempotencyKey } : {}),
         },
         body: JSON.stringify({
           from: params.from,
@@ -667,7 +711,12 @@ export class EmailService implements IEmailService {
     // EMAIL_OVERRIDE: redirecionar em dev/test
     const to = process.env.EMAIL_OVERRIDE ?? params.to;
 
-    await limiter.run(() => this.sendWithRetry({ to, subject, html }));
+    await limiter.run(() => this.sendWithRetry({
+      to,
+      subject,
+      html,
+      idempotencyKey: params.idempotencyKey,
+    }));
     return { sent: true };
   }
 
@@ -675,6 +724,7 @@ export class EmailService implements IEmailService {
     to: string;
     subject: string;
     html: string;
+    idempotencyKey?: string;
   }): Promise<void> {
     let lastError: Error | undefined;
 

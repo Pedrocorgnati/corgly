@@ -5,8 +5,10 @@ import { API } from '@/lib/constants/routes';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
+import { SLOT_OCCUPYING_STATUSES } from '@/lib/bookings/slot-occupying-statuses';
 import { internalApiOrigin } from '@/lib/internal-api';
 import { logger } from '@/lib/logger';
+import type { SessionWithMeta } from '@/types/session.types';
 
 /**
  * `code` e o discriminante sem idioma do envelope (`src/lib/auth.ts`). Ate
@@ -55,10 +57,14 @@ async function apiFetch<T>(
 
   // O `!res.ok` fica DEPOIS da leitura de proposito: e o que preserva
   // `json.error` e `json.code`, o par que `apiResponse` embala em toda resposta
-  // de erro da API e que `BookingConfirmModal` le para entrar em
-  // `insufficient_credits`.
+  // de erro da API. O payload tambem precisa sobreviver: conflitos 409 trazem
+  // horarios alternativos acionaveis em `json.data`.
   if (!res.ok) {
-    return { data: null, error: json?.error ?? `Erro ${res.status}`, code: json?.code ?? null };
+    return {
+      data: (json?.data ?? null) as T | null,
+      error: json?.error ?? `Erro ${res.status}`,
+      code: json?.code ?? null,
+    };
   }
 
   return { data: (json?.data ?? null) as T, error: null, code: null };
@@ -90,6 +96,17 @@ export interface PaginatedSessionList {
   totalPages: number;
 }
 
+export interface SessionConflictAlternative {
+  id: string;
+  startAt: string;
+  endAt: string;
+}
+
+export interface SessionMutationPayload {
+  alternatives?: SessionConflictAlternative[];
+  [key: string]: unknown;
+}
+
 export async function getSessions(params?: {
   page?: number;
   limit?: number;
@@ -111,10 +128,11 @@ export async function getSession(id: string) {
   return apiFetch(`/api/v1/sessions/${id}`);
 }
 
-export async function bookSession(slotId: string) {
-  const result = await apiFetch('/api/v1/sessions', {
+export async function bookSession(slotId: string, idempotencyKey: string) {
+  const result = await apiFetch<SessionMutationPayload>('/api/v1/bookings/lock', {
     method: 'POST',
     body: JSON.stringify({ availabilitySlotId: slotId }),
+    headers: { 'Idempotency-Key': idempotencyKey },
   });
 
   if (!result.error) {
@@ -142,7 +160,7 @@ export async function cancelSession(id: string, reason?: string) {
 }
 
 export async function rescheduleSession(id: string, newSlotId: string) {
-  const result = await apiFetch(`/api/v1/sessions/${id}/reschedule`, {
+  const result = await apiFetch<SessionMutationPayload>(`/api/v1/sessions/${id}/reschedule`, {
     method: 'PATCH',
     body: JSON.stringify({ newAvailabilitySlotId: newSlotId }),
   });
@@ -172,9 +190,94 @@ export async function getAvailability(month: string) {
       ? `${String(Number(ano) + 1)}-01-01`
       : `${ano}-${String(Number(mes) + 1).padStart(2, '0')}-01`;
 
-  return apiFetch<Array<{ id: string; startAt: string; endAt: string; isBlocked: boolean }>>(
-    `/api/v1/availability?date=${date}&until=${until}`,
-  );
+  const result = await apiFetch<
+    Array<{ id: string; startAt: string; endAt: string; isBlocked: boolean }>
+  >(`/api/v1/availability?date=${date}&until=${until}`);
+  if (result.error || !result.data) return result;
+
+  // Piso no agora tambem na borda que o calendario do aluno consome (item 033).
+  // `getAvailable` ja corta na consulta; o corte repetido aqui usa o relogio medido
+  // DEPOIS da resposta e tira o horario que passou durante a ida e volta. Instante
+  // ilegivel sai da lista: horario que nao da para provar futuro nao vira clique.
+  const agora = Date.now();
+  return {
+    ...result,
+    data: result.data.filter((slot) => new Date(slot.startAt).getTime() > agora),
+  };
+}
+
+/** Horario que o proprio aluno autenticado ja reservou (item 036). */
+export interface OwnReservedSlot {
+  /** `availabilitySlotId`: mesmo id da grade de disponibilidade. */
+  id: string;
+  sessionId: string;
+  startAt: string;
+  endAt: string;
+}
+
+/** Teto de paginas lidas por mes: 500 sessoes de um aluno num mes nao e caso real. */
+const OWN_RESERVATIONS_MAX_PAGES = 5;
+
+/**
+ * Reservas do proprio aluno no mes, para a agenda identificar o horario que ele ja
+ * tem (item 036).
+ *
+ * Le `GET /api/v1/sessions`, rota AUTENTICADA que restringe o aluno as proprias
+ * sessoes; a disponibilidade publica nao ganha dado de sessao. Admin nunca chega
+ * aqui: o layout `(student)` redireciona quem nao e STUDENT. "Reserva propria" usa
+ * a MESMA lista fail-closed que define slot ocupado, entao sessao cancelada nao
+ * aparece e status novo do enum continua contando como reserva.
+ */
+export async function getOwnReservedSlots(month: string) {
+  // 'use server': `month` e input externo, validado antes de qualquer fetch.
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return { data: null, error: 'Mês inválido. Use formato YYYY-MM.', code: null };
+  }
+
+  const [ano, mes] = month.split('-');
+  const until =
+    mes === '12'
+      ? `${String(Number(ano) + 1)}-01-01`
+      : `${ano}-${String(Number(mes) + 1).padStart(2, '0')}-01`;
+  // A rota aplica `to` como `lte`: um milissegundo antes do mes seguinte fecha a
+  // janela meio-aberta.
+  const from = `${month}-01T00:00:00.000Z`;
+  const to = new Date(new Date(`${until}T00:00:00.000Z`).getTime() - 1).toISOString();
+
+  const rows: SessionWithMeta[] = [];
+  for (let page = 1; page <= OWN_RESERVATIONS_MAX_PAGES; page++) {
+    const qs = new URLSearchParams({
+      page: String(page),
+      limit: '100',
+      sort: 'startAt:asc',
+      from,
+      to,
+    });
+    const result = await apiFetch<{ data: SessionWithMeta[]; totalPages: number }>(
+      `/api/v1/sessions?${qs.toString()}`,
+    );
+    if (result.error || !result.data) {
+      return { data: null, error: result.error ?? 'Erro ao carregar reservas.', code: result.code };
+    }
+    rows.push(...(result.data.data ?? []));
+    if (page >= (result.data.totalPages ?? 0)) break;
+  }
+
+  const agora = Date.now();
+  const data: OwnReservedSlot[] = rows
+    .filter(
+      (row) =>
+        SLOT_OCCUPYING_STATUSES.includes(row.status) &&
+        new Date(row.startAt).getTime() > agora,
+    )
+    .map((row) => ({
+      id: row.availabilitySlotId,
+      sessionId: row.id,
+      startAt: row.startAt,
+      endAt: row.endAt,
+    }));
+
+  return { data, error: null, code: null };
 }
 
 /**

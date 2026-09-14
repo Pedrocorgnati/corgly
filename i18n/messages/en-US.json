@@ -1863,14 +1863,19 @@
       "gridLabel": "Calendar",
       "today": "Today",
       "slotsAvailableShort": "times available",
-      "legend": "Days with available times"
+      "legend": "Days with available times",
+      "ownReservedShort": "time booked by you",
+      "ownLegend": "Days with a time booked by you"
     },
     "slots": {
+      "ownReserved": "Booked by you",
+      "ownReservedAria": "{time}, time already booked by you",
       "idle": "Pick a day on the calendar to see the available times",
       "title": "Available times",
       "empty": "No times available on this day.",
       "listLabel": "Available times",
       "slotAria": "{time}, {minutes} minutes, {count, plural, one {# credit} other {# credits}}",
+      "slotAriaNoDuration": "{time}, {count, plural, one {# credit} other {# credits}}",
       "minutes": "{minutes} min",
       "credits": "{count, plural, one {# credit} other {# credits}}",
       "selected": "Selected"
@@ -1893,6 +1898,9 @@
       "history": "View history",
       "errorTitle": "Could not book the class",
       "genericError": "Something went wrong while booking. Please try again.",
+      "conflictTitle": "This time just became unavailable",
+      "conflictDescription": "Choose an alternative to continue without losing your booking.",
+      "chooseAlternative": "Book this alternative time",
       "close": "Close",
       "retry": "Try again",
       "insufficientTitle": "Not enough credits",

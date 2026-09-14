@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getCanonicalTimezone, localTimeToUtc } from '@/lib/canonical-timezone';
 import { emailService } from '@/services/email.service';
 import { creditService } from '@/services/credit.service';
 import {
@@ -7,6 +8,7 @@ import {
 } from '@/lib/credits/credit-consumption.service';
 import { EmailType } from '@/lib/constants/enums';
 import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
+import { hasActiveOverlapWithTx } from '@/services/external-busy.repository';
 import type { ReminderSentAt } from '@/types/session.types';
 import { logger } from '@/lib/logger';
 
@@ -322,6 +324,10 @@ export class CronService {
     let booked = 0;
     let failed = 0;
 
+    // Fuso canonico da agenda (app_settings), lido UMA vez por execucao: e o
+    // mesmo valor que generateSlots usa quando o form nao envia timezone.
+    const canonicalTz = await getCanonicalTimezone();
+
     for (const pattern of patterns) {
       try {
         // Verificar se já existe sessão recorrente para esta semana
@@ -336,19 +342,20 @@ export class CronService {
         if (existing) continue; // já agendada — idempotente
 
         // Encontrar slot disponível para o dia/hora do padrão
-        const [hours, minutes] = pattern.startTime.split(':').map(Number);
-
-        // Calcular data alvo na próxima semana para o dayOfWeek
+        // Converter "HH:mm" com o MESMO conversor e fuso canonico da geracao
+        // de slots (availability.service): paridade de instante UTC entre os
+        // dois produtores. O antigo setUTCHours tratava "HH:mm" como UTC e a
+        // recorrencia agendava na hora errada em silencio (item 018).
         const targetDate = new Date(nextWeekStart);
         const startDow = nextWeekStart.getUTCDay();
         let daysToAdd = (pattern.dayOfWeek - startDow + 7) % 7;
         if (daysToAdd === 0 && targetDate.getUTCDay() !== pattern.dayOfWeek) daysToAdd = 7;
         targetDate.setUTCDate(targetDate.getUTCDate() + daysToAdd);
-        targetDate.setUTCHours(hours, minutes, 0, 0);
+        const slotTarget = localTimeToUtc(targetDate, pattern.startTime, canonicalTz);
 
         // Buscar slot disponível neste horário (tolerância de ±5min)
-        const slotFrom = new Date(targetDate.getTime() - 5 * 60 * 1000);
-        const slotTo = new Date(targetDate.getTime() + 5 * 60 * 1000);
+        const slotFrom = new Date(slotTarget.getTime() - 5 * 60 * 1000);
+        const slotTo = new Date(slotTarget.getTime() + 5 * 60 * 1000);
 
         const slot = await prisma.availabilitySlot.findFirst({
           where: {
@@ -400,8 +407,13 @@ export class CronService {
 
         // CAS + criar sessão na transação
         await runSerializableCreditTransaction(async (tx) => {
-          const slots = await tx.$queryRaw<Array<{ id: string; version: number }>>`
-            SELECT id, version FROM availability_slots WHERE id = ${slot.id} FOR UPDATE
+          // `startAt`/`endAt` entram no SELECT porque a rechecagem de ocupacao
+          // externa logo abaixo precisa da janela da linha TRAVADA, nao da
+          // leitura de fora da transacao (`slot`), que ja pode estar stale.
+          const slots = await tx.$queryRaw<
+            Array<{ id: string; version: number; startAt: Date; endAt: Date }>
+          >`
+            SELECT id, version, startAt, endAt FROM availability_slots WHERE id = ${slot.id} FOR UPDATE
           `;
           const lockedSlot = slots[0];
           if (!lockedSlot) throw new Error('SLOT_GONE');
@@ -421,6 +433,20 @@ export class CronService {
             select: { id: true },
           });
           if (occupant) throw new Error('SLOT_TAKEN');
+
+          // Rechecagem de ocupacao externa (item 024). O `isBlocked: false` do
+          // `findFirst` la em cima roda FORA da transacao e nao cobre a janela
+          // entre a escrita do ledger e a projecao do bloqueio no slot, que sao
+          // transacoes separadas. Sem isto, a recorrencia agenda por cima de
+          // horario que o professor ja ocupou no Google.
+          if (
+            await hasActiveOverlapWithTx(tx, {
+              startAt: lockedSlot.startAt,
+              endAt: lockedSlot.endAt,
+            })
+          ) {
+            throw new Error('EXTERNAL_OCCUPANCY');
+          }
 
           const cas = await tx.$executeRaw`
             UPDATE availability_slots SET version = version + 1
@@ -454,6 +480,142 @@ export class CronService {
     }
 
     return { booked, failed };
+  }
+
+  /**
+   * Renova canais push do Google Calendar proximos de expirar.
+   * Executado a cada 6 horas via Vercel Cron.
+   *
+   * Canais expiram em ~7 dias. Renovamos quando faltam < 24 horas.
+   *
+   * @returns Numero de canais renovados
+   */
+  async renewGoogleCalendarChannels(): Promise<{ renewed: number; errors: string[] }> {
+    const { googleCalendarPushService } = await import('./google-calendar-push.service');
+
+    const now = new Date();
+    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    // Buscar canais ausentes, sem baseline ou proximos de expirar.
+    const credentials = await prisma.googleCalendarCredential.findMany({
+      where: {
+        OR: [
+          { channelId: null },
+          { resourceId: null },
+          { channelExpiration: null },
+          { syncToken: null },
+          { channelExpiration: { lte: in24h } },
+        ],
+      },
+      select: { userId: true },
+    });
+
+    let renewed = 0;
+    const errors: string[] = [];
+
+    for (const cred of credentials) {
+      try {
+        const wasRenewed = await googleCalendarPushService.renewChannel(cred.userId);
+        if (wasRenewed) {
+          renewed++;
+        }
+      } catch (e) {
+        logger.error('[CronService.renewGoogleCalendarChannels] renewal error', { action: 'cron.google-calendar', userId: cred.userId }, e);
+        errors.push(cred.userId);
+      }
+    }
+
+    return { renewed, errors };
+  }
+
+  /**
+   * Job de reconciliacao periodica do Google Calendar.
+   * Executado a cada hora via Vercel Cron.
+   *
+   * Rede de seguranca para o canal push:
+   * - Verifica credenciais com lastSyncAt envelhecido (> 1h)
+   * - Dispara sincronizacao completa para credenciais envelhecidas
+   * - Registra sucesso/falha no model Job
+   * - Emite alarme (log estruturado) quando falha
+   *
+   * @returns Numero de credenciais reconciliadas e lista de alarmes
+   */
+  async runGoogleCalendarReconciliation(): Promise<{ reconciled: number; alarms: string[] }> {
+    const { googleCalendarPushService } = await import('./google-calendar-push.service');
+    const { JobType, JobStatus } = await import('@prisma/client');
+
+    const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hora
+    const now = new Date();
+    const alarms: string[] = [];
+    let reconciled = 0;
+
+    // Buscar todas as credenciais conectadas. A reconciliacao e a rede de
+    // seguranca inclusive quando o canal push esta ausente ou morto.
+    const credentials = await prisma.googleCalendarCredential.findMany({
+      select: { userId: true, lastSyncAt: true },
+    });
+
+    for (const cred of credentials) {
+      const stale = !cred.lastSyncAt ||
+        (now.getTime() - cred.lastSyncAt.getTime()) > STALE_THRESHOLD_MS;
+
+      if (!stale) continue;
+
+      // Alarmar carimbo envelhecido
+      alarms.push(`user=${cred.userId} lastSync=${cred.lastSyncAt?.toISOString() ?? 'never'}`);
+      logger.warn('[CronService.runGoogleCalendarReconciliation] stale sync detected', {
+        action: 'cron.google-calendar-reconciliation',
+        userId: cred.userId,
+        lastSyncAt: cred.lastSyncAt,
+      });
+
+      // Criar Job para rastrear
+      const job = await prisma.job.create({
+        data: {
+          type: JobType.GOOGLE_CALENDAR_RECONCILIATION,
+          status: JobStatus.RUNNING,
+          startedAt: now,
+          payload: { userId: cred.userId },
+        },
+      });
+
+      try {
+        // Disparar sincronizacao completa
+        // Reutiliza o full sync existente, protegido pelo lease distribuido.
+        await googleCalendarPushService.initialSync(cred.userId);
+
+        // Marcar Job como sucedido
+        await prisma.job.update({
+          where: { id: job.id },
+          data: {
+            status: JobStatus.SUCCEEDED,
+            completedAt: new Date(),
+          },
+        });
+
+        reconciled++;
+      } catch (error) {
+        // Marcar Job como falho
+        await prisma.job.update({
+          where: { id: job.id },
+          data: {
+            status: JobStatus.FAILED,
+            completedAt: new Date(),
+            finalErrorCode: 'RECONCILIATION_FAILED',
+            finalErrorMessage: error instanceof Error ? error.message : String(error),
+            finalErrorAt: new Date(),
+          },
+        });
+
+        logger.error('[CronService.runGoogleCalendarReconciliation] reconciliation failed', {
+          action: 'cron.google-calendar-reconciliation',
+          userId: cred.userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return { reconciled, alarms };
   }
 }
 

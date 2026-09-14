@@ -20,7 +20,7 @@ import { creditService } from '@/services/credit.service';
  * `undefined` silencioso.
  *
  * Todo campo abaixo tem produtor comprovado:
- *   - id/name/email/role/emailConfirmed: `AuthService.getMe` (select explicito);
+ *   - id/name/email/role/emailConfirmed/timezone: `AuthService.getMe` (select explicito);
  *   - creditBalance: `CreditService.getBalance` (fonte unica de saldo do sistema).
  */
 const authUserSchema = z.object({
@@ -28,6 +28,8 @@ const authUserSchema = z.object({
   name: z.string(),
   email: z.string(),
   role: z.enum(UserRole),
+  /** Fuso IANA persistido do aluno. Produtor: AuthService.getMe. */
+  timezone: z.string().min(1),
   /** Saldo de creditos validos (nao expirados). Produtor: CreditService.getBalance. */
   creditBalance: z.number(),
   emailConfirmed: z.boolean(),

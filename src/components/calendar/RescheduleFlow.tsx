@@ -9,6 +9,7 @@ import { CalendarView } from '@/components/calendar/CalendarView';
 import { SlotPicker } from '@/components/calendar/SlotPicker';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useTimezone } from '@/hooks/useTimezone';
+import { useDialogA11y } from '@/hooks/useDialogA11y';
 import { rescheduleSession } from '@/actions/sessions';
 import { ROUTES } from '@/lib/constants/routes';
 import { toast } from 'sonner';
@@ -20,6 +21,8 @@ type FlowState = 'selecting' | 'confirming' | 'success' | 'error';
 
 interface RescheduleFlowProps {
   session: { id: string; startAt: string };
+  studentTimezone: string;
+  adminTimezone: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRescheduled: () => void;
@@ -27,6 +30,8 @@ interface RescheduleFlowProps {
 
 export function RescheduleFlow({
   session,
+  studentTimezone,
+  adminTimezone,
   open,
   onOpenChange,
   onRescheduled,
@@ -43,13 +48,45 @@ export function RescheduleFlow({
     prevMonth,
     nextMonth,
     refresh,
-  } = useCalendar();
-  const { studentTz } = useTimezone();
+  } = useCalendar({ timeZone: studentTimezone });
+  const { studentTz, adminTz } = useTimezone(studentTimezone, adminTimezone);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
   const [flowState, setFlowState] = useState<FlowState>('selecting');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const handleClose = () => {
+    setFlowState('selecting');
+    setSelectedDate(null);
+    setSelectedSlot(null);
+    setErrorMessage('');
+    onOpenChange(false);
+  };
+
+  const handleSuccessClose = () => {
+    handleClose();
+    onRescheduled();
+  };
+
+  // Esc e clique no fundo reaproveitam o handler do controle de fechar que cada
+  // estado mostra. `selecting` fecha pelo cancelar, que continua montado com
+  // `loadError`. `success` usa `handleSuccessClose` para nao pular o
+  // `onRescheduled`. `confirming` nao mostra controle de fechar e fica inerte com
+  // o `rescheduleSession` em voo.
+  const dismissByState: Record<FlowState, (() => void) | null> = {
+    selecting: handleClose,
+    confirming: null,
+    success: handleSuccessClose,
+    error: handleClose,
+  };
+
+  const { dialogRef, handleBackdropClick } = useDialogA11y<HTMLDivElement>({
+    open,
+    onDismiss: dismissByState[flowState],
+    // O bloco de erro de carregamento troca os botoes do painel sem mudar o estado.
+    focusKey: `${flowState}:${loadError ? 'load-error' : 'loaded'}`,
+  });
 
   if (!open) return null;
 
@@ -58,8 +95,23 @@ export function RescheduleFlow({
   const isLateReschedule = hoursUntilSession < LATE_RESCHEDULE_HOURS;
 
   const slotsForDate = selectedDate ? (slotsByDate[selectedDate] ?? []) : [];
+  // A selecao so vale enquanto o slot continua na lista: quando o horario vence
+  // e o `useCalendar` o remove, o confirmar volta a ficar desabilitado.
+  const activeSlot =
+    selectedSlot && slotsForDate.some((slot) => slot.id === selectedSlot.id)
+      ? selectedSlot
+      : null;
+
+  const isPastSlot = (slot: AvailabilitySlot) =>
+    new Date(slot.startAt).getTime() <= Date.now();
 
   const handleSelectSlot = (slot: AvailabilitySlot) => {
+    // Aba em segundo plano atrasa o timer do hook; o clique revalida o instante.
+    if (isPastSlot(slot)) {
+      setSelectedSlot(null);
+      refresh();
+      return;
+    }
     setSelectedSlot((prev) => (prev?.id === slot.id ? null : slot));
   };
 
@@ -69,10 +121,15 @@ export function RescheduleFlow({
   };
 
   const handleConfirm = async () => {
-    if (!selectedSlot) return;
+    if (!activeSlot) return;
+    if (isPastSlot(activeSlot)) {
+      setSelectedSlot(null);
+      refresh();
+      return;
+    }
     setFlowState('confirming');
     try {
-      const result = await rescheduleSession(session.id, selectedSlot.id);
+      const result = await rescheduleSession(session.id, activeSlot.id);
       if (result.error) {
         setErrorMessage(result.error);
         setFlowState('error');
@@ -90,26 +147,16 @@ export function RescheduleFlow({
     }
   };
 
-  const handleClose = () => {
-    setFlowState('selecting');
-    setSelectedDate(null);
-    setSelectedSlot(null);
-    setErrorMessage('');
-    onOpenChange(false);
-  };
-
-  const handleSuccessClose = () => {
-    handleClose();
-    onRescheduled();
-  };
-
   return (
     <div
+      ref={dialogRef}
       data-testid="modal-reschedule"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={t('dialogLabel')}
+      tabIndex={-1}
+      onClick={handleBackdropClick}
     >
       <div className="bg-card border border-border rounded-2xl shadow-lg w-full max-w-3xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
         {flowState === 'selecting' && (
@@ -160,9 +207,10 @@ export function RescheduleFlow({
                   />
                   <SlotPicker
                     slots={slotsForDate}
-                    selectedSlotId={selectedSlot?.id ?? null}
+                    selectedSlotId={activeSlot?.id ?? null}
                     onSelectSlot={handleSelectSlot}
                     studentTz={studentTz}
+                    adminTz={adminTz}
                     isLoading={isLoading}
                     selectedDate={selectedDate}
                   />
@@ -189,7 +237,7 @@ export function RescheduleFlow({
                 <Button
                   data-testid="modal-reschedule-confirm-button"
                   onClick={handleConfirm}
-                  disabled={!selectedSlot}
+                  disabled={!activeSlot}
                   className="flex-1"
                 >
                   {isLateReschedule ? t('requestSubmit') : t('confirmSubmit')}
