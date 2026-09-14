@@ -3,14 +3,13 @@
 /**
  * Error boundary do segmento de exercicios.
  *
- * Cai aqui quando `getExercises()` recusa o dado copiado da aula (contrato de
- * forma da fonte violado — ver src/lib/exercises/catalog.ts) ou quando o render
- * do segmento falha por qualquer outro motivo.
+ * Cai aqui quando a leitura de sessao/banco falha ou quando o render do
+ * segmento encontra qualquer outro erro inesperado.
  *
  * Next 16.2: o retry canonico e `unstable_retry()`, que refaz o fetch e o
  * render do conteudo do boundary. `reset()` continua sendo passado, mas so
- * limpa o estado de erro sem refazer o trabalho — para uma rota cujo erro nasce
- * na montagem do catalogo, refazer o render e o unico retry que resolve.
+ * limpa o estado de erro sem refazer o trabalho; como a rota consulta o banco,
+ * refazer o render e o retry que pode recuperar uma falha transitoria.
  * Fonte: node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/error.md
  * (secoes `unstable_retry` e `reset`). Os boundaries irmaos em (student) ainda
  * usam `reset` porque sao anteriores a 16.2.
@@ -48,6 +47,7 @@ export default function ExercisesError({ error, unstable_retry }: ExercisesError
         <Button
           data-testid="exercises-error-retry-button"
           size="lg"
+          className="min-h-11 min-w-11"
           onClick={() => unstable_retry()}
         >
           {t('errorRetry')}

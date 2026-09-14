@@ -333,16 +333,16 @@ model User {
 /// tokens pendentes, marcacao de uso unico (consumedAt) e anti-replay.
 /// Armazena apenas o hash SHA-256 do token; o token bruto so existe no link enviado.
 model MagicLinkToken {
-  id           String    @id @default(uuid())
-  userId       String
+  id          String    @id @default(uuid())
+  userId      String
   /// SHA-256 hex do token bruto. Lookup sempre por hash (nunca pelo token cru).
-  tokenHash    String    @unique
-  expiresAt    DateTime
+  tokenHash   String    @unique
+  expiresAt   DateTime
   /// Marcado atomicamente na primeira consumacao. Nao-nulo => ja usado (rejeita replay).
-  consumedAt   DateTime?
+  consumedAt  DateTime?
   /// IP do solicitante (auditoria / rate-limit forense). Pode ser 'unknown'.
-  requesterIp  String?   @db.VarChar(64)
-  createdAt    DateTime  @default(now())
+  requesterIp String?   @db.VarChar(64)
+  createdAt   DateTime  @default(now())
 
   user User @relation("MagicLinkTokenUser", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1648,12 +1648,11 @@ enum ExerciseItemKind {
 }
 
 /// Envelope de exercicio criado no painel admin.
-/// Sucede o catalogo estatico de `src/lib/exercises/`, que permanece como
-/// fallback ate a aula 1 ser importada para o banco.
+/// O banco e a fonte exclusiva do fluxo do aluno desde a migracao da aula 1.
 model Exercise {
   id              String            @id @default(uuid())
   /// Titulo visivel so para o admin na biblioteca. O titulo do aluno vive em ExerciseTranslation.
-  internalTitle   String            @db.VarChar(200)
+  internalTitle   String            @unique(map: "UNIQUE_exercises_internalTitle") @db.VarChar(200)
   /// Idioma de apoio do conteudo. IT_IT e recusado na validacao Zod: a fonte
   /// nao publica italiano (ver `LessonContentLocale` em src/lib/exercises/types.ts).
   supportLanguage SupportedLanguage

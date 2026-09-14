@@ -12,7 +12,9 @@ vi.mock('@/lib/auth', () => ({
     message,
   }),
 }));
-vi.mock('@/lib/auth-guard', () => ({ requireAdmin: mockRequireAdmin }));
+vi.mock('@/lib/auth/admin-mfa.guard', () => ({
+  requireAdminWithRecentMfa: mockRequireAdmin,
+}));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 vi.mock('@/services/exercise.service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/exercise.service')>()),
@@ -25,6 +27,18 @@ import { AppError } from '@/lib/errors';
 const ADMIN = { id: 'admin-1', role: 'ADMIN', tokenVersion: 1 };
 const params = Promise.resolve({ id: 'ex-1' });
 const STUDENT_ID = '11111111-1111-4111-8111-111111111111';
+
+function mfaRequiredResponse() {
+  return NextResponse.json(
+    {
+      data: null,
+      error: 'Verificação MFA recente necessária.',
+      message: null,
+      code: 'mfa_required',
+    },
+    { status: 403 },
+  );
+}
 
 function getRequest() {
   return new NextRequest('http://localhost/api/v1/admin/exercises/ex-1/assignments', {
@@ -46,12 +60,25 @@ beforeEach(() => {
 });
 
 describe('GET /api/v1/admin/exercises/[id]/assignments', () => {
-  it('devolve 403 quando o guard recusa', async () => {
-    mockRequireAdmin.mockResolvedValue(NextResponse.json({}, { status: 403 }));
+  it('devolve 401 sem autenticacao e nao acessa o service', async () => {
+    mockRequireAdmin.mockResolvedValue(NextResponse.json({}, { status: 401 }));
 
     const res = await GET(getRequest(), { params });
 
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockService.listAssignments).not.toHaveBeenCalled();
+  });
+
+  it('devolve 403 mfa_required sem acessar o service', async () => {
+    mockRequireAdmin.mockResolvedValue(mfaRequiredResponse());
+
+    const res = await GET(getRequest(), { params });
+    const body = await res.json();
+
     expect(res.status).toBe(403);
+    expect(body.code).toBe('mfa_required');
+    expect(mockService.listAssignments).not.toHaveBeenCalled();
   });
 
   it('devolve 404 quando o exercicio nao existe', async () => {
@@ -76,6 +103,27 @@ describe('GET /api/v1/admin/exercises/[id]/assignments', () => {
 });
 
 describe('POST /api/v1/admin/exercises/[id]/assignments', () => {
+  it('devolve 401 sem autenticacao e nao acessa o service', async () => {
+    mockRequireAdmin.mockResolvedValue(NextResponse.json({}, { status: 401 }));
+
+    const res = await POST(postRequest({ studentIds: [STUDENT_ID] }), { params });
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockService.grant).not.toHaveBeenCalled();
+  });
+
+  it('devolve 403 mfa_required sem acessar o service', async () => {
+    mockRequireAdmin.mockResolvedValue(mfaRequiredResponse());
+
+    const res = await POST(postRequest({ studentIds: [STUDENT_ID] }), { params });
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('mfa_required');
+    expect(mockService.grant).not.toHaveBeenCalled();
+  });
+
   it('devolve 400 quando o corpo nao e JSON valido', async () => {
     const req = new NextRequest('http://localhost/api/v1/admin/exercises/ex-1/assignments', {
       method: 'POST',
@@ -104,6 +152,16 @@ describe('POST /api/v1/admin/exercises/[id]/assignments', () => {
     const res = await POST(postRequest({ studentIds: [STUDENT_ID] }), { params });
 
     expect(res.status).toBe(409);
+  });
+
+  it('devolve 404 quando o exercicio nao existe', async () => {
+    mockService.grant.mockRejectedValue(
+      new AppError('EXERCISE_001', 'Exercicio nao encontrado.', 404),
+    );
+
+    const res = await POST(postRequest({ studentIds: [STUDENT_ID] }), { params });
+
+    expect(res.status).toBe(404);
   });
 
   // Esta e a UNICA rota do dominio em que `data` carrega conteudo no erro: sem a

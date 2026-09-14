@@ -2,26 +2,23 @@
  * Lista de exercicios do aluno.
  *
  * Server component de proposito: so o card de multipla escolha precisa de
- * estado, entao a lista fica fora do bundle do cliente. Cada exercicio vira um
- * item da lista, e o tipo do exercicio decide qual card renderizar — hoje so
- * existe `multiple-choice` (ver src/lib/exercises/types.ts).
+ * estado, entao a lista fica fora do bundle do cliente.
+ *
+ * NOTA: O drill inline foi removido no item 011. Os cards agora navegam
+ * para a rota de tentativa `/exercises/[id]`. Este componente permanece
+ * como container generico para reuso futuro.
  */
 
-import { ExerciseMultipleChoice } from './exercise-multiple-choice';
-import type { StaticExercise } from '@/lib/exercises';
+import type { ReactNode } from 'react';
 
 interface ExercisesListProps {
-  exercises: readonly StaticExercise[];
+  children: ReactNode;
 }
 
-export function ExercisesList({ exercises }: ExercisesListProps) {
+export function ExercisesList({ children }: ExercisesListProps) {
   return (
     <ul data-testid="exercises-list" className="space-y-6">
-      {exercises.map((exercise) => (
-        <li key={exercise.id}>
-          <ExerciseMultipleChoice exercise={exercise} />
-        </li>
-      ))}
+      {children}
     </ul>
   );
 }

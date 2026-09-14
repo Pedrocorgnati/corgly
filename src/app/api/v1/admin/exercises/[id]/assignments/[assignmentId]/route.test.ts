@@ -12,7 +12,9 @@ vi.mock('@/lib/auth', () => ({
     message,
   }),
 }));
-vi.mock('@/lib/auth-guard', () => ({ requireAdmin: mockRequireAdmin }));
+vi.mock('@/lib/auth/admin-mfa.guard', () => ({
+  requireAdminWithRecentMfa: mockRequireAdmin,
+}));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 vi.mock('@/services/exercise.service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/exercise.service')>()),
@@ -24,6 +26,18 @@ import { AppError } from '@/lib/errors';
 
 const ADMIN = { id: 'admin-1', role: 'ADMIN', tokenVersion: 1 };
 const params = Promise.resolve({ id: 'ex-1', assignmentId: 'as-1' });
+
+function mfaRequiredResponse() {
+  return NextResponse.json(
+    {
+      data: null,
+      error: 'Verificação MFA recente necessária.',
+      message: null,
+      code: 'mfa_required',
+    },
+    { status: 403 },
+  );
+}
 
 function request() {
   return new NextRequest(
@@ -38,12 +52,24 @@ beforeEach(() => {
 });
 
 describe('DELETE /api/v1/admin/exercises/[id]/assignments/[assignmentId]', () => {
-  it('devolve 403 quando o guard recusa', async () => {
-    mockRequireAdmin.mockResolvedValue(NextResponse.json({}, { status: 403 }));
+  it('devolve 401 sem autenticacao e nao acessa o service', async () => {
+    mockRequireAdmin.mockResolvedValue(NextResponse.json({}, { status: 401 }));
 
     const res = await DELETE(request(), { params });
 
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockService.revoke).not.toHaveBeenCalled();
+  });
+
+  it('devolve 403 mfa_required sem acessar o service', async () => {
+    mockRequireAdmin.mockResolvedValue(mfaRequiredResponse());
+
+    const res = await DELETE(request(), { params });
+    const body = await res.json();
+
     expect(res.status).toBe(403);
+    expect(body.code).toBe('mfa_required');
     expect(mockService.revoke).not.toHaveBeenCalled();
   });
 

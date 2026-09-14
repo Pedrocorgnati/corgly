@@ -1,9 +1,7 @@
 /** Barrel do modulo de exercicios do aluno. */
 
-export { getExercises, getExerciseById } from './catalog';
 export { contentLocaleFor, resolveLessonText } from './lesson-text';
 export { distributeQuestion, moveItem, targetCorrectPosition } from './answer-distribution';
-export { LESSON_1_PARROT } from './lesson-1-parrot';
 export {
   EXERCISE_ITEM_KINDS,
   EXERCISE_ITEM_SCHEMAS_BY_KIND,

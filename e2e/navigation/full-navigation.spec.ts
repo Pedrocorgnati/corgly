@@ -5,7 +5,7 @@ import { loginAs, TEST_USERS } from '../helpers/auth'
 // Item novo na navegação do aluno entra aqui também — senão a suíte "sem links
 // órfãos" deixa de cobrir justamente a rota recém-criada.
 const STUDENT_ROUTES = ['/', '/dashboard', '/schedule', '/buy', '/history', '/progress', '/exercises', '/library']
-const ADMIN_ROUTES = ['/admin', '/admin/schedule', '/admin/sessions', '/admin/students', '/admin/credits', '/admin/feedback']
+const ADMIN_ROUTES = ['/admin', '/admin/schedule', '/admin/sessions', '/admin/students', '/admin/credits', '/admin/feedback', '/admin/exercises']
 const PUBLIC_ROUTES = ['/', '/auth/login', '/auth/register', '/auth/reset-password']
 const PROTECTED_ROUTES = ['/dashboard', '/schedule', '/buy', '/history', '/exercises', '/library', '/admin']
 

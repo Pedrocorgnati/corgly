@@ -11,18 +11,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AppError } from '@/lib/errors';
 import { apiResponse } from '@/lib/auth';
-import { requireAdmin } from '@/lib/auth-guard';
+import { requireAdminWithRecentMfa } from '@/lib/auth/admin-mfa.guard';
+import { withApiHandler } from '@/lib/api-handler';
 import { createAssignmentSchema } from '@/schemas/exercise.schema';
 import { exerciseService, statusForAppError } from '@/services/exercise.service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(
+export const GET = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
-  const auth = await requireAdmin(request);
+) => {
+  const auth = await requireAdminWithRecentMfa(request);
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
@@ -31,18 +32,19 @@ export async function GET(
     const assignments = await exerciseService.listAssignments(id);
     return NextResponse.json(apiResponse(assignments));
   } catch (err) {
+    if (!(err instanceof AppError)) throw err;
     return NextResponse.json(
-      apiResponse(null, err instanceof Error ? err.message : 'Erro ao listar liberacoes.'),
+      apiResponse(null, err.message),
       { status: statusForAppError(err) },
     );
   }
-}
+});
 
-export async function POST(
+export const POST = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
-  const auth = await requireAdmin(request);
+) => {
+  const auth = await requireAdminWithRecentMfa(request);
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await params;
@@ -66,10 +68,11 @@ export async function POST(
     const assignments = await exerciseService.grant(id, parsed.data.studentIds, auth.id);
     return NextResponse.json(apiResponse(assignments), { status: 201 });
   } catch (err) {
-    const details = err instanceof AppError ? (err.details ?? null) : null;
+    if (!(err instanceof AppError)) throw err;
+    const details = err.details ?? null;
     return NextResponse.json(
-      apiResponse(details, err instanceof Error ? err.message : 'Erro ao liberar exercicio.'),
+      apiResponse(details, err.message),
       { status: statusForAppError(err) },
     );
   }
-}
+});

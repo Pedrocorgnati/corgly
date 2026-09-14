@@ -80,6 +80,9 @@ export const PAGINATION = {
   STUDENT_HISTORY: 10,
   ADMIN_SESSIONS: 20,
   ADMIN_STUDENTS: 20,
+  // Mesmo limite de students: a biblioteca admin pagina igual (lista densa de
+  // metadados, sem conteudo dos itens). Decisao registrada na task 006 (ST003).
+  ADMIN_EXERCISES: 20,
   FEEDBACK_HISTORY: 20,
   DASHBOARD_RECENT: 10,
   DASHBOARD_UPCOMING: 50,

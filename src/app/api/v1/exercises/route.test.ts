@@ -33,6 +33,16 @@ beforeEach(() => {
 });
 
 describe('GET /api/v1/exercises', () => {
+  it('devolve 401 sem autenticacao e nao acessa o service', async () => {
+    mockRequireStudent.mockResolvedValue(NextResponse.json({}, { status: 401 }));
+
+    const res = await GET(request());
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockService.listForStudent).not.toHaveBeenCalled();
+  });
+
   it('devolve 403 quando o guard recusa', async () => {
     mockRequireStudent.mockResolvedValue(NextResponse.json({}, { status: 403 }));
 

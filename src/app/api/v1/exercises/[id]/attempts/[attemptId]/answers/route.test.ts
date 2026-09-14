@@ -49,6 +49,17 @@ beforeEach(() => {
 });
 
 describe('POST /api/v1/exercises/[id]/attempts/[attemptId]/answers', () => {
+  it('devolve 401 antes do limiter e do service', async () => {
+    mockRequireStudent.mockResolvedValue(NextResponse.json({}, { status: 401 }));
+
+    const res = await POST(request({ itemId: ITEM_ID, answer: {} }), { params });
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockService.submitAnswer).not.toHaveBeenCalled();
+  });
+
   it('devolve 403 quando o guard recusa', async () => {
     mockRequireStudent.mockResolvedValue(NextResponse.json({}, { status: 403 }));
 
@@ -56,6 +67,7 @@ describe('POST /api/v1/exercises/[id]/attempts/[attemptId]/answers', () => {
 
     expect(res.status).toBe(403);
     expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockService.submitAnswer).not.toHaveBeenCalled();
   });
 
   it('devolve 429 quando o limite por aluno estoura', async () => {

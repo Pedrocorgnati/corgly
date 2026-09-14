@@ -22,6 +22,7 @@ import {
   MAX_MATCH_PAIRS,
   MIN_MATCH_PAIRS,
   PHASE_1_EXERCISE_ITEM_KINDS,
+  exerciseEntryIdSchema,
   exerciseItemContentSchema,
 } from '@/lib/exercises';
 
@@ -269,6 +270,16 @@ export const submitAnswerSchema = z.object({
 });
 
 export type SubmitAnswerInput = z.infer<typeof submitAnswerSchema>;
+
+/** Candidato isolado de MATCH_CLICK. Nao aceita kind, gabarito nem contadores. */
+export const matchPairCandidateSchema = z
+  .object({
+    leftId: exerciseEntryIdSchema,
+    rightId: exerciseEntryIdSchema,
+  })
+  .strict();
+
+export type MatchPairCandidate = z.infer<typeof matchPairCandidateSchema>;
 
 /** Kinds que a Fase 1 sabe corrigir. Reexportado para a rota nao importar dois barris. */
 export const SUPPORTED_ANSWER_KINDS = PHASE_1_EXERCISE_ITEM_KINDS;

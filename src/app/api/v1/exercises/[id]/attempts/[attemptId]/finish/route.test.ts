@@ -38,6 +38,16 @@ beforeEach(() => {
 });
 
 describe('POST /api/v1/exercises/[id]/attempts/[attemptId]/finish', () => {
+  it('devolve 401 sem autenticacao e nao acessa o service', async () => {
+    mockRequireStudent.mockResolvedValue(NextResponse.json({}, { status: 401 }));
+
+    const res = await POST(request(), { params });
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockService.finishAttempt).not.toHaveBeenCalled();
+  });
+
   it('devolve 403 quando o guard recusa', async () => {
     mockRequireStudent.mockResolvedValue(NextResponse.json({}, { status: 403 }));
 
@@ -73,8 +83,9 @@ describe('POST /api/v1/exercises/[id]/attempts/[attemptId]/finish', () => {
       answeredCount: 2,
       correctCount: 1,
       itemCount: 4,
-      score: null,
-      scorePending: true,
+      status: 'IN_PROGRESS',
+      score: 0.5,
+      scorePercent: 50,
       items: [{ id: 'it-1', answerKey: { correctIndex: 0 }, isCorrect: true }],
     });
 
@@ -83,8 +94,8 @@ describe('POST /api/v1/exercises/[id]/attempts/[attemptId]/finish', () => {
 
     expect(res.status).toBe(200);
     expect(body.data.items[0].answerKey).toEqual({ correctIndex: 0 });
-    expect(body.data.score).toBeNull();
-    expect(body.data.scorePending).toBe(true);
+    expect(body.data.score).toBe(0.5);
+    expect(body.data.scorePercent).toBe(50);
     expect(mockService.finishAttempt).toHaveBeenCalledWith('ex-1', 'at-1', 'stu-1');
   });
 });

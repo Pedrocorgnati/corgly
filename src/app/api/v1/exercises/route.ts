@@ -9,13 +9,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiResponse } from '@/lib/auth';
 import { requireStudent } from '@/lib/auth-guard';
+import { withApiHandler } from '@/lib/api-handler';
+import { AppError } from '@/lib/errors';
 import { studentExerciseListQuerySchema } from '@/schemas/exercise.schema';
 import { exerciseService, statusForAppError } from '@/services/exercise.service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export const GET = withApiHandler(async (request: NextRequest) => {
   const auth = await requireStudent(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -34,9 +36,10 @@ export async function GET(request: NextRequest) {
     const result = await exerciseService.listForStudent(auth.id, parsed.data);
     return NextResponse.json(apiResponse(result));
   } catch (err) {
+    if (!(err instanceof AppError)) throw err;
     return NextResponse.json(
-      apiResponse(null, err instanceof Error ? err.message : 'Erro ao listar exercicios.'),
+      apiResponse(null, err.message),
       { status: statusForAppError(err) },
     );
   }
-}
+});

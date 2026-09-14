@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  LayoutDashboard, CalendarDays, Users, Video, CreditCard, BarChart3, BookOpen, Mail, LifeBuoy, ShieldCheck, Activity, LogOut
+  LayoutDashboard, CalendarDays, Users, Video, CreditCard, BarChart3, BookOpen, Dumbbell, Mail, LifeBuoy, ShieldCheck, Activity, LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants/routes';
@@ -53,6 +53,7 @@ export const ADMIN_NAV_ITEMS: readonly AdminNavItem[] = [
   { href: ROUTES.ADMIN_CREDITS, labelKey: 'credits', icon: CreditCard, showIn: ['sidebar', 'drawer'] },
   { href: ROUTES.ADMIN_REPORTS, labelKey: 'reports', icon: BarChart3, showIn: ['sidebar', 'drawer'] },
   { href: ROUTES.ADMIN_CONTENT, labelKey: 'content', icon: BookOpen, showIn: ['sidebar', 'drawer'] },
+  { href: ROUTES.ADMIN_EXERCISES, labelKey: 'exercises', icon: Dumbbell, showIn: ['sidebar', 'drawer'] },
   { href: ROUTES.ADMIN_EMAIL_TEMPLATES, labelKey: 'emailTemplates', icon: Mail, showIn: ['sidebar', 'drawer'] },
   { href: ROUTES.ADMIN_SUPPORT, labelKey: 'support', icon: LifeBuoy, showIn: ['sidebar', 'drawer'] },
   { href: ROUTES.ADMIN_HEALTH, labelKey: 'health', icon: Activity, showIn: ['sidebar', 'drawer'] },

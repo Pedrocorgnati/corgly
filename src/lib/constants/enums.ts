@@ -230,3 +230,96 @@ export const CREDIT_TYPE_LABEL_KEY: Record<CreditType, string> = {
   MANUAL: 'MANUAL',
   REFUND: 'REFUND',
 };
+
+// ── Exercícios (biblioteca do admin) ──
+
+export const ExerciseStatus = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+export type ExerciseStatus = (typeof ExerciseStatus)[keyof typeof ExerciseStatus];
+
+export const ExerciseAssignmentStatus = {
+  ACTIVE: 'ACTIVE',
+  REVOKED: 'REVOKED',
+} as const;
+export type ExerciseAssignmentStatus =
+  (typeof ExerciseAssignmentStatus)[keyof typeof ExerciseAssignmentStatus];
+
+export const ExerciseAttemptStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  ABANDONED: 'ABANDONED',
+} as const;
+export type ExerciseAttemptStatus =
+  (typeof ExerciseAttemptStatus)[keyof typeof ExerciseAttemptStatus];
+
+export const ExerciseItemKind = {
+  MULTIPLE_CHOICE: 'MULTIPLE_CHOICE',
+  MATCH_CLICK: 'MATCH_CLICK',
+  AUDIO_WORD: 'AUDIO_WORD',
+  AUDIO_CLOZE: 'AUDIO_CLOZE',
+  AUDIO_SENTENCE: 'AUDIO_SENTENCE',
+  AUDIO_CHOICE: 'AUDIO_CHOICE',
+  AUDIO_ORDER: 'AUDIO_ORDER',
+  TEXT_CHOICE: 'TEXT_CHOICE',
+  VERB_CLOZE: 'VERB_CLOZE',
+  IMAGE_WORD: 'IMAGE_WORD',
+  IMAGE_CHOICE: 'IMAGE_CHOICE',
+  IMAGE_SPEAK: 'IMAGE_SPEAK',
+  AUDIO_SHADOW: 'AUDIO_SHADOW',
+  L1_SPEAK_PT: 'L1_SPEAK_PT',
+} as const;
+export type ExerciseItemKind = (typeof ExerciseItemKind)[keyof typeof ExerciseItemKind];
+
+/**
+ * Cor/rotulo de cada status de exercicio. Decisao da task 006 (ST006, opcao a):
+ * mapa PROPRIO ao lado do `SESSION_STATUS_MAP`, sem generalizar o `StatusBadge`
+ * — aquele e tipado em `SessionStatus` e tem 9 consumers de sessao que nao
+ * deveriam ser tocados por uma tela nova.
+ *
+ * O rotulo e pt-BR de proposito: a area admin inteira (ex.
+ * `admin/students/page.tsx`) escreve copy direto em pt-BR, sem catalogo
+ * next-intl. Se a area admin for i18n-izada um dia, este mapa ganha um
+ * `EXERCISE_STATUS_LABEL_KEY` espelhando o padrao de sessao.
+ *
+ * Consumidor: `src/app/(admin)/admin/exercises/page.tsx`.
+ */
+export const EXERCISE_STATUS_MAP: Record<
+  ExerciseStatus,
+  { color: string; bg: string; border: string; label: string }
+> = {
+  DRAFT: {
+    color: 'text-[#D97706]',
+    bg: 'bg-[#FEF3C7]',
+    border: 'border-[#FDE68A]',
+    label: 'Rascunho',
+  },
+  PUBLISHED: {
+    color: 'text-[#059669]',
+    bg: 'bg-[#D1FAE5]',
+    border: 'border-[#A7F3D0]',
+    label: 'Publicado',
+  },
+  ARCHIVED: {
+    color: 'text-[#6B7280]',
+    bg: 'bg-[#F3F4F6]',
+    border: 'border-[#E5E7EB]',
+    label: 'Arquivado',
+  },
+};
+
+/**
+ * Mapa de nível do exercício (1-5). Usado na tela de assignments para
+ * exibir o nível com cor correspondente.
+ *
+ * Consumidor: `src/components/admin/exercises/assignment-list.tsx`.
+ */
+export const LEVEL_MAP: Record<number, { color: string; bg: string; border: string }> = {
+  1: { color: 'text-[#059669]', bg: 'bg-[#D1FAE5]', border: 'border-[#A7F3D0]' },
+  2: { color: 'text-[#0891B2]', bg: 'bg-[#CFFAFE]', border: 'border-[#A5F3FC]' },
+  3: { color: 'text-[#0284C7]', bg: 'bg-[#E0F2FE]', border: 'border-[#BAE6FD]' },
+  4: { color: 'text-[#7C3AED]', bg: 'bg-[#EDE9FE]', border: 'border-[#DDD6FE]' },
+  5: { color: 'text-[#DC2626]', bg: 'bg-[#FEE2E2]', border: 'border-[#FECACA]' },
+};

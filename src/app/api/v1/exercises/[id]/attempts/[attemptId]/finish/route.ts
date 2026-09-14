@@ -9,15 +9,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiResponse } from '@/lib/auth';
 import { requireStudent } from '@/lib/auth-guard';
+import { withApiHandler } from '@/lib/api-handler';
+import { AppError } from '@/lib/errors';
 import { exerciseService, statusForAppError } from '@/services/exercise.service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(
+export const POST = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string; attemptId: string }> },
-) {
+) => {
   const auth = await requireStudent(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -27,9 +29,10 @@ export async function POST(
     const result = await exerciseService.finishAttempt(id, attemptId, auth.id);
     return NextResponse.json(apiResponse(result));
   } catch (err) {
+    if (!(err instanceof AppError)) throw err;
     return NextResponse.json(
-      apiResponse(null, err instanceof Error ? err.message : 'Erro ao finalizar tentativa.'),
+      apiResponse(null, err.message),
       { status: statusForAppError(err) },
     );
   }
-}
+});

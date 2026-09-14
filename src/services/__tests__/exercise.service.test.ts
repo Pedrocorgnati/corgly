@@ -9,6 +9,7 @@
  * em vez de recriacao, e revogacao sem delecao.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Prisma } from '@prisma/client';
 import { AppError } from '@/lib/errors';
 
 const mockPrisma = vi.hoisted(() => ({
@@ -80,6 +81,148 @@ describe('statusForAppError', () => {
   it('trata qualquer outro erro como 500', () => {
     expect(statusForAppError(new Error('boom'))).toBe(500);
     expect(statusForAppError('boom')).toBe(500);
+  });
+});
+
+describe('listForAdmin', () => {
+  it('combina busca e cinco filtros, pagina de modo estável e monta o DTO sem N+1', async () => {
+    const updatedAt = new Date('2026-09-08T12:00:00.000Z');
+    const where = {
+      internalTitle: { contains: 'passado' },
+      level: 2,
+      subject: { contains: 'Gramática' },
+      supportLanguage: 'EN_US',
+      status: 'PUBLISHED',
+      tags: { array_contains: 'A2' },
+    };
+
+    mockPrisma.exercise.count.mockResolvedValue(42);
+    mockPrisma.exercise.findMany.mockResolvedValue([
+      {
+        id: 'ex-1',
+        internalTitle: 'Passado composto',
+        supportLanguage: 'EN_US',
+        level: 2,
+        subject: 'Gramática',
+        tags: ['A2', 'verbos'],
+        status: 'PUBLISHED',
+        updatedAt,
+        translations: [
+          { locale: 'PT_BR', title: 'Passado composto' },
+          { locale: 'EN_US', title: 'Present perfect' },
+        ],
+        items: [
+          { kind: 'TEXT_CHOICE', position: 3 },
+          { kind: 'MATCH_CLICK', position: 1 },
+          { kind: 'TEXT_CHOICE', position: 2 },
+        ],
+      },
+      {
+        id: 'ex-2',
+        internalTitle: 'Sem tradução de apoio',
+        supportLanguage: 'ES_ES',
+        level: 2,
+        subject: null,
+        tags: { inesperado: true },
+        status: 'DRAFT',
+        updatedAt,
+        translations: [{ locale: 'PT_BR', title: 'Somente português' }],
+        items: [],
+      },
+    ]);
+    mockPrisma.exerciseAssignment.groupBy.mockResolvedValue([
+      { exerciseId: 'ex-1', _count: { _all: 3 } },
+    ]);
+
+    const result = await exerciseService.listForAdmin({
+      q: 'passado',
+      level: 2,
+      subject: 'Gramática',
+      supportLanguage: 'EN_US',
+      status: 'PUBLISHED',
+      tag: 'A2',
+      page: 3,
+      limit: 10,
+    });
+
+    expect(mockPrisma.exercise.count).toHaveBeenCalledWith({ where });
+    expect(mockPrisma.exercise.findMany).toHaveBeenCalledWith({
+      where,
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+      skip: 20,
+      take: 10,
+      select: {
+        id: true,
+        internalTitle: true,
+        supportLanguage: true,
+        level: true,
+        subject: true,
+        tags: true,
+        status: true,
+        updatedAt: true,
+        translations: { select: { locale: true, title: true } },
+        items: {
+          select: { kind: true, position: true },
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
+    expect(mockPrisma.exerciseAssignment.groupBy).toHaveBeenCalledOnce();
+    expect(mockPrisma.exerciseAssignment.groupBy).toHaveBeenCalledWith({
+      by: ['exerciseId'],
+      where: { exerciseId: { in: ['ex-1', 'ex-2'] }, status: 'ACTIVE' },
+      _count: { _all: true },
+    });
+
+    expect(result).toStrictEqual({
+      total: 42,
+      page: 3,
+      limit: 10,
+      items: [
+        {
+          id: 'ex-1',
+          internalTitle: 'Passado composto',
+          studentTitle: 'Present perfect',
+          predominantKind: 'TEXT_CHOICE',
+          supportLanguage: 'EN_US',
+          level: 2,
+          subject: 'Gramática',
+          tags: ['A2', 'verbos'],
+          itemCount: 3,
+          status: 'PUBLISHED',
+          activeAssignmentCount: 3,
+          updatedAt,
+        },
+        {
+          id: 'ex-2',
+          internalTitle: 'Sem tradução de apoio',
+          studentTitle: null,
+          predominantKind: null,
+          supportLanguage: 'ES_ES',
+          level: 2,
+          subject: null,
+          tags: [],
+          itemCount: 0,
+          status: 'DRAFT',
+          activeAssignmentCount: 0,
+          updatedAt,
+        },
+      ],
+    });
+    expect(Object.keys(result.items[0] ?? {})).toHaveLength(12);
+    expect(result.items[0]).not.toHaveProperty('actions');
+    expect(result.items[0]).not.toHaveProperty('publishedAt');
+  });
+
+  it('não consulta contagens de assignments quando a página está vazia', async () => {
+    mockPrisma.exercise.count.mockResolvedValue(0);
+    mockPrisma.exercise.findMany.mockResolvedValue([]);
+
+    await expect(
+      exerciseService.listForAdmin({ page: 1, limit: 20 }),
+    ).resolves.toStrictEqual({ total: 0, page: 1, limit: 20, items: [] });
+
+    expect(mockPrisma.exerciseAssignment.groupBy).not.toHaveBeenCalled();
   });
 });
 
@@ -280,7 +423,15 @@ describe('archive', () => {
     mockPrisma.exercise.findUnique.mockResolvedValue({ id: 'ex-1', status: 'PUBLISHED' });
     mockPrisma.exercise.update.mockResolvedValue({ id: 'ex-1', status: 'ARCHIVED' });
 
-    await exerciseService.archive('ex-1', ADMIN);
+    await expect(exerciseService.archive('ex-1', ADMIN)).resolves.toStrictEqual({
+      id: 'ex-1',
+      status: 'ARCHIVED',
+    });
+
+    expect(mockPrisma.exercise.update).toHaveBeenCalledWith({
+      where: { id: 'ex-1', status: 'PUBLISHED' },
+      data: { status: 'ARCHIVED' },
+    });
 
     expect(mockAuditLog).toHaveBeenCalledWith(
       'EXERCISE_ARCHIVE',
@@ -288,6 +439,22 @@ describe('archive', () => {
       ADMIN,
       expect.any(Object),
     );
+  });
+
+  it('devolve conflito e nao duplica auditoria quando outra transicao vence o archive', async () => {
+    mockPrisma.exercise.findUnique.mockResolvedValue({ id: 'ex-1', status: 'PUBLISHED' });
+    mockPrisma.exercise.update.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Registro alterado', {
+        code: 'P2025',
+        clientVersion: '5.22.0',
+      }),
+    );
+
+    await expect(exerciseService.archive('ex-1', ADMIN)).rejects.toMatchObject({
+      code: 'EXERCISE_007',
+      status: 409,
+    });
+    expect(mockAuditLog).not.toHaveBeenCalled();
   });
 });
 
@@ -397,6 +564,7 @@ describe('revoke', () => {
 
     expect(result.status).toBe('REVOKED');
     expect(mockPrisma.exerciseAssignment.update).not.toHaveBeenCalled();
+    expect(mockAuditLog).not.toHaveBeenCalled();
   });
 
   it('revoga marcando status, sem apagar a linha', async () => {
@@ -411,7 +579,10 @@ describe('revoke', () => {
     await exerciseService.revoke('ex-1', 'as-1', ADMIN);
 
     expect(mockPrisma.exerciseAssignment.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: 'REVOKED' }) }),
+      expect.objectContaining({
+        where: { id: 'as-1', exerciseId: 'ex-1', status: 'ACTIVE' },
+        data: expect.objectContaining({ status: 'REVOKED' }),
+      }),
     );
     expect(mockAuditLog).toHaveBeenCalledWith(
       'EXERCISE_REVOKE',
@@ -419,6 +590,34 @@ describe('revoke', () => {
       ADMIN,
       expect.any(Object),
     );
+  });
+
+  it('trata revoke concorrente ja convergido como no-op sem auditoria duplicada', async () => {
+    mockPrisma.exerciseAssignment.findUnique
+      .mockResolvedValueOnce({
+        id: 'as-1',
+        exerciseId: 'ex-1',
+        studentId: STUDENT,
+        status: 'ACTIVE',
+      })
+      .mockResolvedValueOnce({
+        id: 'as-1',
+        exerciseId: 'ex-1',
+        studentId: STUDENT,
+        status: 'REVOKED',
+      });
+    mockPrisma.exerciseAssignment.update.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Registro alterado', {
+        code: 'P2025',
+        clientVersion: '5.22.0',
+      }),
+    );
+
+    await expect(exerciseService.revoke('ex-1', 'as-1', ADMIN)).resolves.toMatchObject({
+      id: 'as-1',
+      status: 'REVOKED',
+    });
+    expect(mockAuditLog).not.toHaveBeenCalled();
   });
 });
 
@@ -521,9 +720,7 @@ describe('getPlayableForStudent', () => {
     expect(result.title).toBe('Presente do indicativo');
   });
 
-  // `publish` so garante PT_BR + supportLanguage. Aluno em ES_ES num exercicio
-  // publicado em PT_BR + EN_US cai no apoio publicado, nao em string vazia.
-  it('cai no supportLanguage quando nao ha traducao no idioma do aluno', async () => {
+  it('cai em PT_BR, nunca no supportLanguage, quando falta o idioma do aluno', async () => {
     mockPrisma.exercise.findUnique.mockResolvedValue({
       ...PUBLISHED,
       supportLanguage: 'EN_US',
@@ -541,39 +738,252 @@ describe('getPlayableForStudent', () => {
 
     const result = await exerciseService.getPlayableForStudent('ex-1', STUDENT);
 
-    expect(result.title).toBe('Present tense');
+    expect(result.title).toBe('Presente do indicativo');
   });
 });
 
 describe('listForStudent', () => {
-  it('resolve o titulo da listagem pelo preferredLanguage do aluno', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ preferredLanguage: 'PT_BR' });
+  const grantedAt = new Date('2026-01-01T00:00:00.000Z');
+  const seenAt = new Date('2026-01-02T00:00:00.000Z');
+
+  function assignment(
+    translations: Array<{ locale: string; title: string; summary: string | null }>,
+    exerciseOverrides: Record<string, unknown> = {},
+  ) {
+    return {
+      id: 'assignment-id-must-not-leak',
+      grantedAt,
+      firstSeenAt: seenAt,
+      exercise: {
+        id: 'exercise-id',
+        supportLanguage: 'ES_ES',
+        level: 2,
+        subject: 'Gramática',
+        translations,
+        items: [{ kind: 'MULTIPLE_CHOICE', position: 1 }],
+        attempts: [],
+        ...exerciseOverrides,
+      },
+    };
+  }
+
+  async function listWith(
+    readerLocale: string | null,
+    translations: Array<{ locale: string; title: string; summary: string | null }>,
+    exerciseOverrides: Record<string, unknown> = {},
+  ) {
+    mockPrisma.user.findUnique.mockResolvedValue({ preferredLanguage: readerLocale });
     mockPrisma.exerciseAssignment.count.mockResolvedValue(1);
     mockPrisma.exerciseAssignment.findMany.mockResolvedValue([
-      {
-        grantedAt: new Date('2026-01-01T00:00:00Z'),
-        firstSeenAt: null,
-        exercise: {
-          id: 'ex-1',
-          supportLanguage: 'EN_US',
-          level: 1,
-          subject: null,
-          translations: [
-            { locale: 'EN_US', title: 'Present tense', summary: null },
-            { locale: 'PT_BR', title: 'Presente do indicativo', summary: null },
-          ],
-          items: [{ id: 'it-1' }],
-          attempts: [],
-        },
-      },
+      assignment(translations, exerciseOverrides),
     ]);
 
-    const result = await exerciseService.listForStudent(STUDENT, {
+    return exerciseService.listForStudent(STUDENT, { page: 1, limit: 20 });
+  }
+
+  it('limita a consulta ao aluno, ACTIVE e PUBLISHED sem qualquer predicado de idioma', async () => {
+    await listWith('EN_US', [
+      { locale: 'PT_BR', title: 'Português', summary: null },
+      { locale: 'EN_US', title: 'English', summary: null },
+    ]);
+
+    const where = {
+      studentId: STUDENT,
+      status: 'ACTIVE',
+      exercise: {
+        status: 'PUBLISHED',
+        internalTitle: { contains: 'verbos' },
+        level: 2,
+        subject: { contains: 'Gramática' },
+      },
+    };
+
+    await exerciseService.listForStudent(STUDENT, {
+      q: 'verbos',
+      level: 2,
+      subject: 'Gramática',
+      page: 3,
+      limit: 10,
+    });
+
+    expect(mockPrisma.exerciseAssignment.count).toHaveBeenLastCalledWith({ where });
+    expect(mockPrisma.exerciseAssignment.findMany).toHaveBeenLastCalledWith({
+      where,
+      orderBy: [{ grantedAt: 'desc' }, { id: 'asc' }],
+      skip: 20,
+      take: 10,
+      select: {
+        grantedAt: true,
+        firstSeenAt: true,
+        exercise: {
+          select: {
+            id: true,
+            supportLanguage: true,
+            level: true,
+            subject: true,
+            translations: { select: { locale: true, title: true, summary: true } },
+            items: {
+              select: { kind: true, position: true },
+              orderBy: { position: 'asc' },
+            },
+            attempts: {
+              where: {
+                studentId: STUDENT,
+                status: { in: ['IN_PROGRESS', 'COMPLETED'] },
+              },
+              orderBy: { startedAt: 'desc' },
+              take: 1,
+              select: {
+                status: true,
+                answeredCount: true,
+                correctCount: true,
+                itemCount: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const serializedWhere = JSON.stringify(where);
+    expect(serializedWhere).not.toContain('preferredLanguage');
+    expect(serializedWhere).not.toContain('supportLanguage');
+    expect(serializedWhere).not.toContain('locale');
+  });
+
+  it('usa Exercise.id, o helper predominante e o snapshot da tentativa mais recente sem N+1', async () => {
+    const result = await listWith(
+      'PT_BR',
+      [{ locale: 'PT_BR', title: 'Exercício', summary: 'Resumo' }],
+      {
+        items: [
+          { kind: 'MATCH_CLICK', position: 1 },
+          { kind: 'TEXT_CHOICE', position: 3 },
+          { kind: 'TEXT_CHOICE', position: 2 },
+          { kind: 'MULTIPLE_CHOICE', position: 4 },
+        ],
+        attempts: [
+          {
+            status: 'IN_PROGRESS',
+            answeredCount: 2,
+            correctCount: 1,
+            itemCount: 7,
+          },
+        ],
+      },
+    );
+
+    expect(result).toStrictEqual({
+      total: 1,
       page: 1,
       limit: 20,
-    } as never);
+      items: [
+        {
+          id: 'exercise-id',
+          title: 'Exercício',
+          summary: 'Resumo',
+          predominantKind: 'TEXT_CHOICE',
+          supportLanguage: 'ES_ES',
+          level: 2,
+          subject: 'Gramática',
+          itemCount: 4,
+          firstSeenAt: seenAt,
+          grantedAt,
+          latestAttempt: {
+            status: 'IN_PROGRESS',
+            answeredCount: 2,
+            correctCount: 1,
+            itemCount: 7,
+          },
+        },
+      ],
+    });
+    expect(result.items[0]?.id).not.toBe('assignment-id-must-not-leak');
+    expect(result.items[0]?.itemCount).toBe(4);
+    expect(result.items[0]?.latestAttempt?.itemCount).toBe(7);
+    expect(mockPrisma.exerciseAssignment.findMany).toHaveBeenCalledOnce();
+    expect(mockPrisma.exerciseAttempt.findFirst).not.toHaveBeenCalled();
+  });
 
-    expect(result.items[0].title).toBe('Presente do indicativo');
+  it.each([
+    ['PT_BR', 'Português'],
+    ['EN_US', 'English'],
+    ['ES_ES', 'Español'],
+  ])('%s tenta o próprio locale antes de PT_BR', async (locale, expectedTitle) => {
+    const result = await listWith(locale, [
+      { locale: 'IT_IT', title: 'Prima voce', summary: null },
+      { locale: 'PT_BR', title: 'Português', summary: null },
+      { locale: 'EN_US', title: 'English', summary: null },
+      { locale: 'ES_ES', title: 'Español', summary: null },
+    ]);
+
+    expect(result.items[0]?.title).toBe(expectedTitle);
+  });
+
+  it.each(['EN_US', 'ES_ES'])('%s cai em PT_BR quando o próprio locale falta', async (locale) => {
+    const result = await listWith(locale, [
+      { locale: 'IT_IT', title: 'Nunca usar a primeira', summary: null },
+      { locale: 'PT_BR', title: 'Fallback português', summary: null },
+    ]);
+
+    expect(result.items[0]?.title).toBe('Fallback português');
+  });
+
+  it('IT_IT tenta EN_US e ignora a tradução italiana', async () => {
+    const result = await listWith('IT_IT', [
+      { locale: 'IT_IT', title: 'Italiano ignorado', summary: null },
+      { locale: 'PT_BR', title: 'Português', summary: null },
+      { locale: 'EN_US', title: 'English for Italian reader', summary: null },
+    ]);
+
+    expect(result.items[0]?.title).toBe('English for Italian reader');
+  });
+
+  it('IT_IT cai em PT_BR quando EN_US falta', async () => {
+    const result = await listWith('IT_IT', [
+      { locale: 'IT_IT', title: 'Italiano ignorado', summary: null },
+      { locale: 'PT_BR', title: 'Fallback português', summary: null },
+    ]);
+
+    expect(result.items[0]?.title).toBe('Fallback português');
+  });
+
+  it.each([null, 'DE_DE'])('%s usa somente PT_BR', async (locale) => {
+    const result = await listWith(locale, [
+      { locale: 'EN_US', title: 'Nunca usar a primeira', summary: null },
+      { locale: 'PT_BR', title: 'Português canônico', summary: null },
+    ]);
+
+    expect(result.items[0]?.title).toBe('Português canônico');
+  });
+
+  it('lança EXERCISE_006/422 quando a cadeia precisa de PT_BR e ele falta', async () => {
+    await expect(
+      listWith('ES_ES', [
+        { locale: 'IT_IT', title: 'Primeira proibida', summary: null },
+        { locale: 'EN_US', title: 'Support language proibido', summary: null },
+      ], { supportLanguage: 'EN_US' }),
+    ).rejects.toMatchObject({ code: 'EXERCISE_006', status: 422 });
+  });
+
+  it('o locale do leitor não altera os ids pertencentes ao aluno', async () => {
+    const translations = [
+      { locale: 'PT_BR', title: 'Português', summary: null },
+      { locale: 'EN_US', title: 'English', summary: null },
+    ];
+    const inPortuguese = await listWith('PT_BR', translations);
+    const inEnglish = await listWith('EN_US', translations);
+
+    expect(inPortuguese.items.map(({ id }) => id)).toEqual(['exercise-id']);
+    expect(inEnglish.items.map(({ id }) => id)).toEqual(['exercise-id']);
+    expect(mockPrisma.exerciseAssignment.findMany).toHaveBeenCalledTimes(2);
+    for (const call of mockPrisma.exerciseAssignment.findMany.mock.calls) {
+      expect(call[0]?.where).toEqual({
+        studentId: STUDENT,
+        status: 'ACTIVE',
+        exercise: { status: 'PUBLISHED' },
+      });
+    }
   });
 });
 
@@ -593,11 +1003,16 @@ describe('startOrResumeAttempt', () => {
   it('retoma a tentativa aberta em vez de criar outra', async () => {
     mockPrisma.exercise.findUnique.mockResolvedValue(PUBLISHED);
     mockPrisma.exerciseAssignment.findUnique.mockResolvedValue({ id: 'as-1', status: 'ACTIVE' });
-    mockPrisma.exerciseAttempt.findFirst.mockResolvedValue({ id: 'at-1', status: 'IN_PROGRESS' });
+    mockPrisma.exerciseAttempt.findFirst.mockResolvedValue({
+      id: 'at-1',
+      status: 'IN_PROGRESS',
+      answers: [{ itemId: 'b' }],
+    });
 
     const result = await exerciseService.startOrResumeAttempt('ex-1', STUDENT);
 
     expect(result.resumed).toBe(true);
+    expect(result.attempt.answeredItemIds).toEqual(['b']);
     expect(mockPrisma.exerciseAttempt.create).not.toHaveBeenCalled();
   });
 
@@ -796,6 +1211,135 @@ describe('submitAnswer', () => {
   });
 });
 
+describe('checkMatchPair', () => {
+  const ATTEMPT = {
+    id: 'at-1',
+    exerciseId: 'ex-1',
+    studentId: STUDENT,
+    status: 'IN_PROGRESS',
+    itemCount: 3,
+    answeredCount: 0,
+    correctCount: 0,
+    finishedAt: null,
+  };
+  const MATCH_ITEM = {
+    id: 'it-match',
+    exerciseId: 'ex-1',
+    kind: 'MATCH_CLICK',
+    payload: {
+      left: [
+        { id: 'l1', text: 'one' },
+        { id: 'l2', text: 'two' },
+        { id: 'l3', text: 'three' },
+      ],
+      right: [
+        { id: 'r1', text: 'um' },
+        { id: 'r2', text: 'dois' },
+        { id: 'r3', text: 'tres' },
+      ],
+    },
+    answerKey: {
+      pairs: [
+        { leftId: 'l1', rightId: 'r1' },
+        { leftId: 'l2', rightId: 'r2' },
+        { leftId: 'l3', rightId: 'r3' },
+      ],
+    },
+  };
+  const candidate = (extra: Record<string, string> = {}) => ({
+    exerciseId: 'ex-1',
+    attemptId: 'at-1',
+    itemId: 'it-match',
+    leftId: 'l1',
+    rightId: 'r1',
+    ...extra,
+  });
+
+  beforeEach(() => {
+    mockPrisma.exerciseAttempt.findUnique.mockResolvedValue(ATTEMPT);
+    mockPrisma.exerciseItem.findUnique.mockResolvedValue(MATCH_ITEM);
+  });
+
+  it('retorna somente isCorrect para um par correto sem persistir nem contar', async () => {
+    const result = await exerciseService.checkMatchPair(candidate(), STUDENT);
+
+    expect(result).toEqual({ isCorrect: true });
+    expect(Object.keys(result)).toEqual(['isCorrect']);
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    expect(mockPrisma.exerciseItemAnswer.upsert).not.toHaveBeenCalled();
+    expect(mockPrisma.exerciseItemAnswer.count).not.toHaveBeenCalled();
+    expect(mockPrisma.exerciseAttempt.update).not.toHaveBeenCalled();
+  });
+
+  it('retorna false sem revelar o par correto', async () => {
+    const result = await exerciseService.checkMatchPair(
+      candidate({ rightId: 'r2' }),
+      STUDENT,
+    );
+
+    expect(result).toEqual({ isCorrect: false });
+    expect(JSON.stringify(result)).not.toContain('r1');
+  });
+
+  it('esconde tentativa inexistente ou de outro aluno com 404', async () => {
+    mockPrisma.exerciseAttempt.findUnique.mockResolvedValue(null);
+
+    await expect(exerciseService.checkMatchPair(candidate(), STUDENT)).rejects.toMatchObject({
+      code: 'ATTEMPT_001',
+      status: 404,
+    });
+    expect(mockPrisma.exerciseItem.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('recusa tentativa fora de IN_PROGRESS com 409', async () => {
+    mockPrisma.exerciseAttempt.findUnique.mockResolvedValue({
+      ...ATTEMPT,
+      status: 'COMPLETED',
+    });
+
+    await expect(exerciseService.checkMatchPair(candidate(), STUDENT)).rejects.toMatchObject({
+      code: 'ATTEMPT_002',
+      status: 409,
+    });
+    expect(mockPrisma.exerciseItem.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('devolve 404 para item inexistente', async () => {
+    mockPrisma.exerciseItem.findUnique.mockResolvedValue(null);
+
+    await expect(exerciseService.checkMatchPair(candidate(), STUDENT)).rejects.toMatchObject({
+      code: 'MATCH_001',
+      status: 404,
+    });
+  });
+
+  it('recusa item de outro exercicio ou de outro tipo com 422', async () => {
+    mockPrisma.exerciseItem.findUnique.mockResolvedValueOnce({
+      ...MATCH_ITEM,
+      exerciseId: 'ex-2',
+    });
+    await expect(exerciseService.checkMatchPair(candidate(), STUDENT)).rejects.toMatchObject({
+      code: 'ATTEMPT_003',
+      status: 422,
+    });
+
+    mockPrisma.exerciseItem.findUnique.mockResolvedValueOnce({
+      ...MATCH_ITEM,
+      kind: 'MULTIPLE_CHOICE',
+    });
+    await expect(exerciseService.checkMatchPair(candidate(), STUDENT)).rejects.toMatchObject({
+      code: 'MATCH_002',
+      status: 422,
+    });
+  });
+
+  it('recusa ids que nao existem nas colunas com 422', async () => {
+    await expect(
+      exerciseService.checkMatchPair(candidate({ leftId: 'desconhecido' }), STUDENT),
+    ).rejects.toMatchObject({ code: 'MATCH_003', status: 422 });
+  });
+});
+
 describe('finishAttempt', () => {
   const ATTEMPT = {
     id: 'at-1',
@@ -814,18 +1358,18 @@ describe('finishAttempt', () => {
     });
   });
 
-  // Terminar com item em branco e permitido: o aluno pode parar no meio e ainda
-  // assim ver o que acertou. O score fica pendente ate a regra de pontuacao
-  // existir - `null` explicito, nao zero inventado.
-  it('finaliza com itens em branco e devolve score pendente', async () => {
+  // Uma tentativa parcial continua retomavel; o score e derivado no servidor
+  // sem transformar saida no meio em conclusao.
+  it('mantem itens em branco em andamento e devolve score derivado', async () => {
     mockPrisma.exerciseAttempt.findUnique.mockResolvedValue(ATTEMPT);
     mockPrisma.exerciseItemAnswer.count.mockResolvedValue(1);
     mockPrisma.exerciseAttempt.update.mockResolvedValue({
       id: 'at-1',
+      status: 'IN_PROGRESS',
       answeredCount: 1,
       correctCount: 1,
       itemCount: 2,
-      finishedAt: new Date('2026-09-07T00:00:00Z'),
+      finishedAt: null,
     });
     mockPrisma.exerciseItem.findMany.mockResolvedValue([
       { id: 'it-1', kind: 'MULTIPLE_CHOICE', position: 1, payload: {}, answerKey: { correctIndex: 0 }, answers: [{ payload: {}, isCorrect: true, answeredAt: new Date() }] },
@@ -834,10 +1378,67 @@ describe('finishAttempt', () => {
 
     const result = await exerciseService.finishAttempt('ex-1', 'at-1', STUDENT);
 
-    expect(result.score).toBeNull();
-    expect(result.scorePending).toBe(true);
+    expect(result.status).toBe('IN_PROGRESS');
+    expect(result.score).toBe(1);
+    expect(result.scorePercent).toBe(100);
     expect(result.answeredCount).toBe(1);
-    // O item nao respondido volta com answer/isCorrect nulos, e com gabarito.
-    expect(result.items[1]).toMatchObject({ answer: null, isCorrect: null, answerKey: { correctIndex: 1 } });
+    // Tentativa ainda em andamento nao revela gabarito de item nao respondido.
+    expect(result.items[1]).toMatchObject({ answer: null, isCorrect: null, answerKey: null });
+  });
+});
+
+describe('getAttemptSummary', () => {
+  const ATTEMPT = {
+    id: 'at-1',
+    exerciseId: 'ex-1',
+    studentId: STUDENT,
+    status: 'IN_PROGRESS',
+    itemCount: 2,
+    answeredCount: 1,
+    correctCount: 1,
+    finishedAt: null,
+  };
+
+  it('usa o locale do aluno e esconde gabarito ainda nao respondido', async () => {
+    mockPrisma.exerciseAttempt.findUnique.mockResolvedValue(ATTEMPT);
+    mockPrisma.user.findUnique.mockResolvedValue({ preferredLanguage: 'EN_US' });
+    mockPrisma.exercise.findUnique.mockResolvedValue({
+      id: 'ex-1',
+      supportLanguage: 'PT_BR',
+      translations: [
+        { locale: 'PT_BR', title: 'Exercicio em portugues' },
+        { locale: 'EN_US', title: 'Exercise in English' },
+      ],
+    });
+    mockPrisma.exerciseItem.findMany.mockResolvedValue([
+      {
+        id: 'it-1',
+        kind: 'MULTIPLE_CHOICE',
+        position: 1,
+        payload: {},
+        answerKey: { correctIndex: 0 },
+        answers: [{ payload: { kind: 'MULTIPLE_CHOICE', selectedIndex: 0 }, isCorrect: true }],
+      },
+      {
+        id: 'it-2',
+        kind: 'MULTIPLE_CHOICE',
+        position: 2,
+        payload: {},
+        answerKey: { correctIndex: 1 },
+        answers: [],
+      },
+    ]);
+
+    const result = await exerciseService.getAttemptSummary('ex-1', 'at-1', STUDENT);
+
+    expect(result.exercise.title).toBe('Exercise in English');
+    expect(result.items[0].answerKey).toEqual({ correctIndex: 0 });
+    expect(result.items[1]).toMatchObject({
+      answerKey: null,
+      answer: null,
+      isCorrect: null,
+    });
+    expect(result.attempt.score).toBe(1);
+    expect(result.attempt.scorePercent).toBe(100);
   });
 });

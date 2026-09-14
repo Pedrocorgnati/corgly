@@ -32,15 +32,14 @@ import { useCallback, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   BookOpen,
-  CheckCircle2,
   ChevronRight,
   CircleAlert,
   RotateCcw,
   Trophy,
-  XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { AnswerChoices } from './answer-choices';
+import { AnswerResultBar } from './answer-result-bar';
 import { resolveLessonText } from '@/lib/exercises';
 import type { StaticExercise, OptionLetter } from '@/lib/exercises';
 
@@ -200,67 +199,15 @@ export function ExerciseMultipleChoice({ exercise }: ExerciseMultipleChoiceProps
         </div>
       ) : (
         <>
-          <fieldset disabled={phase === 'checked'} className="space-y-2.5">
-            <legend
-              data-testid="exercise-question"
-              className="mb-3 text-base font-medium text-foreground"
-            >
-              {question.prompt}
-            </legend>
-
-            {question.options.map((option, optionIndex) => {
-              const isSelectedOption = selected === option.letter;
-              const showAsCorrect = phase === 'checked' && option.letter === question.correctLetter;
-              const showAsWrong = phase === 'checked' && isSelectedOption && !showAsCorrect;
-
-              return (
-                <label
-                  key={option.letter}
-                  data-testid={`exercise-option-${optionIndex}`}
-                  className={cn(
-                    'flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors',
-                    'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
-                    phase === 'checked' ? 'cursor-default' : 'hover:bg-muted/60',
-                    isSelectedOption && phase === 'answering'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border',
-                    showAsCorrect && 'border-success bg-success/10',
-                    showAsWrong && 'border-destructive bg-destructive/10',
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name={question.id}
-                    value={option.letter}
-                    checked={isSelectedOption}
-                    onChange={() => handleSelect(option.letter)}
-                    className="sr-only"
-                  />
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold uppercase',
-                      isSelectedOption && phase === 'answering'
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border text-muted-foreground',
-                      showAsCorrect && 'border-success bg-success text-success-foreground',
-                      showAsWrong && 'border-destructive bg-destructive text-destructive-foreground',
-                    )}
-                  >
-                    {option.letter}
-                  </span>
-                  <span className="sr-only">{t('optionLabel', { letter: option.letter })}</span>
-                  <span className="text-sm leading-relaxed text-foreground">{option.text}</span>
-                  {showAsCorrect && (
-                    <CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-success" aria-hidden="true" />
-                  )}
-                  {showAsWrong && (
-                    <XCircle className="ml-auto h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-                  )}
-                </label>
-              );
-            })}
-          </fieldset>
+          <AnswerChoices
+            questionId={question.id}
+            prompt={question.prompt}
+            options={question.options}
+            selected={selected}
+            phase={phase === 'checked' ? 'checked' : 'answering'}
+            correctLetter={question.correctLetter}
+            onSelect={(letter) => handleSelect(letter as OptionLetter)}
+          />
 
           {missingSelection && (
             <p
@@ -274,34 +221,11 @@ export function ExerciseMultipleChoice({ exercise }: ExerciseMultipleChoiceProps
           )}
 
           {phase === 'checked' && (
-            <div
-              data-testid="exercise-result"
-              role="status"
-              aria-live="polite"
-              className={cn(
-                'mt-4 rounded-xl border p-4',
-                isCorrect ? 'border-success/40 bg-success/10' : 'border-destructive/40 bg-destructive/10',
-              )}
-            >
-              <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                {isCorrect ? (
-                  <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
-                )}
-                {isCorrect ? t('correctTitle') : t('incorrectTitle')}
-              </p>
-              {!isCorrect && selectedOption && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {t('yourAnswer', { letter: selectedOption.letter, text: selectedOption.text })}
-                </p>
-              )}
-              {correctOption && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t('correctAnswer', { letter: correctOption.letter, text: correctOption.text })}
-                </p>
-              )}
-            </div>
+            <AnswerResultBar
+              isCorrect={isCorrect}
+              yourAnswer={!isCorrect ? selectedOption : undefined}
+              correctAnswer={correctOption}
+            />
           )}
         </>
       )}

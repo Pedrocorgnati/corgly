@@ -29,6 +29,9 @@ export const ROUTES = {
   CREDITS: '/credits',
   PROGRESS: '/progress',
   EXERCISES: '/exercises',
+  EXERCISE: (id: string) => `/exercises/${id}`,
+  EXERCISE_ATTEMPT_SUMMARY: (id: string, attemptId: string) =>
+    `/exercises/${id}/attempt/${attemptId}/summary`,
   ONBOARDING_EQUIPMENT: '/onboarding/equipment-check',
   SESSION: (id: string) => `/session/${id}`,
   SESSION_LOBBY: (id: string) => `/session/${id}/lobby`,
@@ -124,8 +127,11 @@ export const API = {
     LIST: '/api/v1/exercises',
     DETAIL: (id: string) => `/api/v1/exercises/${id}`,
     ATTEMPTS: (id: string) => `/api/v1/exercises/${id}/attempts`,
+    ATTEMPT: (attemptId: string) => `/api/v1/exercises/attempts/${attemptId}`,
     ATTEMPT_ANSWERS: (id: string, attemptId: string) =>
       `/api/v1/exercises/${id}/attempts/${attemptId}/answers`,
+    ATTEMPT_MATCH_CHECK: (id: string, attemptId: string, itemId: string) =>
+      `/api/v1/exercises/${id}/attempts/${attemptId}/items/${itemId}/match-check`,
     ATTEMPT_FINISH: (id: string, attemptId: string) =>
       `/api/v1/exercises/${id}/attempts/${attemptId}/finish`,
   },

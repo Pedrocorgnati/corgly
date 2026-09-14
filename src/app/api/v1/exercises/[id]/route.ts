@@ -9,15 +9,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiResponse } from '@/lib/auth';
 import { requireStudent } from '@/lib/auth-guard';
+import { withApiHandler } from '@/lib/api-handler';
+import { AppError } from '@/lib/errors';
 import { exerciseService, statusForAppError } from '@/services/exercise.service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(
+export const GET = withApiHandler(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
-) {
+) => {
   const auth = await requireStudent(request);
   if (auth instanceof NextResponse) return auth;
 
@@ -27,9 +29,10 @@ export async function GET(
     const exercise = await exerciseService.getPlayableForStudent(id, auth.id);
     return NextResponse.json(apiResponse(exercise));
   } catch (err) {
+    if (!(err instanceof AppError)) throw err;
     return NextResponse.json(
-      apiResponse(null, err instanceof Error ? err.message : 'Erro ao carregar exercicio.'),
+      apiResponse(null, err.message),
       { status: statusForAppError(err) },
     );
   }
-}
+});

@@ -25,8 +25,15 @@ export type LessonContentLocale = 'pt' | 'en' | 'es';
 /** Texto da aula nos tres idiomas publicados pela fonte. */
 export type LessonText = Record<LessonContentLocale, string>;
 
-/** Letras exibidas ao aluno, na ordem canonica da fonte. */
-export const OPTION_LETTERS = ['a', 'b', 'c', 'd'] as const;
+/**
+ * Letras exibidas ao aluno, na ordem canonica da fonte.
+ *
+ * Vocabulario de render: cresceu para `'e'` no item 010, quando `TEXT_CHOICE`
+ * (2 a 5 alternativas, `MIN_FLEXIBLE_OPTIONS`/`MAX_FLEXIBLE_OPTIONS`) entrou
+ * em tela. `OPTIONS_PER_QUESTION` NAO acompanhou: ele e a cardinalidade fixa
+ * de R-MC-01 do `MULTIPLE_CHOICE`, nao de render.
+ */
+export const OPTION_LETTERS = ['a', 'b', 'c', 'd', 'e'] as const;
 
 export type OptionLetter = (typeof OPTION_LETTERS)[number];
 
@@ -35,11 +42,10 @@ export type OptionLetter = (typeof OPTION_LETTERS)[number];
  * `MULTIPLE_CHOICE` vindo do banco.
  *
  * Deixou de derivar de `OPTION_LETTERS.length` de proposito: as duas constantes
- * respondem perguntas diferentes e vao divergir. `OPTION_LETTERS` e vocabulario
- * de render e cresce para `'e'` quando os tipos de 2 a 5 alternativas
- * (`TEXT_CHOICE`, `AUDIO_CHOICE`, `IMAGE_CHOICE`) entrarem em tela;
- * `OPTIONS_PER_QUESTION` e a cardinalidade fixa de R-MC-01 e nao pode andar
- * junto com aquele crescimento.
+ * respondem perguntas diferentes e divergiram no item 010. `OPTION_LETTERS` e
+ * vocabulario de render e cresceu para `'e'` quando `TEXT_CHOICE` (2 a 5
+ * alternativas) entrou em tela; `OPTIONS_PER_QUESTION` e a cardinalidade fixa
+ * de R-MC-01 e nao andou junto com aquele crescimento.
  */
 export const OPTIONS_PER_QUESTION = 4;
 

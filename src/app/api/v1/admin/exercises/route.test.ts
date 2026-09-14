@@ -12,7 +12,9 @@ vi.mock('@/lib/auth', () => ({
     message,
   }),
 }));
-vi.mock('@/lib/auth-guard', () => ({ requireAdmin: mockRequireAdmin }));
+vi.mock('@/lib/auth/admin-mfa.guard', () => ({
+  requireAdminWithRecentMfa: mockRequireAdmin,
+}));
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 // `importOriginal` preserva o `statusForAppError` REAL: o que esta sob teste
 // aqui e justamente a traducao de AppError em status HTTP.
@@ -25,6 +27,18 @@ import { GET, POST } from './route';
 import { AppError } from '@/lib/errors';
 
 const ADMIN = { id: 'admin-1', role: 'ADMIN', tokenVersion: 1 };
+
+function mfaRequiredResponse() {
+  return NextResponse.json(
+    {
+      data: null,
+      error: 'Verificação MFA recente necessária.',
+      message: null,
+      code: 'mfa_required',
+    },
+    { status: 403 },
+  );
+}
 
 function getRequest(url = 'http://localhost/api/v1/admin/exercises') {
   return new NextRequest(url, { method: 'GET' });
@@ -59,14 +73,24 @@ beforeEach(() => {
 });
 
 describe('GET /api/v1/admin/exercises', () => {
-  it('devolve 403 quando o guard recusa', async () => {
-    mockRequireAdmin.mockResolvedValue(
-      NextResponse.json({ data: null, error: 'Acesso restrito a administradores.', message: null }, { status: 403 }),
-    );
+  it('devolve 401 sem autenticacao e nao acessa o service', async () => {
+    mockRequireAdmin.mockResolvedValue(NextResponse.json({}, { status: 401 }));
 
     const res = await GET(getRequest());
 
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockService.listForAdmin).not.toHaveBeenCalled();
+  });
+
+  it('devolve 403 mfa_required sem acessar o service', async () => {
+    mockRequireAdmin.mockResolvedValue(mfaRequiredResponse());
+
+    const res = await GET(getRequest());
+    const body = await res.json();
+
     expect(res.status).toBe(403);
+    expect(body.code).toBe('mfa_required');
     expect(mockService.listForAdmin).not.toHaveBeenCalled();
   });
 
@@ -92,14 +116,25 @@ describe('GET /api/v1/admin/exercises', () => {
 });
 
 describe('POST /api/v1/admin/exercises', () => {
-  it('devolve 403 quando o guard recusa', async () => {
-    mockRequireAdmin.mockResolvedValue(
-      NextResponse.json({ data: null, error: 'Acesso restrito a administradores.', message: null }, { status: 403 }),
-    );
+  it('devolve 401 sem autenticacao e nao acessa o service', async () => {
+    mockRequireAdmin.mockResolvedValue(NextResponse.json({}, { status: 401 }));
 
     const res = await POST(postRequest(VALID_BODY));
 
+    expect(res.status).toBe(401);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(mockService.create).not.toHaveBeenCalled();
+  });
+
+  it('devolve 403 mfa_required sem acessar o service', async () => {
+    mockRequireAdmin.mockResolvedValue(mfaRequiredResponse());
+
+    const res = await POST(postRequest(VALID_BODY));
+    const body = await res.json();
+
     expect(res.status).toBe(403);
+    expect(body.code).toBe('mfa_required');
+    expect(mockService.create).not.toHaveBeenCalled();
   });
 
   it('devolve 400 quando o corpo nao e JSON valido', async () => {
@@ -144,5 +179,17 @@ describe('POST /api/v1/admin/exercises', () => {
     expect(res.status).toBe(201);
     expect(body.data.id).toBe('ex-1');
     expect(mockService.create).toHaveBeenCalledWith(expect.any(Object), 'admin-1');
+  });
+
+  it('sanitiza erro inesperado no wrapper', async () => {
+    mockService.create.mockRejectedValue(new Error('detalhe interno sensivel'));
+
+    const res = await POST(postRequest(VALID_BODY));
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(res.headers.get('x-request-id')).toBeTruthy();
+    expect(body.error).toBe('Erro interno. Tente novamente em instantes.');
+    expect(JSON.stringify(body)).not.toContain('detalhe interno sensivel');
   });
 });

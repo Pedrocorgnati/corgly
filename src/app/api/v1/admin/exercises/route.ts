@@ -9,15 +9,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { apiResponse } from '@/lib/auth';
-import { requireAdmin } from '@/lib/auth-guard';
+import { requireAdminWithRecentMfa } from '@/lib/auth/admin-mfa.guard';
+import { withApiHandler } from '@/lib/api-handler';
+import { AppError } from '@/lib/errors';
 import { createExerciseSchema, exerciseListQuerySchema } from '@/schemas/exercise.schema';
 import { exerciseService, statusForAppError } from '@/services/exercise.service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+export const GET = withApiHandler(async (request: NextRequest) => {
+  const auth = await requireAdminWithRecentMfa(request);
   if (auth instanceof NextResponse) return auth;
 
   const parsed = exerciseListQuerySchema.safeParse(
@@ -35,15 +37,16 @@ export async function GET(request: NextRequest) {
     const result = await exerciseService.listForAdmin(parsed.data);
     return NextResponse.json(apiResponse(result));
   } catch (err) {
+    if (!(err instanceof AppError)) throw err;
     return NextResponse.json(
-      apiResponse(null, err instanceof Error ? err.message : 'Erro ao listar exercicios.'),
+      apiResponse(null, err.message),
       { status: statusForAppError(err) },
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+export const POST = withApiHandler(async (request: NextRequest) => {
+  const auth = await requireAdminWithRecentMfa(request);
   if (auth instanceof NextResponse) return auth;
 
   let raw: unknown;
@@ -65,9 +68,10 @@ export async function POST(request: NextRequest) {
     const exercise = await exerciseService.create(parsed.data, auth.id);
     return NextResponse.json(apiResponse(exercise), { status: 201 });
   } catch (err) {
+    if (!(err instanceof AppError)) throw err;
     return NextResponse.json(
-      apiResponse(null, err instanceof Error ? err.message : 'Erro ao criar exercicio.'),
+      apiResponse(null, err.message),
       { status: statusForAppError(err) },
     );
   }
-}
+});

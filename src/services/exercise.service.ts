@@ -27,7 +27,14 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { AppError } from '@/lib/errors';
 import { auditLog } from '@/lib/audit/audit-logger';
-import { exerciseItemContentSchema, matchesAnswerKey } from '@/lib/exercises';
+import {
+  EXERCISE_ITEM_SCHEMAS_BY_KIND,
+  exerciseItemContentSchema,
+  matchesAnswerKey,
+  type ExerciseItemKind,
+} from '@/lib/exercises';
+import type { ExerciseStatus, SupportedLanguage } from '@/lib/constants/enums';
+import { getPredominantItemKind } from '@/lib/exercises/predominant-item-kind';
 import {
   EXERCISE_ANSWER_SCHEMAS_BY_KIND,
   PUBLISHABLE_SUPPORT_LANGUAGES,
@@ -38,13 +45,6 @@ import {
 } from '@/schemas/exercise.schema';
 
 /**
- * Traducao unica de erro de dominio para status HTTP.
- *
- * Le `AppError.status`, que ja foi decidido no lugar onde a regra vive. NAO ha
- * `switch` por codigo aqui de proposito: um `switch` seria uma segunda tabela
- * de status, e as duas divergiriam no primeiro codigo novo.
- */
-/**
  * Traducao que o ALUNO le, resolvida pelo idioma do LEITOR.
  *
  * O `supportLanguage` do exercicio descreve em que idioma a fonte publicou o
@@ -53,21 +53,30 @@ import {
  * contradizia a convencao ja fixada em `src/lib/exercises/lesson-text.ts`
  * (locale do leitor governa o texto do conteudo).
  *
- * A cadeia de fallback existe porque `publish` so garante DUAS traducoes:
- * `PT_BR` e a do `supportLanguage`. Um aluno com `preferredLanguage = ES_ES`
- * num exercicio publicado em PT_BR + EN_US nao tem traducao propria; nesse
- * caso o apoio publicado e a melhor aproximacao disponivel.
+ * PT/EN/ES tentam o idioma do leitor e depois PT; IT usa EN e depois PT.
+ * Locale ausente ou desconhecido usa PT. O idioma de apoio do exercicio nao
+ * participa dessa escolha, e a ordem recebida das traducoes nunca e fallback.
  */
 function pickReaderTranslation<T extends { locale: string }>(
   translations: readonly T[],
   readerLocale: string | null,
-  supportLanguage: string,
-): T | undefined {
-  return (
-    (readerLocale ? translations.find((t) => t.locale === readerLocale) : undefined) ??
-    translations.find((t) => t.locale === supportLanguage) ??
-    translations.find((t) => t.locale === 'PT_BR') ??
-    translations[0]
+): T {
+  const requestedLocales =
+    readerLocale === 'IT_IT'
+      ? (['EN_US', 'PT_BR'] as const)
+      : readerLocale === 'EN_US' || readerLocale === 'ES_ES'
+        ? ([readerLocale, 'PT_BR'] as const)
+        : (['PT_BR'] as const);
+
+  for (const locale of requestedLocales) {
+    const translation = translations.find((candidate) => candidate.locale === locale);
+    if (translation) return translation;
+  }
+
+  throw new AppError(
+    'EXERCISE_006',
+    'Traducao obrigatoria do exercicio nao encontrada.',
+    422,
   );
 }
 
@@ -80,8 +89,22 @@ async function readerLocaleOf(studentId: string): Promise<string | null> {
   return student?.preferredLanguage ?? null;
 }
 
+/**
+ * Traducao unica de erro de dominio para status HTTP.
+ *
+ * Le `AppError.status`, que ja foi decidido no lugar onde a regra vive. NAO ha
+ * `switch` por codigo aqui de proposito: um `switch` seria uma segunda tabela
+ * de status, e as duas divergiriam no primeiro codigo novo.
+ */
 export function statusForAppError(err: unknown): number {
   return err instanceof AppError ? err.status : 500;
+}
+
+/** Unica formula de pontuacao do dominio. `score` e razao; `scorePercent` e exibivel. */
+export function deriveAttemptScore(correctCount: number, answeredCount: number) {
+  if (answeredCount === 0) return { score: null, scorePercent: null };
+  const score = correctCount / answeredCount;
+  return { score, scorePercent: Math.round(score * 100) };
 }
 
 // ---------------------------------------------------------------------------
@@ -91,14 +114,15 @@ export function statusForAppError(err: unknown): number {
 export interface AdminExerciseListRow {
   id: string;
   internalTitle: string;
-  supportLanguage: string;
+  studentTitle: string | null;
+  predominantKind: ExerciseItemKind | null;
+  supportLanguage: SupportedLanguage;
   level: number;
   subject: string | null;
-  status: string;
+  tags: string[];
   itemCount: number;
-  predominantKind: string | null;
+  status: ExerciseStatus;
   activeAssignmentCount: number;
-  publishedAt: Date | null;
   updatedAt: Date;
 }
 
@@ -106,13 +130,19 @@ export interface StudentExerciseListRow {
   id: string;
   title: string;
   summary: string | null;
-  supportLanguage: string;
+  predominantKind: ExerciseItemKind | null;
+  supportLanguage: SupportedLanguage;
   level: number;
   subject: string | null;
   itemCount: number;
   firstSeenAt: Date | null;
   grantedAt: Date;
-  attemptStatus: string | null;
+  latestAttempt: {
+    status: 'IN_PROGRESS' | 'COMPLETED';
+    answeredCount: number;
+    correctCount: number;
+    itemCount: number;
+  } | null;
 }
 
 export interface GrantRejection {
@@ -216,24 +246,11 @@ function assertMediaIntegrity(items: readonly ItemContentInput[]): void {
   });
 }
 
-/** Kind mais frequente entre os itens. Empate resolve pelo menor `position`. */
-function derivePredominantKind(items: readonly { kind: string; position?: number }[]): string | null {
-  if (items.length === 0) return null;
-
-  const tally = new Map<string, number>();
-  items.forEach((item) => tally.set(item.kind, (tally.get(item.kind) ?? 0) + 1));
-
-  let winner = items[0]!.kind;
-  let winnerCount = tally.get(winner) ?? 0;
-
-  tally.forEach((count, kind) => {
-    if (count > winnerCount) {
-      winner = kind;
-      winnerCount = count;
-    }
-  });
-
-  return winner;
+/** Normaliza a coluna Json sem enviar valores inesperados para a biblioteca. */
+function stringTags(value: Prisma.JsonValue | null): string[] {
+  return Array.isArray(value)
+    ? value.filter((tag): tag is string => typeof tag === 'string')
+    : [];
 }
 
 /** Compara a resposta do aluno com o gabarito do item. */
@@ -302,7 +319,7 @@ export class ExerciseService {
       prisma.exercise.count({ where }),
       prisma.exercise.findMany({
         where,
-        orderBy: { updatedAt: 'desc' },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
         select: {
@@ -311,9 +328,10 @@ export class ExerciseService {
           supportLanguage: true,
           level: true,
           subject: true,
+          tags: true,
           status: true,
-          publishedAt: true,
           updatedAt: true,
+          translations: { select: { locale: true, title: true } },
           items: { select: { kind: true, position: true }, orderBy: { position: 'asc' } },
         },
       }),
@@ -335,14 +353,18 @@ export class ExerciseService {
     const items: AdminExerciseListRow[] = exercises.map((exercise) => ({
       id: exercise.id,
       internalTitle: exercise.internalTitle,
+      studentTitle:
+        exercise.translations.find(
+          (translation) => translation.locale === exercise.supportLanguage,
+        )?.title ?? null,
+      predominantKind: getPredominantItemKind(exercise.items),
       supportLanguage: exercise.supportLanguage,
       level: exercise.level,
       subject: exercise.subject,
-      status: exercise.status,
+      tags: stringTags(exercise.tags),
       itemCount: exercise.items.length,
-      predominantKind: derivePredominantKind(exercise.items),
+      status: exercise.status,
       activeAssignmentCount: activeByExercise.get(exercise.id) ?? 0,
-      publishedAt: exercise.publishedAt,
       updatedAt: exercise.updatedAt,
     }));
 
@@ -626,10 +648,29 @@ export class ExerciseService {
       throw new AppError('EXERCISE_007', 'Exercicio ja esta arquivado.', 409);
     }
 
-    const archived = await prisma.exercise.update({
-      where: { id: exerciseId },
-      data: { status: 'ARCHIVED' },
-    });
+    let archived;
+    try {
+      // Compare-and-set: a leitura acima fornece o status anterior usado pela
+      // auditoria, e o UPDATE somente vence se nenhuma transicao concorrente
+      // tiver alterado a mesma linha. Assim, dois archives simultaneos nao
+      // conseguem registrar dois eventos EXERCISE_ARCHIVE.
+      archived = await prisma.exercise.update({
+        where: { id: exerciseId, status: exercise.status },
+        data: { status: 'ARCHIVED' },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new AppError(
+          'EXERCISE_007',
+          'Exercicio alterado por outra operacao. Recarregue e tente novamente.',
+          409,
+        );
+      }
+      throw error;
+    }
 
     auditLog('EXERCISE_ARCHIVE', { type: 'Exercise', id: exerciseId }, adminId, {
       previousStatus: exercise.status,
@@ -793,13 +834,32 @@ export class ExerciseService {
       throw new AppError('ASSIGNMENT_001', 'Liberacao nao encontrada.', 404);
     }
 
-    const revoked =
-      assignment.status === 'REVOKED'
-        ? assignment
-        : await prisma.exerciseAssignment.update({
-            where: { id: assignmentId },
-            data: { status: 'REVOKED', revokedAt: new Date() },
-          });
+    if (assignment.status === 'REVOKED') {
+      return assignment;
+    }
+
+    let revoked;
+    try {
+      revoked = await prisma.exerciseAssignment.update({
+        where: { id: assignmentId, exerciseId, status: 'ACTIVE' },
+        data: { status: 'REVOKED', revokedAt: new Date() },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        const converged = await prisma.exerciseAssignment.findUnique({
+          where: { id: assignmentId },
+          select: { id: true, exerciseId: true, studentId: true, status: true },
+        });
+        if (converged?.exerciseId === exerciseId && converged.status === 'REVOKED') {
+          return converged;
+        }
+        throw new AppError('ASSIGNMENT_001', 'Liberacao nao encontrada.', 404);
+      }
+      throw error;
+    }
 
     auditLog('EXERCISE_REVOKE', { type: 'ExerciseAssignment', id: assignmentId }, adminId, {
       exerciseId,
@@ -830,7 +890,7 @@ export class ExerciseService {
       prisma.exerciseAssignment.count({ where }),
       prisma.exerciseAssignment.findMany({
         where,
-        orderBy: { grantedAt: 'desc' },
+        orderBy: [{ grantedAt: 'desc' }, { id: 'asc' }],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
         select: {
@@ -843,12 +903,20 @@ export class ExerciseService {
               level: true,
               subject: true,
               translations: { select: { locale: true, title: true, summary: true } },
-              items: { select: { id: true } },
+              items: {
+                select: { kind: true, position: true },
+                orderBy: { position: 'asc' },
+              },
               attempts: {
-                where: { studentId },
+                where: { studentId, status: { in: ['IN_PROGRESS', 'COMPLETED'] } },
                 orderBy: { startedAt: 'desc' },
                 take: 1,
-                select: { status: true },
+                select: {
+                  status: true,
+                  answeredCount: true,
+                  correctCount: true,
+                  itemCount: true,
+                },
               },
             },
           },
@@ -861,20 +929,30 @@ export class ExerciseService {
       const translation = pickReaderTranslation(
         exercise.translations,
         readerLocale,
-        exercise.supportLanguage,
       );
+      const attempt = exercise.attempts[0];
+      const latestAttempt =
+        attempt && (attempt.status === 'IN_PROGRESS' || attempt.status === 'COMPLETED')
+          ? {
+              status: attempt.status,
+              answeredCount: attempt.answeredCount,
+              correctCount: attempt.correctCount,
+              itemCount: attempt.itemCount,
+            }
+          : null;
 
       return {
         id: exercise.id,
-        title: translation?.title ?? '',
-        summary: translation?.summary ?? null,
+        title: translation.title,
+        summary: translation.summary ?? null,
+        predominantKind: getPredominantItemKind(exercise.items),
         supportLanguage: exercise.supportLanguage,
         level: exercise.level,
         subject: exercise.subject,
         itemCount: exercise.items.length,
         firstSeenAt: assignment.firstSeenAt,
         grantedAt: assignment.grantedAt,
-        attemptStatus: exercise.attempts[0]?.status ?? null,
+        latestAttempt,
       };
     });
 
@@ -941,13 +1019,12 @@ export class ExerciseService {
     const translation = pickReaderTranslation(
       exercise.translations,
       await readerLocaleOf(studentId),
-      exercise.supportLanguage,
     );
 
     return {
       id: exercise.id,
-      title: translation?.title ?? '',
-      summary: translation?.summary ?? null,
+      title: translation.title,
+      summary: translation.summary ?? null,
       supportLanguage: exercise.supportLanguage,
       level: exercise.level,
       subject: exercise.subject,
@@ -988,10 +1065,18 @@ export class ExerciseService {
     const open = await prisma.exerciseAttempt.findFirst({
       where: { exerciseId, studentId, status: 'IN_PROGRESS' },
       orderBy: { startedAt: 'desc' },
+      include: { answers: { select: { itemId: true } } },
     });
 
     if (open) {
-      return { attempt: open, resumed: true };
+      const { answers, ...attempt } = open;
+      return {
+        attempt: {
+          ...attempt,
+          answeredItemIds: (answers ?? []).map((answer) => answer.itemId),
+        },
+        resumed: true,
+      };
     }
 
     // `itemCount` e escrito UMA vez, aqui, e nunca reescrito: ele congela o
@@ -1007,11 +1092,11 @@ export class ExerciseService {
       },
     });
 
-    return { attempt, resumed: false };
+    return { attempt: { ...attempt, answeredItemIds: [] }, resumed: false };
   }
 
-  /** Carrega e valida a tentativa como pertencente ao aluno e ao exercicio da URL. */
-  private async loadOwnAttempt(exerciseId: string, attemptId: string, studentId: string) {
+  /** Carrega e valida a tentativa como pertencente ao aluno sem revelar ids alheios. */
+  private async loadOwnAttemptById(attemptId: string, studentId: string) {
     const attempt = await prisma.exerciseAttempt.findUnique({
       where: { id: attemptId },
       select: {
@@ -1020,16 +1105,94 @@ export class ExerciseService {
         studentId: true,
         status: true,
         itemCount: true,
+        answeredCount: true,
+        correctCount: true,
+        finishedAt: true,
       },
     });
 
     // Tentativa de outro aluno responde 404, nao 403: 403 confirmaria que a
     // tentativa existe.
-    if (!attempt || attempt.studentId !== studentId || attempt.exerciseId !== exerciseId) {
+    if (!attempt || attempt.studentId !== studentId) {
       throw new AppError('ATTEMPT_001', 'Tentativa nao encontrada.', 404);
     }
 
     return attempt;
+  }
+
+  /** Carrega e valida tambem a relacao com o exercicio presente na URL. */
+  private async loadOwnAttempt(exerciseId: string, attemptId: string, studentId: string) {
+    const attempt = await this.loadOwnAttemptById(attemptId, studentId);
+    if (attempt.exerciseId !== exerciseId) {
+      throw new AppError('ATTEMPT_001', 'Tentativa nao encontrada.', 404);
+    }
+    return attempt;
+  }
+
+  /**
+   * Valida um unico candidato de MATCH_CLICK sem gravar resposta, alterar
+   * contador ou devolver qualquer parte do gabarito.
+   */
+  async checkMatchPair(
+    input: {
+      exerciseId: string;
+      attemptId: string;
+      itemId: string;
+      leftId: string;
+      rightId: string;
+    },
+    studentId: string,
+  ): Promise<{ isCorrect: boolean }> {
+    const attempt = await this.loadOwnAttempt(
+      input.exerciseId,
+      input.attemptId,
+      studentId,
+    );
+
+    if (attempt.status !== 'IN_PROGRESS') {
+      throw new AppError('ATTEMPT_002', 'Tentativa ja finalizada.', 409);
+    }
+
+    const item = await prisma.exerciseItem.findUnique({
+      where: { id: input.itemId },
+      select: {
+        id: true,
+        exerciseId: true,
+        kind: true,
+        payload: true,
+        answerKey: true,
+      },
+    });
+
+    if (!item) {
+      throw new AppError('MATCH_001', 'Item nao encontrado.', 404);
+    }
+    if (item.exerciseId !== attempt.exerciseId) {
+      throw new AppError('ATTEMPT_003', 'Item nao pertence a este exercicio.', 422);
+    }
+    if (item.kind !== 'MATCH_CLICK') {
+      throw new AppError('MATCH_002', 'Item nao aceita validacao de pares.', 422);
+    }
+
+    const payload = EXERCISE_ITEM_SCHEMAS_BY_KIND.MATCH_CLICK.payload.safeParse(item.payload);
+    const answerKey = EXERCISE_ITEM_SCHEMAS_BY_KIND.MATCH_CLICK.answerKey.safeParse(
+      item.answerKey,
+    );
+    if (!payload.success || !answerKey.success) {
+      throw new AppError('EXERCISE_005', 'Conteudo MATCH_CLICK invalido.', 422);
+    }
+
+    const leftExists = payload.data.left.some((entry) => entry.id === input.leftId);
+    const rightExists = payload.data.right.some((entry) => entry.id === input.rightId);
+    if (!leftExists || !rightExists) {
+      throw new AppError('MATCH_003', 'Candidato contem ids inexistentes.', 422);
+    }
+
+    return {
+      isCorrect: answerKey.data.pairs.some(
+        (pair) => pair.leftId === input.leftId && pair.rightId === input.rightId,
+      ),
+    };
   }
 
   /**
@@ -1049,7 +1212,7 @@ export class ExerciseService {
   ) {
     const attempt = await this.loadOwnAttempt(exerciseId, attemptId, studentId);
 
-    if (attempt.status === 'COMPLETED') {
+    if (attempt.status !== 'IN_PROGRESS') {
       throw new AppError('ATTEMPT_002', 'Tentativa ja finalizada.', 409);
     }
 
@@ -1134,37 +1297,36 @@ export class ExerciseService {
     };
   }
 
-  /**
-   * Finaliza.
-   *
-   * Terminar com `answeredCount < itemCount` e permitido: o aluno pode desistir
-   * no meio e ainda assim ver o que acertou. O score NAO e derivado aqui;
-   * `score: null` com `scorePending: true` e o contrato ate a regra de
-   * pontuacao existir.
-   */
-  async finishAttempt(exerciseId: string, attemptId: string, studentId: string) {
-    const attempt = await this.loadOwnAttempt(exerciseId, attemptId, studentId);
-
-    if (attempt.status === 'COMPLETED') {
+  /** Fecha sem forcar conclusao, ou abandona explicitamente quando `force=true`. */
+  async closeAttempt(attemptId: string, studentId: string, force = false) {
+    const attempt = await this.loadOwnAttemptById(attemptId, studentId);
+    if (attempt.status !== 'IN_PROGRESS') {
       throw new AppError('ATTEMPT_002', 'Tentativa ja finalizada.', 409);
     }
 
-    const finished = await prisma.$transaction(async (tx) => {
+    const closed = await prisma.$transaction(async (tx) => {
       const [answeredCount, correctCount] = await Promise.all([
         tx.exerciseItemAnswer.count({ where: { attemptId } }),
         tx.exerciseItemAnswer.count({ where: { attemptId, isCorrect: true } }),
       ]);
 
+      const status = force
+        ? 'ABANDONED'
+        : answeredCount === attempt.itemCount
+          ? 'COMPLETED'
+          : 'IN_PROGRESS';
+
       return tx.exerciseAttempt.update({
         where: { id: attemptId },
         data: {
-          status: 'COMPLETED',
-          finishedAt: new Date(),
+          status,
+          finishedAt: status === 'IN_PROGRESS' ? null : new Date(),
           answeredCount,
           correctCount,
         },
         select: {
           id: true,
+          status: true,
           answeredCount: true,
           correctCount: true,
           itemCount: true,
@@ -1173,9 +1335,18 @@ export class ExerciseService {
       });
     });
 
+    return { ...closed, ...deriveAttemptScore(closed.correctCount, closed.answeredCount) };
+  }
+
+  /** Finaliza o fluxo e devolve a revisao completa com score derivado no servidor. */
+  async finishAttempt(exerciseId: string, attemptId: string, studentId: string) {
+    const attempt = await this.loadOwnAttempt(exerciseId, attemptId, studentId);
+    const closed = await this.closeAttempt(attemptId, studentId);
+
     const items = await prisma.exerciseItem.findMany({
       where: { exerciseId: attempt.exerciseId },
       orderBy: { position: 'asc' },
+      take: attempt.itemCount,
       select: {
         id: true,
         kind: true,
@@ -1190,23 +1361,104 @@ export class ExerciseService {
     });
 
     return {
-      attemptId: finished.id,
-      answeredCount: finished.answeredCount,
-      correctCount: finished.correctCount,
-      itemCount: finished.itemCount,
-      finishedAt: finished.finishedAt,
-      score: null,
-      scorePending: true,
-      items: items.map((item) => ({
-        id: item.id,
-        kind: item.kind,
-        position: item.position,
-        payload: item.payload,
-        answerKey: item.answerKey,
-        answer: item.answers[0]?.payload ?? null,
-        isCorrect: item.answers[0]?.isCorrect ?? null,
-        answeredAt: item.answers[0]?.answeredAt ?? null,
-      })),
+      attemptId: closed.id,
+      status: closed.status,
+      answeredCount: closed.answeredCount,
+      correctCount: closed.correctCount,
+      itemCount: closed.itemCount,
+      finishedAt: closed.finishedAt,
+      score: closed.score,
+      scorePercent: closed.scorePercent,
+      items: items.map((item) => {
+        const answer = item.answers[0];
+        return {
+          id: item.id,
+          kind: item.kind,
+          position: item.position,
+          payload: item.payload,
+          answerKey: closed.status === 'IN_PROGRESS' && !answer ? null : item.answerKey,
+          answer: answer?.payload ?? null,
+          isCorrect: answer?.isCorrect ?? null,
+          answeredAt: answer?.answeredAt ?? null,
+        };
+      }),
+    };
+  }
+
+  /**
+   * Busca o resumo de uma tentativa ja finalizada ou em andamento.
+   *
+   * Usado pela pagina de resumo para mostrar o score e os itens revisaveis.
+   * Nao modifica o estado da tentativa.
+   */
+  async getAttemptSummary(exerciseId: string, attemptId: string, studentId: string) {
+    const attempt = await this.loadOwnAttempt(exerciseId, attemptId, studentId);
+
+    const [exercise, readerLocale] = await Promise.all([
+      prisma.exercise.findUnique({
+        where: { id: exerciseId },
+        select: {
+          id: true,
+          supportLanguage: true,
+          translations: { select: { locale: true, title: true } },
+        },
+      }),
+      readerLocaleOf(studentId),
+    ]);
+
+    if (!exercise) {
+      throw new AppError('EXERCISE_001', 'Exercicio nao encontrado.', 404);
+    }
+
+    const items = await prisma.exerciseItem.findMany({
+      where: { exerciseId: attempt.exerciseId },
+      orderBy: { position: 'asc' },
+      take: attempt.itemCount,
+      select: {
+        id: true,
+        kind: true,
+        position: true,
+        payload: true,
+        answerKey: true,
+        answers: {
+          where: { attemptId },
+          select: { payload: true, isCorrect: true, answeredAt: true },
+        },
+      },
+    });
+
+    const translation = pickReaderTranslation(
+      exercise.translations,
+      readerLocale,
+    );
+
+    return {
+      attempt: {
+        id: attempt.id,
+        status: attempt.status,
+        answeredCount: attempt.answeredCount,
+        correctCount: attempt.correctCount,
+        itemCount: attempt.itemCount,
+        finishedAt: attempt.finishedAt,
+        ...deriveAttemptScore(attempt.correctCount, attempt.answeredCount),
+      },
+      exercise: {
+        id: exercise.id,
+        title: translation.title,
+      },
+      items: items.map((item) => {
+        const answer = item.answers[0];
+        return {
+          id: item.id,
+          kind: item.kind,
+          position: item.position,
+          payload: item.payload,
+          answerKey: attempt.status === 'IN_PROGRESS' && !answer ? null : item.answerKey,
+          answer: answer?.payload ?? null,
+          isCorrect: answer?.isCorrect ?? null,
+          answeredAt: answer?.answeredAt ?? null,
+        };
+      }),
     };
   }
 }
