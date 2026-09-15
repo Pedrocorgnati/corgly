@@ -56,6 +56,14 @@ const ADMIN_ONLY_PATHS = [
   '/api/v1/credits/manual',
 ];
 
+// Rotas de cron (crontab do servidor, scheduler da Vercel) chegam sem sessao por
+// construcao: autenticam por `Authorization: Bearer ${CRON_SECRET}`. Sem ramo
+// proprio o proxy respondia o 401 de sessao antes de a rota rodar e nenhum cron
+// executava em producao. Fora de PUBLIC_API_PATHS de proposito: o proxy confere o
+// segredo aqui e a rota confere de novo, entao o namespace nunca fica aberto para
+// quem nao tem o segredo, nem para rota futura que esqueca a propria checagem.
+const CRON_API_PREFIX = '/api/v1/cron';
+
 // Rotas de UI admin que exigem MFA recente (redirect 307 para challenge se ausente).
 // Assets estaticos, login e a propria challenge nao entram nesta lista (evita loop).
 const ADMIN_UI_MFA_REQUIRED = '/admin';
@@ -108,7 +116,12 @@ function nextWithStripped(
   extraHeaders?: Record<string, string>,
 ): NextResponse {
   const base = request._strippedHeaders ?? new Headers(request.headers);
-  const merged = new Headers(base);
+  // Copia entrada a entrada, nao por `new Headers(base)`: sob o vitest, copiar de
+  // novo um Headers derivado de NextRequest perde as entradas da primeira copia
+  // (Node 22/24 puro nao reproduz). Com o forEach os testes enxergam o mesmo
+  // repasse de headers que a producao.
+  const merged = new Headers();
+  base.forEach((value, key) => merged.append(key, value));
   if (extraHeaders) {
     for (const [k, v] of Object.entries(extraHeaders)) {
       merged.set(k, v);
@@ -160,6 +173,21 @@ function generateCorrelationId(): string {
   } catch {
     return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
+}
+
+// Comparacao em tempo constante: `===` retorna no primeiro caractere divergente e
+// deixa o tempo de resposta revelar quanto do segredo o chamador ja acertou.
+function hasValidCronSecret(request: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const header = request.headers.get('authorization') ?? '';
+  const expected = `Bearer ${secret}`;
+  if (header.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= header.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 export async function proxy(request: NextRequest) {
@@ -264,6 +292,20 @@ export async function proxy(request: NextRequest) {
       );
       return addSecurityHeaders(res, correlationId);
     }
+  }
+
+  // ─── Cron: segredo compartilhado no lugar da sessao ───────────────────────
+  // Depois do rate limit de proposito: tentativa de adivinhar o segredo consome
+  // a mesma cota por IP que qualquer outra chamada.
+  if (pathname === CRON_API_PREFIX || pathname.startsWith(`${CRON_API_PREFIX}/`)) {
+    if (!hasValidCronSecret(request)) {
+      const res = NextResponse.json(apiResponse(null, 'Não autorizado.'), { status: 401 });
+      return addSecurityHeaders(res, correlationId);
+    }
+    return addSecurityHeaders(
+      nextWithStripped(request, { 'x-request-id': correlationId }),
+      correlationId,
+    );
   }
 
   // ─── Allow public API paths without auth ──────────────────────────────────

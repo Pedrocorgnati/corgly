@@ -338,3 +338,84 @@ describe('proxy: aluno autenticado nas mutacoes de disponibilidade (GAP-04)', ()
     expect(forwarded(res, 'x-token-version')).toBe('0');
   });
 });
+
+describe('proxy: rotas de cron autenticam por CRON_SECRET, nao por sessao', () => {
+  const SECRET = 'cron-secret-de-teste';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+    vi.stubEnv('CRON_SECRET', SECRET);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  function cronReq(path: string, headers: Record<string, string> = {}) {
+    return new NextRequest(`http://localhost${path}`, { method: 'GET', headers });
+  }
+
+  it('bearer correto atravessa sem consultar sessao e o header chega na rota', async () => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(cronReq('/api/v1/cron/jobs', { authorization: `Bearer ${SECRET}` }));
+    expect(res.status).toBe(200);
+    expect(mockGetPayload).not.toHaveBeenCalled();
+    // A rota confere o segredo de novo: o proxy nao pode engolir o header.
+    expect(forwarded(res, 'authorization')).toBe(`Bearer ${SECRET}`);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+  });
+
+  it('identidade forjada pelo cliente e descartada mesmo com bearer correto', async () => {
+    const res = await proxy(
+      cronReq('/api/v1/cron/reminders', {
+        authorization: `Bearer ${SECRET}`,
+        'x-user-id': 'a1',
+        'x-user-role': 'ADMIN',
+        'x-token-version': '9',
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+    expect(forwarded(res, 'x-user-role')).toBeNull();
+    expect(forwarded(res, 'x-token-version')).toBeNull();
+  });
+
+  it.each<[string, Record<string, string>]>([
+    ['sem header', {}],
+    ['bearer errado', { authorization: 'Bearer outro-segredo' }],
+    ['segredo sem o prefixo Bearer', { authorization: SECRET }],
+    ['segredo truncado', { authorization: `Bearer ${SECRET.slice(0, -1)}` }],
+  ])('%s -> 401 no proxy', async (_label, headers) => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(cronReq('/api/v1/cron/jobs', headers));
+    expect(res.status).toBe(401);
+  });
+
+  it('sessao de admin nao substitui o segredo', async () => {
+    mockGetPayload.mockReturnValue({ sub: 'a1', role: 'ADMIN', version: 0, mfaAt: nowSec() });
+    const res = await proxy(cronReq('/api/v1/cron/jobs'));
+    expect(res.status).toBe(401);
+  });
+
+  it('CRON_SECRET vazio fecha a porta para qualquer header', async () => {
+    vi.stubEnv('CRON_SECRET', '');
+    const res = await proxy(cronReq('/api/v1/cron/jobs', { authorization: 'Bearer ' }));
+    expect(res.status).toBe(401);
+  });
+
+  it('prefixo irmao /api/v1/cronjobs nao herda o ramo de cron', async () => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(cronReq('/api/v1/cronjobs', { authorization: `Bearer ${SECRET}` }));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe('Não autorizado. Faça login para continuar.');
+  });
+
+  it('rate limit vale antes da checagem do segredo', async () => {
+    mockCheckRateLimit.mockResolvedValue({ allowed: false, resetAt: Date.now() + 30_000 });
+    const res = await proxy(cronReq('/api/v1/cron/jobs', { authorization: `Bearer ${SECRET}` }));
+    expect(res.status).toBe(429);
+  });
+});
