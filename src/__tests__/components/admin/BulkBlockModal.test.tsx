@@ -1,6 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/test/utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createTranslator } from 'next-intl';
 import { BulkBlockModal } from '@/components/admin/BulkBlockModal';
+import ptBR from '../../../../i18n/messages/pt-BR.json';
 
 const mockGet = vi.fn();
 const mockPost = vi.fn();
@@ -15,10 +17,12 @@ vi.mock('@/lib/api-client', () => ({
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+const mockToastWarning = vi.fn();
 vi.mock('sonner', () => ({
   toast: {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
+    warning: (...args: unknown[]) => mockToastWarning(...args),
   },
 }));
 
@@ -41,6 +45,7 @@ describe('BulkBlockModal — previa real (item 008)', () => {
     mockPost.mockReset();
     mockToastSuccess.mockReset();
     mockToastError.mockReset();
+    mockToastWarning.mockReset();
   });
 
   // C9.1 — a previa vem da API, nao de zeros semeados no cliente
@@ -134,7 +139,7 @@ describe('BulkBlockModal — previa real (item 008)', () => {
   // C9.3 — o toast pos-execucao le as chaves reais do BulkCancelResult
   it('deve exibir os contadores reais no toast apos confirmar', async () => {
     mockGet.mockResolvedValueOnce({ data: { sessionsToCancel: 5, slotsToBlock: 9 } });
-    mockPost.mockResolvedValueOnce({ data: { cancelled: 5, refunded: 3, blocked: 9 } });
+    mockPost.mockResolvedValueOnce({ data: { cancelled: 5, refunded: 3, blocked: 9, errors: [] } });
     const onComplete = vi.fn();
 
     render(<BulkBlockModal open onOpenChange={vi.fn()} onComplete={onComplete} />);
@@ -149,5 +154,45 @@ describe('BulkBlockModal — previa real (item 008)', () => {
       );
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  // C9.4 — errors do POST ficam visiveis: modal aberto, lista com a copy do catalogo e toast de aviso
+  it('[RED C9.4] deve manter o modal aberto e listar as sessoes nao canceladas com a copy do catalogo', async () => {
+    mockGet.mockResolvedValueOnce({ data: { sessionsToCancel: 3, slotsToBlock: 9 } });
+    mockPost.mockResolvedValueOnce({
+      data: {
+        cancelled: 2,
+        refunded: 2,
+        blocked: 9,
+        errors: [{ sessionId: 'sess-falhou', code: 'SESSION_080', error: 'detalhe-interno-sintetico-gap09' }],
+      },
+    });
+    const onComplete = vi.fn();
+    const onOpenChange = vi.fn();
+
+    render(<BulkBlockModal open onOpenChange={onOpenChange} onComplete={onComplete} />);
+    preencherFormulario();
+    fireEvent.click(screen.getByTestId('modal-bulk-block-preview-button'));
+    fireEvent.click(await screen.findByTestId('modal-bulk-block-confirm-button'));
+
+    const lista = await screen.findByTestId('modal-bulk-block-submit-errors');
+    const tModal = createTranslator({
+      locale: 'pt-BR',
+      messages: ptBR,
+      namespace: 'bulkBlockModal',
+    });
+    const itemEsperado = tModal('resultado.item', { sessionId: 'sess-falhou', code: 'SESSION_080' });
+    const toastEsperado = tModal('resultado.parcial', { cancelled: 2, refunded: 2, blocked: 9, falhas: 1 });
+    expect(itemEsperado).not.toContain('bulkBlockModal.');
+    expect(toastEsperado).not.toContain('bulkBlockModal.');
+    expect(lista).toHaveAttribute('role', 'alert');
+    expect(lista).toHaveTextContent(itemEsperado);
+    expect(document.body.textContent ?? '').not.toContain('detalhe-interno-sintetico-gap09');
+    expect(mockToastWarning).toHaveBeenCalledWith(toastEsperado);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(screen.queryByTestId('modal-bulk-block-confirm-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('modal-bulk-block-preview-button')).toBeInTheDocument();
   });
 });

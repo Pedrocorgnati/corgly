@@ -113,3 +113,34 @@ export function isInCivilWindow(startAtIso: string, w: Pick<CivilMonthWindow, 's
   const t = new Date(startAtIso).getTime();
   return !Number.isNaN(t) && t >= w.start.getTime() && t < w.end.getTime();
 }
+
+/**
+ * Primeiro instante do dia civil `YYYY-MM-DD` no fuso IANA: o menor instante cujas
+ * partes locais (Intl, hourCycle h23) sao >= `AAAA-MM-DDT00:00:00`. Acerta o dia que
+ * comeca depois da meia-noite (meia-noite inexistente) e, com meia-noite repetida,
+ * fica com a primeira ocorrencia. Dia ou fuso invalido lanca RangeError.
+ */
+export function civilDayStart(dateKey: string, timeZone: string): Date {
+  if (!isValidCivilDateKey(dateKey)) throw new RangeError('dia civil invalido');
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const [ano, mes, dia] = dateKey.split('-').map(Number);
+  const alvo = Date.UTC(ano, mes - 1, dia);
+  const chave = `${dateKey}T00:00:00`;
+  const deslocamentos = Array.from(new Set(SONDAS_HORAS.map((k) => deslocamentoMs(fmt, alvo + k * UMA_HORA_MS))));
+  let borda = Number.POSITIVE_INFINITY;
+  for (const deslocamento of deslocamentos) {
+    const candidato = alvo - deslocamento;
+    if (candidato < borda && chaveLocal(fmt, candidato) >= chave) borda = candidato;
+  }
+  if (!Number.isFinite(borda)) throw new RangeError('borda civil indeterminada');
+  return new Date(borda);
+}

@@ -2107,5 +2107,13 @@
       "retry": "Try again",
       "confirmSlot": "Confirm time"
     }
+  },
+  "bulkBlockModal": {
+    "resultado": {
+      "sucesso": "{cancelled} sessions cancelled, {refunded} credits refunded, {blocked} time slots blocked.",
+      "parcial": "{cancelled} sessions cancelled, {refunded} credits refunded, {blocked} time slots blocked. {falhas, plural, one {# session not cancelled} other {# sessions not cancelled}}; see the list in the modal.",
+      "listaTitulo": "Sessions not cancelled:",
+      "item": "{sessionId}: {code}"
+    }
   }
 }

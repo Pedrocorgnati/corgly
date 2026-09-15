@@ -2107,5 +2107,13 @@
       "retry": "Riprova",
       "confirmSlot": "Conferma orario"
     }
+  },
+  "bulkBlockModal": {
+    "resultado": {
+      "sucesso": "{cancelled} sessioni annullate, {refunded} crediti rimborsati, {blocked} orari bloccati.",
+      "parcial": "{cancelled} sessioni annullate, {refunded} crediti rimborsati, {blocked} orari bloccati. {falhas, plural, one {# sessione non annullata} other {# sessioni non annullate}}; consulta la lista nel modale.",
+      "listaTitulo": "Sessioni non annullate:",
+      "item": "{sessionId}: {code}"
+    }
   }
 }

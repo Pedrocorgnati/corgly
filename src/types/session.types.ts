@@ -91,7 +91,7 @@ export interface BulkCancelResult {
   cancelled: number;
   refunded: number;
   blocked: number;
-  errors: Array<{ sessionId: string; error: string }>;
+  errors: Array<{ sessionId: string; code: string }>;
 }
 
 // ---------------------------------------------------------------------------

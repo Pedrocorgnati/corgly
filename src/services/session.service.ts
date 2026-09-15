@@ -11,6 +11,8 @@ import { logger } from '@/lib/logger';
 import { SessionStatus } from '@/lib/constants/enums';
 import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
 import { hasActiveOverlapWithTx } from '@/services/external-busy.repository';
+import { getCanonicalTimezone } from '@/lib/canonical-timezone';
+import { civilDayStart } from '@/lib/canonical-timezone-window';
 import type {
   BookSessionInput,
   CancelSessionInput,
@@ -266,10 +268,12 @@ function buildSessionWhere(params: {
 }
 
 /**
- * Janela inclusiva em UTC do bulk cancel. `new Date('2026-04-30')` resolve para
- * 2026-04-30T00:00:00.000Z, entao um `lte` cru cortaria o ultimo dia inteiro.
- * Referencia UTC igual a de AvailabilityService.getAvailable (linhas 101-102);
- * escolher o fuso do produto e o item 018.
+ * Janela semiaberta [windowStart, windowEndExclusive) do bulk cancel no fuso
+ * canonico da agenda (item 018). Data sem hora e dia civil nesse fuso: o inicio
+ * e o primeiro instante local do primeiro dia e o fim exclusivo e o primeiro
+ * instante local do dia seguinte ao ultimo, os dois por `civilDayStart`. ISO
+ * completo ja traz o instante e passa direto por `new Date`; como fim, e limite
+ * exclusivo. Data sem hora inexistente no calendario lanca RangeError.
  *
  * Helper de modulo de proposito: `bulkCancel` e `bulkCancelPreview` precisam da
  * MESMA janela. Duas copias da regra divergem no dia em que uma muda, e a previa
@@ -278,15 +282,22 @@ function buildSessionWhere(params: {
 export function bulkCancelWindow(
   startDate: string,
   endDate: string,
-): { windowStart: Date; windowEnd: Date } {
+  timeZone: string,
+): { windowStart: Date; windowEndExclusive: Date } {
   const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-  const windowStart = DATE_ONLY.test(startDate)
-    ? new Date(`${startDate}T00:00:00.000Z`)
-    : new Date(startDate);
-  const windowEnd = DATE_ONLY.test(endDate)
-    ? new Date(`${endDate}T23:59:59.999Z`)
-    : new Date(endDate);
-  return { windowStart, windowEnd };
+  const windowStart = DATE_ONLY.test(startDate) ? civilDayStart(startDate, timeZone) : new Date(startDate);
+
+  let windowEndExclusive: Date;
+  if (DATE_ONLY.test(endDate)) {
+    const [ano, mes, dia] = endDate.split('-').map(Number);
+    const ultimoDia = new Date(Date.UTC(ano, mes - 1, dia));
+    if (ultimoDia.toISOString().slice(0, 10) !== endDate) throw new RangeError('dia civil invalido');
+    ultimoDia.setUTCDate(ultimoDia.getUTCDate() + 1);
+    windowEndExclusive = civilDayStart(ultimoDia.toISOString().slice(0, 10), timeZone);
+  } else {
+    windowEndExclusive = new Date(endDate);
+  }
+  return { windowStart, windowEndExclusive };
 }
 
 export class SessionService {
@@ -724,14 +735,15 @@ export class SessionService {
    * Reembolsa créditos e envia BULK_CANCEL_NOTIFICATION.
    */
   async bulkCancel(data: BulkCancelInput): Promise<BulkCancelResult> {
-    const { windowStart, windowEnd } = bulkCancelWindow(data.startDate, data.endDate);
+    const timeZone = await getCanonicalTimezone();
+    const { windowStart, windowEndExclusive } = bulkCancelWindow(data.startDate, data.endDate, timeZone);
 
     const sessions = await prisma.session.findMany({
       where: {
         status: SessionStatus.SCHEDULED,
         startAt: {
           gte: windowStart,
-          lte: windowEnd,
+          lt: windowEndExclusive,
         },
       },
       include: {
@@ -774,9 +786,13 @@ export class SessionService {
           })
           .catch((e) => logger.error('[SessionService.bulkCancel] email error', { action: 'email.send' }, e));
       } catch (err) {
-        errors.push({
+        const code = err instanceof AppError ? err.code : 'SESSION_080';
+        errors.push({ sessionId: session.id, code });
+        logger.error('[SessionService.bulkCancel] cancel error', {
+          action: 'session.bulkCancel',
           sessionId: session.id,
-          error: err instanceof Error ? err.message : 'Erro desconhecido',
+          errorName: err instanceof Error ? err.name : 'desconhecido',
+          errorCode: code,
         });
       }
     }
@@ -789,7 +805,7 @@ export class SessionService {
     // de proposito — cancelar e bloquear sao unidades de falha distintas.
     const blockedResult = await prisma.availabilitySlot.updateMany({
       where: {
-        startAt: { gte: windowStart, lte: windowEnd },
+        startAt: { gte: windowStart, lt: windowEndExclusive },
         isBlocked: false,
         sessions: { none: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } },
       },
@@ -817,7 +833,8 @@ export class SessionService {
     startDate: string;
     endDate: string;
   }): Promise<BulkCancelPreview> {
-    const { windowStart, windowEnd } = bulkCancelWindow(data.startDate, data.endDate);
+    const timeZone = await getCanonicalTimezone();
+    const { windowStart, windowEndExclusive } = bulkCancelWindow(data.startDate, data.endDate, timeZone);
 
     const [sessionsToCancel, slotsToBlock] = await prisma.$transaction([
       prisma.session.count({
@@ -825,13 +842,13 @@ export class SessionService {
           status: SessionStatus.SCHEDULED,
           startAt: {
             gte: windowStart,
-            lte: windowEnd,
+            lt: windowEndExclusive,
           },
         },
       }),
       prisma.availabilitySlot.count({
         where: {
-          startAt: { gte: windowStart, lte: windowEnd },
+          startAt: { gte: windowStart, lt: windowEndExclusive },
           isBlocked: false,
           sessions: { none: { status: { in: [...SLOT_OCCUPYING_STATUSES] } } },
         },

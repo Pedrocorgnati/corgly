@@ -2107,5 +2107,13 @@
       "retry": "Intentar de nuevo",
       "confirmSlot": "Confirmar horario"
     }
+  },
+  "bulkBlockModal": {
+    "resultado": {
+      "sucesso": "{cancelled} sesiones canceladas, {refunded} créditos reembolsados, {blocked} horarios bloqueados.",
+      "parcial": "{cancelled} sesiones canceladas, {refunded} créditos reembolsados, {blocked} horarios bloqueados. {falhas, plural, one {# sesión no cancelada} other {# sesiones no canceladas}}; consulta la lista en el modal.",
+      "listaTitulo": "Sesiones no canceladas:",
+      "item": "{sessionId}: {code}"
+    }
   }
 }

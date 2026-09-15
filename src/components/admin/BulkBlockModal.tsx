@@ -6,6 +6,8 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
+import type { BulkCancelResult } from '@/types/session.types';
 import { apiClient } from '@/lib/api-client';
 
 interface BulkBlockModalProps {
@@ -29,6 +31,8 @@ export function BulkBlockModal({
   } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const t = useTranslations('bulkBlockModal');
+  const [submitErrors, setSubmitErrors] = useState<BulkCancelResult['errors']>([]);
   /**
    * Token monotonic de correlacao requisicao<->resposta da previa.
    *
@@ -56,12 +60,14 @@ export function BulkBlockModal({
     setPreview(null);
     setPreviewError(null);
     setIsPreviewing(false);
+    setSubmitErrors([]);
   };
 
   const handlePreview = async () => {
     if (!canSubmit) return;
     const requestId = ++previewRequestId.current;
     setPreviewError(null);
+    setSubmitErrors([]);
     setIsPreviewing(true);
     try {
       const json = await apiClient.get<{ data: { sessionsToCancel: number; slotsToBlock: number } }>(
@@ -95,19 +101,28 @@ export function BulkBlockModal({
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
+    setSubmitErrors([]);
     try {
-      // O servico devolve `{ cancelled, refunded, blocked, errors }` (BulkCancelResult).
-      // As chaves `cancelledCount`/`refundedCount` lidas antes nunca existiram: o
-      // toast dizia "0 e 0" mesmo apos cancelar dezenas de aulas.
-      const json = await apiClient.post<{
-        data: { cancelled: number; refunded: number; blocked: number };
-      }>(API.SESSIONS_BULK_CANCEL, { startDate, endDate, reason });
-      const { cancelled, refunded, blocked } = json.data;
-      toast.success(
-        `${cancelled} sessões canceladas, ${refunded} créditos reembolsados, ${blocked} horários bloqueados.`,
-      );
+      // O servico devolve BulkCancelResult. `errors` nao vazio e execucao parcial: as
+      // sessoes listadas seguem agendadas e o slot delas nao foi bloqueado.
+      const json = await apiClient.post<{ data: BulkCancelResult }>(API.SESSIONS_BULK_CANCEL, {
+        startDate,
+        endDate,
+        reason,
+      });
+      const { cancelled, refunded, blocked, errors } = json.data;
+      if (errors.length === 0) {
+        toast.success(t('resultado.sucesso', { cancelled, refunded, blocked }));
+        onComplete();
+        handleClose();
+        return;
+      }
+      toast.warning(t('resultado.parcial', { cancelled, refunded, blocked, falhas: errors.length }));
       onComplete();
-      handleClose();
+      // A previa ja nao descreve o periodo. `invalidatePreview` tambem zera a lista,
+      // por isso a lista e gravada depois dela.
+      invalidatePreview();
+      setSubmitErrors(errors);
     } catch {
       toast.error('Erro ao executar operação. Tente novamente.');
     } finally {
@@ -198,6 +213,23 @@ export function BulkBlockModal({
             >
               {previewError}
             </p>
+          )}
+
+          {submitErrors.length > 0 && (
+            <div
+              data-testid="modal-bulk-block-submit-errors"
+              role="alert"
+              className="text-sm text-destructive"
+            >
+              <p className="font-medium">{t('resultado.listaTitulo')}</p>
+              <ul className="mt-1 list-disc list-inside">
+                {submitErrors.map((item) => (
+                  <li key={item.sessionId}>
+                    {t('resultado.item', { sessionId: item.sessionId, code: item.code })}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
 

@@ -5,9 +5,12 @@
  * Estes testes usam Vitest vi.* conforme TASK-8 ST002.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SessionService } from '../session.service';
+import { SessionService, bulkCancelWindow } from '../session.service';
 import { BulkCancelSchema } from '@/schemas/session.schema';
 import { SLOT_OCCUPYING_STATUSES } from '@/services/availability.service';
+import { emailService } from '@/services/email.service';
+import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -39,6 +42,15 @@ vi.mock('@/services/email.service', () => ({
   emailService: { send: vi.fn().mockResolvedValue(undefined) },
 }));
 
+// Fuso canonico da agenda (GAP-09): `importOriginal` preserva os demais exports
+// reais do modulo; o prisma que ele importa ja esta mockado acima.
+const mockGetCanonicalTimezone = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/canonical-timezone', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/canonical-timezone')>()),
+  getCanonicalTimezone: mockGetCanonicalTimezone,
+}));
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeSession(id: string, overrides: Record<string, unknown> = {}) {
@@ -60,6 +72,7 @@ describe('SessionService — bulkCancel() $transaction atomicidade (ST002)', () 
   beforeEach(() => {
     service = new SessionService();
     vi.clearAllMocks();
+    mockGetCanonicalTimezone.mockResolvedValue('America/Sao_Paulo');
 
     // Default: $transaction executes the callback with the transaction client
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockTransactionClient) => Promise<unknown>) => {
@@ -117,24 +130,52 @@ describe('SessionService — bulkCancel() $transaction atomicidade (ST002)', () 
     expect(result.errors[0].sessionId).toBe('s2');
   });
 
-  it('deve retornar erros parciais sem lançar exceção global', async () => {
-    const sessions = [makeSession('s1'), makeSession('s2')];
-    mockPrisma.session.findMany.mockResolvedValue(sessions);
+  it('[RED m1] deve devolver errors so com sessionId e code, sem a message interna no resultado nem no log', async () => {
+    mockPrisma.session.findMany.mockResolvedValue([makeSession('s1'), makeSession('s2')]);
+    mockPrisma.$transaction.mockRejectedValue(new Error('detalhe-interno-sintetico-gap09'));
+    const espiaErro = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
 
-    // Both transactions fail
-    mockPrisma.$transaction.mockRejectedValue(new Error('DB connection lost'));
+    const result = await service.bulkCancel({ startDate: '2026-04-01', endDate: '2026-04-30', reason: 'Manutencao' });
 
-    const result = await service.bulkCancel({
-      startDate: '2026-04-01',
-      endDate: '2026-04-30',
-      reason: 'Manutenção',
-    });
-
-    // Should NOT throw — returns error list
     expect(result.cancelled).toBe(0);
-    expect(result.errors).toHaveLength(2);
-    expect(result.errors[0].error).not.toContain('password');
-    expect(result.errors[0].error).not.toContain('secret');
+    expect(result.errors).toEqual([
+      { sessionId: 's1', code: 'SESSION_080' },
+      { sessionId: 's2', code: 'SESSION_080' },
+    ]);
+    expect(JSON.stringify(result)).not.toContain('detalhe-interno-sintetico-gap09');
+    expect(espiaErro).toHaveBeenCalledWith('[SessionService.bulkCancel] cancel error', {
+      action: 'session.bulkCancel',
+      sessionId: 's1',
+      errorName: 'Error',
+      errorCode: 'SESSION_080',
+    });
+    for (const chamada of espiaErro.mock.calls) {
+      expect(chamada).toHaveLength(2);
+      expect(JSON.stringify(chamada)).not.toContain('detalhe-interno-sintetico-gap09');
+    }
+    espiaErro.mockRestore();
+  });
+
+  it('[RED m2] deve devolver o code do AppError sem a message', async () => {
+    mockPrisma.session.findMany.mockResolvedValue([makeSession('s1')]);
+    mockPrisma.$transaction.mockRejectedValue(new AppError('CREDIT_TESTE_GAP09', 'detalhe-interno-sintetico-gap09', 409));
+    const espiaErro = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    const result = await service.bulkCancel({ startDate: '2026-04-01', endDate: '2026-04-30', reason: 'Manutencao' });
+
+    expect(result.errors).toEqual([{ sessionId: 's1', code: 'CREDIT_TESTE_GAP09' }]);
+    expect(JSON.stringify(result)).not.toContain('detalhe-interno-sintetico-gap09');
+    expect(espiaErro).toHaveBeenCalledWith('[SessionService.bulkCancel] cancel error', {
+      action: 'session.bulkCancel',
+      sessionId: 's1',
+      errorName: 'AppError',
+      errorCode: 'CREDIT_TESTE_GAP09',
+    });
+    for (const chamada of espiaErro.mock.calls) {
+      expect(chamada).toHaveLength(2);
+      expect(JSON.stringify(chamada)).not.toContain('detalhe-interno-sintetico-gap09');
+    }
+    espiaErro.mockRestore();
   });
 
   it('deve invocar $transaction por sessão (uma transação por unidade)', async () => {
@@ -174,6 +215,7 @@ describe('SessionService — bulkCancel() bloqueia os horarios do periodo (item 
   beforeEach(() => {
     service = new SessionService();
     vi.clearAllMocks();
+    mockGetCanonicalTimezone.mockResolvedValue('America/Sao_Paulo');
 
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockTransactionClient) => Promise<unknown>) => {
       return fn(mockTransactionClient);
@@ -193,7 +235,7 @@ describe('SessionService — bulkCancel() bloqueia os horarios do periodo (item 
     expect(
       BulkCancelSchema.safeParse({
         startDate: '2026-04-01T00:00:00.000Z',
-        endDate: '2026-04-30T23:59:59.999Z',
+        endDate: '2026-05-01T00:00:00.000Z',
         reason: 'Ferias',
       }).success,
     ).toBe(true);
@@ -203,17 +245,18 @@ describe('SessionService — bulkCancel() bloqueia os horarios do periodo (item 
     expect(BulkCancelSchema.safeParse({ startDate: '', endDate: '2026-04-30' }).success).toBe(false);
   });
 
-  // C7.2 — janela inclusiva: o ultimo dia inteiro entra na varredura
-  it('deve fechar a janela no fim do ultimo dia quando as datas vem sem hora', async () => {
+  // C7.2 — janela semiaberta no fuso canonico: o ultimo dia inteiro entra, o dia seguinte nao
+  it('[RED C7.2] deve fechar a janela no inicio do dia seguinte ao ultimo, no fuso canonico, quando as datas vem sem hora', async () => {
     await service.bulkCancel({ startDate: '2026-04-01', endDate: '2026-04-30', reason: 'Ferias' });
 
     const where = mockPrisma.session.findMany.mock.calls[0][0].where;
-    expect(where.startAt.gte.toISOString()).toBe('2026-04-01T00:00:00.000Z');
-    expect(where.startAt.lte.toISOString()).toBe('2026-04-30T23:59:59.999Z');
+    expect(where.startAt.gte.toISOString()).toBe('2026-04-01T03:00:00.000Z');
+    expect(where.startAt.lt.toISOString()).toBe('2026-05-01T03:00:00.000Z');
+    expect(where.startAt.lte).toBeUndefined();
   });
 
   // C7.3 — efeito real: o periodo fica bloqueado, com bump de version (CAS do CronService)
-  it('deve bloquear os slots do periodo em uma unica escrita agregada com bump de version', async () => {
+  it('[RED C7.3] deve bloquear os slots do periodo em uma unica escrita agregada com bump de version', async () => {
     await service.bulkCancel({ startDate: '2026-04-01', endDate: '2026-04-30', reason: 'Ferias' });
 
     expect(mockPrisma.availabilitySlot.updateMany).toHaveBeenCalledTimes(1);
@@ -221,8 +264,9 @@ describe('SessionService — bulkCancel() bloqueia os horarios do periodo (item 
     expect(arg.data.isBlocked).toBe(true);
     expect(arg.data.blockOrigin).toBe('MANUAL');
     expect(arg.data.version).toEqual({ increment: 1 });
-    expect(arg.where.startAt.gte.toISOString()).toBe('2026-04-01T00:00:00.000Z');
-    expect(arg.where.startAt.lte.toISOString()).toBe('2026-04-30T23:59:59.999Z');
+    expect(arg.where.startAt.gte.toISOString()).toBe('2026-04-01T03:00:00.000Z');
+    expect(arg.where.startAt.lt.toISOString()).toBe('2026-05-01T03:00:00.000Z');
+    expect(arg.where.startAt.lte).toBeUndefined();
   });
 
   // C7.4 — invariante que blockSlot defende com AVAILABILITY_051: slot ocupado nao vira bloqueado
@@ -255,6 +299,47 @@ describe('SessionService — bulkCancel() bloqueia os horarios do periodo (item 
     expect(blockOrder.length).toBe(1);
     expect(blockOrder[0]).toBeGreaterThan(txOrder[txOrder.length - 1]);
   });
+
+  // controle do envio de e-mail (secao do GAP-16): so a sessao cancelada e notificada
+  it('[CONTROLE email] deve notificar por e-mail so a sessao cujo cancelamento fechou', async () => {
+    mockPrisma.session.findMany.mockResolvedValue([
+      makeSession('s1', { student: { email: 'aluno-s1@test.com', preferredLanguage: 'PT_BR' } }),
+      makeSession('s2', { student: { email: 'aluno-s2@test.com', preferredLanguage: 'PT_BR' } }),
+    ]);
+    mockPrisma.$transaction
+      .mockImplementationOnce(async (fn: (tx: typeof mockTransactionClient) => Promise<unknown>) => fn(mockTransactionClient))
+      .mockRejectedValueOnce(new Error('detalhe-interno-sintetico-gap09'));
+
+    await service.bulkCancel({ startDate: '2026-04-01', endDate: '2026-04-30', reason: 'Ferias' });
+
+    const send = vi.mocked(emailService.send);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'aluno-s1@test.com',
+        type: 'BULK_CANCEL_NOTIFICATION',
+        data: expect.objectContaining({ sessionId: 's1' }),
+      }),
+    );
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ sessionId: 's2' }) }));
+  });
+
+  // C7.7 — fuso fora do default: a janela da execucao sai do fuso canonico lido, nao de UTC
+  it('[RED C7.7] deve montar a janela da execucao no fuso canonico lido, inclusive fora do default', async () => {
+    mockGetCanonicalTimezone.mockResolvedValue('Pacific/Auckland');
+
+    await service.bulkCancel({ startDate: '2018-04-01', endDate: '2018-04-30', reason: 'Ferias' });
+
+    for (const where of [
+      mockPrisma.session.findMany.mock.calls[0][0].where,
+      mockPrisma.availabilitySlot.updateMany.mock.calls[0][0].where,
+    ]) {
+      expect(where.startAt.gte.toISOString()).toBe('2018-03-31T11:00:00.000Z');
+      expect(where.startAt.lt.toISOString()).toBe('2018-04-30T12:00:00.000Z');
+      expect(where.startAt.lte).toBeUndefined();
+    }
+    expect(mockGetCanonicalTimezone).toHaveBeenCalled();
+  });
 });
 
 describe('SessionService — bulkCancelPreview() (item 008)', () => {
@@ -263,6 +348,7 @@ describe('SessionService — bulkCancelPreview() (item 008)', () => {
   beforeEach(() => {
     service = new SessionService();
     vi.clearAllMocks();
+    mockGetCanonicalTimezone.mockResolvedValue('America/Sao_Paulo');
 
     // A previa usa a forma de ARRAY do $transaction (duas leituras em lote), nao
     // a forma de callback que o bulkCancel usa por sessao.
@@ -275,13 +361,14 @@ describe('SessionService — bulkCancelPreview() (item 008)', () => {
     mockPrisma.availabilitySlot.updateMany.mockResolvedValue({ count: 0 });
   });
 
-  // C8.1 — janela date-only fecha no fim do ultimo dia (mesmo helper do bulkCancel)
-  it('deve fechar a janela date-only no fim do ultimo dia', async () => {
+  // C8.1 — janela date-only semiaberta no fuso canonico (mesmo helper do bulkCancel)
+  it('[RED C8.1] deve fechar a janela date-only no inicio do dia seguinte ao ultimo, no fuso canonico', async () => {
     await service.bulkCancelPreview({ startDate: '2026-04-01', endDate: '2026-04-30' });
 
     const where = mockPrisma.session.count.mock.calls[0][0].where;
-    expect(where.startAt.gte.toISOString()).toBe('2026-04-01T00:00:00.000Z');
-    expect(where.startAt.lte.toISOString()).toBe('2026-04-30T23:59:59.999Z');
+    expect(where.startAt.gte.toISOString()).toBe('2026-04-01T03:00:00.000Z');
+    expect(where.startAt.lt.toISOString()).toBe('2026-05-01T03:00:00.000Z');
+    expect(where.startAt.lte).toBeUndefined();
   });
 
   // C8.2 — paridade de predicado de sessao com o findMany da execucao
@@ -331,5 +418,89 @@ describe('SessionService — bulkCancelPreview() (item 008)', () => {
       (call) => typeof call[0] === 'function',
     );
     expect(callbackCalls).toHaveLength(0);
+  });
+
+  // C8.6 — fuso fora do default: a previa conta na mesma janela do fuso canonico lido
+  it('[RED C8.6] deve contar sessoes e slots na janela do fuso canonico lido, inclusive fora do default', async () => {
+    mockGetCanonicalTimezone.mockResolvedValue('Pacific/Auckland');
+
+    await service.bulkCancelPreview({ startDate: '2018-04-01', endDate: '2018-04-30' });
+
+    for (const where of [
+      mockPrisma.session.count.mock.calls[0][0].where,
+      mockPrisma.availabilitySlot.count.mock.calls[0][0].where,
+    ]) {
+      expect(where.startAt.gte.toISOString()).toBe('2018-03-31T11:00:00.000Z');
+      expect(where.startAt.lt.toISOString()).toBe('2018-04-30T12:00:00.000Z');
+      expect(where.startAt.lte).toBeUndefined();
+    }
+    expect(mockGetCanonicalTimezone).toHaveBeenCalled();
+  });
+});
+
+describe('bulkCancelWindow() no fuso canonico (GAP-09)', () => {
+  // Janela semiaberta [windowStart, windowEndExclusive): o fim e o inicio civil do
+  // dia seguinte ao ultimo, nunca o ultimo milissegundo do ultimo dia.
+
+  it('[RED a1] deve abrir e fechar abril no fuso de America/Sao_Paulo, com fim exclusivo no inicio de 01/05', () => {
+    const r = bulkCancelWindow('2026-04-01', '2026-04-30', 'America/Sao_Paulo');
+    expect(r.windowStart.toISOString()).toBe('2026-04-01T03:00:00.000Z');
+    expect(r.windowEndExclusive.toISOString()).toBe('2026-05-01T03:00:00.000Z');
+  });
+
+  it('[RED a2] deve abrir e fechar abril no fuso de Europe/Rome', () => {
+    const r = bulkCancelWindow('2026-04-01', '2026-04-30', 'Europe/Rome');
+    expect(r.windowStart.toISOString()).toBe('2026-03-31T22:00:00.000Z');
+    expect(r.windowEndExclusive.toISOString()).toBe('2026-04-30T22:00:00.000Z');
+  });
+
+  it('[RED a3] deve usar o offset de cada borda quando a troca de horario de America/New_York cai dentro do mes', () => {
+    const r = bulkCancelWindow('2026-03-01', '2026-03-31', 'America/New_York');
+    expect(r.windowStart.toISOString()).toBe('2026-03-01T05:00:00.000Z');
+    expect(r.windowEndExclusive.toISOString()).toBe('2026-04-01T04:00:00.000Z');
+  });
+
+  it('[RED a4] deve deixar 31/03 21:30 local fora, 30/04 21:30 local dentro e 01/05 00:00 local fora em America/Sao_Paulo', () => {
+    const r = bulkCancelWindow('2026-04-01', '2026-04-30', 'America/Sao_Paulo');
+    expect(new Date('2026-04-01T00:30:00.000Z').getTime() < r.windowStart.getTime()).toBe(true);
+    expect(new Date('2026-05-01T00:30:00.000Z').getTime() < r.windowEndExclusive.getTime()).toBe(true);
+    expect(new Date('2026-05-01T03:00:00.000Z').getTime() < r.windowEndExclusive.getTime()).toBe(false);
+  });
+
+  it('[RED a5] deve abrir abril de 2018 na meia-noite anterior a troca em Pacific/Auckland e tirar de marco o slot de 01/04 00:30 local', () => {
+    const abril = bulkCancelWindow('2018-04-01', '2018-04-30', 'Pacific/Auckland');
+    const marco = bulkCancelWindow('2018-03-01', '2018-03-31', 'Pacific/Auckland');
+    expect(abril.windowStart.toISOString()).toBe('2018-03-31T11:00:00.000Z');
+    expect(abril.windowEndExclusive.toISOString()).toBe('2018-04-30T12:00:00.000Z');
+    expect(marco.windowStart.toISOString()).toBe('2018-02-28T11:00:00.000Z');
+    expect(marco.windowEndExclusive.toISOString()).toBe('2018-03-31T11:00:00.000Z');
+    const slot = new Date('2018-03-31T11:30:00.000Z').getTime();
+    expect(slot >= abril.windowStart.getTime() && slot < abril.windowEndExclusive.getTime()).toBe(true);
+    expect(slot < marco.windowEndExclusive.getTime()).toBe(false);
+  });
+
+  it('[RED a6] deve manter em setembro de 2017 o slot de 30/09 23:30 local em Australia/Sydney', () => {
+    const r = bulkCancelWindow('2017-09-01', '2017-09-30', 'Australia/Sydney');
+    expect(r.windowStart.toISOString()).toBe('2017-08-31T14:00:00.000Z');
+    expect(r.windowEndExclusive.toISOString()).toBe('2017-09-30T14:00:00.000Z');
+    const slot = new Date('2017-09-30T13:30:00.000Z').getTime();
+    expect(slot >= r.windowStart.getTime() && slot < r.windowEndExclusive.getTime()).toBe(true);
+  });
+
+  it('[RED a7] deve comecar abril de 2016 as 01:00 local em Asia/Amman e manter em marco o slot de 31/03 23:30 local', () => {
+    const marco = bulkCancelWindow('2016-03-01', '2016-03-31', 'Asia/Amman');
+    const abril = bulkCancelWindow('2016-04-01', '2016-04-30', 'Asia/Amman');
+    expect(marco.windowStart.toISOString()).toBe('2016-02-29T22:00:00.000Z');
+    expect(marco.windowEndExclusive.toISOString()).toBe('2016-03-31T22:00:00.000Z');
+    expect(abril.windowStart.toISOString()).toBe('2016-03-31T22:00:00.000Z');
+    expect(abril.windowEndExclusive.toISOString()).toBe('2016-04-30T21:00:00.000Z');
+    const slot = new Date('2016-03-31T21:30:00.000Z').getTime();
+    expect(slot >= marco.windowStart.getTime() && slot < marco.windowEndExclusive.getTime()).toBe(true);
+    expect(slot >= abril.windowStart.getTime()).toBe(false);
+  });
+
+  it('[CONTROLE b] deve manter o instante explicito de um ISO completo, sem reinterpretar pelo fuso', () => {
+    const r = bulkCancelWindow('2026-04-01T10:00:00.000Z', '2026-04-02T10:00:00-03:00', 'Europe/Rome');
+    expect(Object.values(r).map((d) => d.toISOString())).toEqual(['2026-04-01T10:00:00.000Z', '2026-04-02T13:00:00.000Z']);
   });
 });
