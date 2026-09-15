@@ -25,7 +25,8 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.corgly.com';
 // stack de um terceiro argumento (src/lib/logger.ts), e a message de um erro de
 // banco ou de e-mail pode trazer detalhe interno. O contexto leva so o nome do
 // erro e um codigo: a message quando ela e um dos codigos que o proprio metodo
-// lanca, senao o `code` string do erro, senao unknown.
+// lanca, senao o `code` do erro quando ele tem forma de codigo (P2034,
+// ER_LOCK_DEADLOCK, ECONNRESET), senao unknown. O `code` tambem e string livre.
 const CODIGOS_DA_RECORRENCIA = new Set([
   'SLOT_GONE',
   'SLOT_BLOCKED',
@@ -34,14 +35,15 @@ const CODIGOS_DA_RECORRENCIA = new Set([
   'SLOT_RACE',
   'NO_CREDIT',
 ]);
+const FORMA_DE_CODIGO = /^[A-Z][A-Z0-9_]{0,63}$/;
 
 function contextoDoErroDaRecorrencia(error: unknown): { errorName: string; errorCode: string } {
   const errorName = error instanceof Error ? error.name : 'unknown';
   if (error instanceof Error && CODIGOS_DA_RECORRENCIA.has(error.message)) {
     return { errorName, errorCode: error.message };
   }
-  const errorCode =
-    typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'unknown';
+  const code = (error as { code?: unknown })?.code;
+  const errorCode = typeof code === 'string' && FORMA_DE_CODIGO.test(code) ? code : 'unknown';
   return { errorName, errorCode };
 }
 
@@ -443,12 +445,18 @@ export class CronService {
           // externa logo abaixo precisa da janela da linha TRAVADA, nao da
           // leitura de fora da transacao (`slot`), que ja pode estar stale.
           const slots = await tx.$queryRaw<
-            Array<{ id: string; version: number; startAt: Date; endAt: Date }>
+            Array<{ id: string; isBlocked: number; version: number; startAt: Date; endAt: Date }>
           >`
-            SELECT id, version, startAt, endAt FROM availability_slots WHERE id = ${slot.id} FOR UPDATE
+            SELECT id, isBlocked, version, startAt, endAt FROM availability_slots WHERE id = ${slot.id} FOR UPDATE
           `;
           const lockedSlot = slots[0];
           if (!lockedSlot) throw new Error('SLOT_GONE');
+
+          // O isBlocked do findFirst de fora da transacao ja pode estar stale: um
+          // blockSlot cabe inteiro entre aquela leitura e este lock, e o CAS abaixo
+          // compara com a version que o proprio bloqueio incrementou. Rechecar aqui,
+          // antes de ocupante, ledger, CAS, credito e create.
+          if (lockedSlot.isBlocked) throw new Error('SLOT_BLOCKED');
 
           // Re-check de ocupacao DENTRO da transacao, sob o FOR UPDATE acima.
           // `availabilitySlotId` deixou de ser unico quando o slot passou a ser

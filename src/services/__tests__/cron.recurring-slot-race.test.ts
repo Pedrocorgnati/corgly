@@ -233,4 +233,106 @@ describe('CronService.runRecurringBookings - re-check de ocupacao dentro da tran
     });
     expect(logSerializado()).not.toContain(MARCADOR);
   });
+
+  // Achado do Codex no gate ST004 do GAP-03: o `code` de um erro tambem e string
+  // livre. So vai ao log quando tem forma de codigo (P2034, ER_LOCK_DEADLOCK).
+  it('code sem forma de codigo nao vai ao log', async () => {
+    txMocks.sessionFindFirst.mockResolvedValue(null);
+    txMocks.consumeOrNullWithTx.mockRejectedValue(Object.assign(new Error('falha sintetica'), { code: MARCADOR }));
+
+    const result = await service.runRecurringBookings();
+
+    expect(result).toEqual({ booked: 0, failed: 1 });
+    const chamadas = chamadasDoMetodo();
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]).toHaveLength(2);
+    expect(chamadas[0][1]).toEqual({
+      action: 'cron.recurring',
+      patternId: 'pattern-1',
+      errorName: 'Error',
+      errorCode: 'unknown',
+    });
+    expect(logSerializado()).not.toContain(MARCADOR);
+  });
+
+  it('code com forma de codigo vai ao log e a message nao', async () => {
+    txMocks.sessionFindFirst.mockResolvedValue(null);
+    txMocks.consumeOrNullWithTx.mockRejectedValue(Object.assign(new Error(MARCADOR), { code: 'P2034' }));
+
+    const result = await service.runRecurringBookings();
+
+    expect(result).toEqual({ booked: 0, failed: 1 });
+    const chamadas = chamadasDoMetodo();
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]).toHaveLength(2);
+    expect(chamadas[0][1]).toEqual({
+      action: 'cron.recurring',
+      patternId: 'pattern-1',
+      errorName: 'Error',
+      errorCode: 'P2034',
+    });
+    expect(logSerializado()).not.toContain(MARCADOR);
+  });
+
+  // GAP-03: o `isBlocked: false` do findFirst de fora da transacao ja pode estar
+  // stale quando o lock e tomado. A rechecagem sob o FOR UPDATE aborta antes de
+  // ocupante, ledger externo, CAS, credito e create.
+  it('aborta sob o FOR UPDATE quando o slot travado esta bloqueado', async () => {
+    const ordem: string[] = [];
+    const slot = futureSlot();
+    let sqlDoLock = '';
+    txMocks.queryRaw.mockImplementation(async (strings: TemplateStringsArray) => {
+      const sql = [...strings].join(' ');
+      if (sql.includes('external_busy_intervals')) {
+        ordem.push('EXTERNAL');
+        return [];
+      }
+      sqlDoLock = sql;
+      ordem.push('FOR_UPDATE');
+      return [{ id: 'slot-1', isBlocked: 1, version: 1, startAt: slot.startAt, endAt: slot.endAt }];
+    });
+    txMocks.sessionFindFirst.mockImplementation(async () => {
+      ordem.push('RECHECK');
+      return null;
+    });
+    txMocks.sessionCreate.mockImplementation(async () => {
+      ordem.push('CREATE');
+      return { id: 'session-1' };
+    });
+
+    const result = await service.runRecurringBookings();
+
+    expect(result).toEqual({ booked: 0, failed: 1 });
+    expect(ordem).toEqual(['FOR_UPDATE']);
+    expect(txMocks.executeRaw).not.toHaveBeenCalled();
+    expect(txMocks.consumeOrNullWithTx).not.toHaveBeenCalled();
+    expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
+      '[CronService.runRecurringBookings] pattern error',
+      expect.objectContaining({
+        action: 'cron.recurring',
+        patternId: 'pattern-1',
+        errorName: 'Error',
+        errorCode: 'SLOT_BLOCKED',
+      }),
+    );
+    const chamadas = chamadasDoMetodo();
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]).toHaveLength(2);
+    expect(sqlDoLock).toMatch(/SELECT\s+id,\s*isBlocked\b/);
+  });
+
+  it('segue agendando quando o slot travado vem com isBlocked 0', async () => {
+    const slot = futureSlot();
+    txMocks.queryRaw.mockImplementation(async (strings: TemplateStringsArray) =>
+      [...strings].join(' ').includes('external_busy_intervals')
+        ? []
+        : [{ id: 'slot-1', isBlocked: 0, version: 1, startAt: slot.startAt, endAt: slot.endAt }],
+    );
+    txMocks.sessionFindFirst.mockResolvedValue(null);
+
+    const result = await service.runRecurringBookings();
+
+    expect(result.booked).toBe(1);
+    expect(txMocks.sessionCreate).toHaveBeenCalledTimes(1);
+  });
 });
