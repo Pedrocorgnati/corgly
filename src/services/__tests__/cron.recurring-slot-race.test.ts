@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { CronService } from '../cron.service';
+import { logger } from '@/lib/logger';
 
 // Regressao FA1 (review-executed do item 004 do loop
 // 09-06-corgly-saas-agenda-google-bloqueio-ocupado): `runRecurringBookings`
@@ -157,5 +158,79 @@ describe('CronService.runRecurringBookings - re-check de ocupacao dentro da tran
     // ainda antes do CAS/credito/create: nenhuma das duas pode rodar antes do
     // `FOR UPDATE`, senao le estado que outra transacao ainda pode mudar.
     expect(ordem).toEqual(['FOR_UPDATE', 'RECHECK', 'EXTERNAL', 'CREATE']);
+  });
+
+  // GAP-03, pendencia logger-erro-bruto do GAP-07: o logger serializa message e
+  // stack de um terceiro argumento (src/lib/logger.ts), entao o detalhe do erro
+  // nao pode chegar la. O contexto leva so nome e codigo.
+  const MARCADOR = 'detalhe-interno-sintetico-gap07';
+
+  function chamadasDoMetodo() {
+    return vi
+      .mocked(logger.error)
+      .mock.calls.filter((c) => String(c[0]).startsWith('[CronService.runRecurringBookings]'));
+  }
+
+  function logSerializado() {
+    return JSON.stringify(vi.mocked(logger.error).mock.calls, (_k, v) =>
+      v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v,
+    );
+  }
+
+  it('sem slot: a falha do e-mail vai ao log so com nome e codigo', async () => {
+    prismaMocks.availabilitySlotFindFirst.mockResolvedValue(null);
+    emailMocks.send.mockRejectedValue(new Error(MARCADOR));
+
+    await service.runRecurringBookings();
+    await vi.waitFor(() => expect(vi.mocked(logger.error)).toHaveBeenCalled());
+
+    const chamadas = chamadasDoMetodo();
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]).toHaveLength(2);
+    expect(chamadas[0][1]).toEqual({
+      action: 'email.send',
+      patternId: 'pattern-1',
+      errorName: 'Error',
+      errorCode: 'unknown',
+    });
+    expect(logSerializado()).not.toContain(MARCADOR);
+  });
+
+  it('sem credito: a falha do e-mail vai ao log so com nome e codigo', async () => {
+    creditMocks.getBalance.mockResolvedValue(0);
+    emailMocks.send.mockRejectedValue(new Error(MARCADOR));
+
+    await service.runRecurringBookings();
+    await vi.waitFor(() => expect(vi.mocked(logger.error)).toHaveBeenCalled());
+
+    const chamadas = chamadasDoMetodo();
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]).toHaveLength(2);
+    expect(chamadas[0][1]).toEqual({
+      action: 'email.send',
+      patternId: 'pattern-1',
+      errorName: 'Error',
+      errorCode: 'unknown',
+    });
+    expect(logSerializado()).not.toContain(MARCADOR);
+  });
+
+  it('erro dentro da transacao vai ao log so com nome e codigo', async () => {
+    txMocks.sessionFindFirst.mockResolvedValue(null);
+    txMocks.consumeOrNullWithTx.mockRejectedValue(new Error(MARCADOR));
+
+    const result = await service.runRecurringBookings();
+
+    expect(result).toEqual({ booked: 0, failed: 1 });
+    const chamadas = chamadasDoMetodo();
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]).toHaveLength(2);
+    expect(chamadas[0][1]).toEqual({
+      action: 'cron.recurring',
+      patternId: 'pattern-1',
+      errorName: 'Error',
+      errorCode: 'unknown',
+    });
+    expect(logSerializado()).not.toContain(MARCADOR);
   });
 });

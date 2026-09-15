@@ -21,6 +21,30 @@ export interface CronResult {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.corgly.com';
 
+// Log da recorrencia sem o erro bruto: `logger.error` serializaria message e
+// stack de um terceiro argumento (src/lib/logger.ts), e a message de um erro de
+// banco ou de e-mail pode trazer detalhe interno. O contexto leva so o nome do
+// erro e um codigo: a message quando ela e um dos codigos que o proprio metodo
+// lanca, senao o `code` string do erro, senao unknown.
+const CODIGOS_DA_RECORRENCIA = new Set([
+  'SLOT_GONE',
+  'SLOT_BLOCKED',
+  'SLOT_TAKEN',
+  'EXTERNAL_OCCUPANCY',
+  'SLOT_RACE',
+  'NO_CREDIT',
+]);
+
+function contextoDoErroDaRecorrencia(error: unknown): { errorName: string; errorCode: string } {
+  const errorName = error instanceof Error ? error.name : 'unknown';
+  if (error instanceof Error && CODIGOS_DA_RECORRENCIA.has(error.message)) {
+    return { errorName, errorCode: error.message };
+  }
+  const errorCode =
+    typeof (error as { code?: unknown })?.code === 'string' ? (error as { code: string }).code : 'unknown';
+  return { errorName, errorCode };
+}
+
 export class CronService {
   /**
    * Executa rotina diária de expiração de créditos (03:00 UTC via Vercel Cron).
@@ -377,7 +401,11 @@ export class CronService {
               >[0]['locale'],
             })
             .catch((e) =>
-              logger.error('[CronService.runRecurringBookings] email error', { action: 'email.send', patternId: pattern.id }, e),
+              logger.error('[CronService.runRecurringBookings] email error', {
+                action: 'email.send',
+                patternId: pattern.id,
+                ...contextoDoErroDaRecorrencia(e),
+              }),
             );
           continue;
         }
@@ -400,7 +428,11 @@ export class CronService {
               >[0]['locale'],
             })
             .catch((e) =>
-              logger.error('[CronService.runRecurringBookings] email error', { action: 'email.send', patternId: pattern.id }, e),
+              logger.error('[CronService.runRecurringBookings] email error', {
+                action: 'email.send',
+                patternId: pattern.id,
+                ...contextoDoErroDaRecorrencia(e),
+              }),
             );
           continue;
         }
@@ -474,7 +506,11 @@ export class CronService {
 
         booked++;
       } catch (e) {
-        logger.error('[CronService.runRecurringBookings] pattern error', { action: 'cron.recurring', patternId: pattern.id }, e);
+        logger.error('[CronService.runRecurringBookings] pattern error', {
+          action: 'cron.recurring',
+          patternId: pattern.id,
+          ...contextoDoErroDaRecorrencia(e),
+        });
         failed++;
       }
     }
