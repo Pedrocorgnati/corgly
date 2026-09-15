@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { availabilityService } from '@/services/availability.service';
 import { apiResponse } from '@/lib/auth';
 import { requireAdmin } from '@/lib/auth-guard';
+import { isValidCivilDateKey } from '@/lib/canonical-timezone-window';
 
 /**
  * GET /api/v1/admin/availability?date=YYYY-MM-DD[&until=YYYY-MM-DD]
@@ -22,14 +23,15 @@ export async function GET(request: NextRequest) {
   const date = searchParams.get('date');
   const until = searchParams.get('until');
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  // Mesma validacao civil da rota publica (GAP-08): data impossivel sai em 400 aqui.
+  if (!isValidCivilDateKey(date)) {
     return NextResponse.json(
       apiResponse(null, 'Parâmetro date inválido. Use formato YYYY-MM-DD.'),
       { status: 400 },
     );
   }
 
-  if (until !== null && !/^\d{4}-\d{2}-\d{2}$/.test(until)) {
+  if (until !== null && !isValidCivilDateKey(until)) {
     return NextResponse.json(
       apiResponse(null, 'Parâmetro until inválido. Use formato YYYY-MM-DD.'),
       { status: 400 },

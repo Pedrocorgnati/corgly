@@ -29,13 +29,15 @@ interface AdminCalendarProps {
    * publico de sempre.
    */
   calendar?: UseCalendarReturn;
+  /** Fuso IANA do professor: grade do mes e horario de cada slot nesse fuso (GAP-08). */
+  timeZone?: string;
 }
 
-export function AdminCalendar({ sessions = [], onSlotClick, calendar }: AdminCalendarProps) {
+export function AdminCalendar({ sessions = [], onSlotClick, calendar, timeZone }: AdminCalendarProps) {
   const tStatus = useTranslations('sessionStatus');
   // Hook chamado incondicionalmente (regra dos hooks); `enabled: false` evita o
   // fetch publico redundante quando a fonte ja vem por prop.
-  const internal = useCalendar({ enabled: !calendar });
+  const internal = useCalendar({ enabled: !calendar, timeZone });
   const {
     currentMonth,
     currentYear,
@@ -87,6 +89,7 @@ export function AdminCalendar({ sessions = [], onSlotClick, calendar }: AdminCal
         isLoading={isLoading}
         error={error}
         onRetry={refresh}
+        timeZone={timeZone}
       />
 
       {/* Slot details for selected date.
@@ -129,11 +132,13 @@ export function AdminCalendar({ sessions = [], onSlotClick, calendar }: AdminCal
                         {new Date(slot.startAt).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit',
+                          ...(timeZone ? { timeZone } : {}),
                         })}
                         {' - '}
                         {new Date(slot.endAt).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
                           minute: '2-digit',
+                          ...(timeZone ? { timeZone } : {}),
                         })}
                       </p>
                       {session?.studentName && (

@@ -70,7 +70,7 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
     setError(null);
     setFatalError(null);
     try {
-      const result = await getAvailability(monthKey);
+      const result = await getAvailability(monthKey, timeZone);
       if (result.error) {
         setError(result.error);
         setSlots([]);
@@ -85,7 +85,7 @@ export function useCalendar(options?: UseCalendarOptions): UseCalendarReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [monthKey, enabled]);
+  }, [monthKey, enabled, timeZone]);
 
   useEffect(() => {
     void fetchSlots();

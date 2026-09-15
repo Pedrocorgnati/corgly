@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 
 import { SLOT_OCCUPYING_STATUSES } from '@/lib/bookings/slot-occupying-statuses';
+import { civilMonthWindow, isInCivilWindow, type CivilMonthWindow } from '@/lib/canonical-timezone-window';
 import { internalApiOrigin } from '@/lib/internal-api';
 import { logger } from '@/lib/logger';
 import type { SessionWithMeta } from '@/types/session.types';
@@ -175,24 +176,29 @@ export async function rescheduleSession(id: string, newSlotId: string) {
 }
 
 
-export async function getAvailability(month: string) {
+export async function getAvailability(month: string, timeZone?: string) {
   // 'use server': `month` e input externo, validado antes de qualquer fetch.
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
     return { data: null, error: 'Mês inválido. Use formato YYYY-MM.', code: null };
   }
 
-  const date = `${month}-01`;
+  // Com fuso, o mes e a janela civil semiaberta [start, end) no fuso do aluno (GAP-08):
+  // a rota recebe a cobertura UTC em dias inteiros e a lista volta recortada na janela.
+  const janela: CivilMonthWindow | null = timeZone ? civilMonthWindow(month, timeZone) : null;
+  const dateLegado = `${month}-01`;
   // Primeiro dia do mes seguinte por aritmetica de string: nao depende do fuso
   // do processo.
   const [ano, mes] = month.split('-');
-  const until =
+  const untilLegado =
     mes === '12'
       ? `${String(Number(ano) + 1)}-01-01`
       : `${ano}-${String(Number(mes) + 1).padStart(2, '0')}-01`;
 
   const result = await apiFetch<
     Array<{ id: string; startAt: string; endAt: string; isBlocked: boolean }>
-  >(`/api/v1/availability?date=${date}&until=${until}`);
+  >(
+    `/api/v1/availability?date=${janela ? janela.date : dateLegado}&until=${janela ? janela.until : untilLegado}`,
+  );
   if (result.error || !result.data) return result;
 
   // Piso no agora tambem na borda que o calendario do aluno consome (item 033).
@@ -202,7 +208,10 @@ export async function getAvailability(month: string) {
   const agora = Date.now();
   return {
     ...result,
-    data: result.data.filter((slot) => new Date(slot.startAt).getTime() > agora),
+    data: result.data.filter(
+      (slot) =>
+        new Date(slot.startAt).getTime() > agora && (!janela || isInCivilWindow(slot.startAt, janela)),
+    ),
   };
 }
 
@@ -228,12 +237,14 @@ const OWN_RESERVATIONS_MAX_PAGES = 5;
  * a MESMA lista fail-closed que define slot ocupado, entao sessao cancelada nao
  * aparece e status novo do enum continua contando como reserva.
  */
-export async function getOwnReservedSlots(month: string) {
+export async function getOwnReservedSlots(month: string, timeZone?: string) {
   // 'use server': `month` e input externo, validado antes de qualquer fetch.
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
     return { data: null, error: 'Mês inválido. Use formato YYYY-MM.', code: null };
   }
 
+  // Com fuso, `from`/`to` seguem a janela civil do aluno no fuso (GAP-08).
+  const janela: CivilMonthWindow | null = timeZone ? civilMonthWindow(month, timeZone) : null;
   const [ano, mes] = month.split('-');
   const until =
     mes === '12'
@@ -241,8 +252,10 @@ export async function getOwnReservedSlots(month: string) {
       : `${ano}-${String(Number(mes) + 1).padStart(2, '0')}-01`;
   // A rota aplica `to` como `lte`: um milissegundo antes do mes seguinte fecha a
   // janela meio-aberta.
-  const from = `${month}-01T00:00:00.000Z`;
-  const to = new Date(new Date(`${until}T00:00:00.000Z`).getTime() - 1).toISOString();
+  const from = janela ? janela.start.toISOString() : `${month}-01T00:00:00.000Z`;
+  const to = janela
+    ? new Date(janela.end.getTime() - 1).toISOString()
+    : new Date(new Date(`${until}T00:00:00.000Z`).getTime() - 1).toISOString();
 
   const rows: SessionWithMeta[] = [];
   for (let page = 1; page <= OWN_RESERVATIONS_MAX_PAGES; page++) {
@@ -268,7 +281,8 @@ export async function getOwnReservedSlots(month: string) {
     .filter(
       (row) =>
         SLOT_OCCUPYING_STATUSES.includes(row.status) &&
-        new Date(row.startAt).getTime() > agora,
+        new Date(row.startAt).getTime() > agora &&
+        (!janela || isInCivilWindow(row.startAt, janela)),
     )
     .map((row) => ({
       id: row.availabilitySlotId,
@@ -285,22 +299,24 @@ export async function getOwnReservedSlots(month: string) {
  * vendidos, com a sessao ocupante. Espelha `getAvailability`, trocando so a
  * rota e o tipo do payload.
  */
-export async function getAdminAvailability(month: string) {
+export async function getAdminAvailability(month: string, timeZone?: string) {
   // 'use server': `month` e input externo, validado antes de qualquer fetch.
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
     return { data: null, error: 'Mês inválido. Use formato YYYY-MM.', code: null };
   }
 
-  const date = `${month}-01`;
+  // Com fuso, o mes e a janela civil do professor no fuso (GAP-08); sem piso no agora.
+  const janela: CivilMonthWindow | null = timeZone ? civilMonthWindow(month, timeZone) : null;
+  const dateLegado = `${month}-01`;
   // Primeiro dia do mes seguinte por aritmetica de string: nao depende do fuso
   // do processo.
   const [ano, mes] = month.split('-');
-  const until =
+  const untilLegado =
     mes === '12'
       ? `${String(Number(ano) + 1)}-01-01`
       : `${ano}-${String(Number(mes) + 1).padStart(2, '0')}-01`;
 
-  return apiFetch<
+  const result = await apiFetch<
     Array<{
       id: string;
       startAt: string;
@@ -308,5 +324,9 @@ export async function getAdminAvailability(month: string) {
       isBlocked: boolean;
       session: { id: string; status: string; studentName?: string } | null;
     }>
-  >(`${API.ADMIN.AVAILABILITY}?date=${date}&until=${until}`);
+  >(
+    `${API.ADMIN.AVAILABILITY}?date=${janela ? janela.date : dateLegado}&until=${janela ? janela.until : untilLegado}`,
+  );
+  if (!janela || result.error || !result.data) return result;
+  return { ...result, data: result.data.filter((slot) => isInCivilWindow(slot.startAt, janela)) };
 }

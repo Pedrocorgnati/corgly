@@ -20,6 +20,8 @@ export interface UseOwnReservationsReturn {
 
 interface LoadedReservations {
   monthKey: string;
+  /** Fuso com que a leitura foi pedida: a janela civil do mes depende dele. */
+  timeZone?: string;
   slots: OwnReservedSlot[];
 }
 
@@ -47,28 +49,29 @@ export function useOwnReservations({
     let ativo = true;
     // `Promise.resolve().then` tambem absorve excecao sincrona da chamada. O
     // estado so muda no callback da resposta, e resposta de leitura substituida
-    // (troca de mes, refresh) e descartada.
+    // (troca de mes ou de fuso, refresh) e descartada.
     Promise.resolve()
-      .then(() => getOwnReservedSlots(monthKey))
+      .then(() => getOwnReservedSlots(monthKey, timeZone))
       .then(
         (result) => (result.error ? [] : (result.data ?? [])),
         (): OwnReservedSlot[] => [],
       )
       .then((slots) => {
-        if (ativo) setLoaded({ monthKey, slots });
+        if (ativo) setLoaded({ monthKey, timeZone, slots });
       });
     return () => {
       ativo = false;
     };
-  }, [monthKey, reloadToken]);
+  }, [monthKey, reloadToken, timeZone]);
 
   const refresh = useCallback(() => {
     setReloadToken((token) => token + 1);
   }, []);
 
-  // Resposta de outro mes (troca de mes com a leitura em voo) nao vale para a
-  // grade atual.
-  const ownSlots = loaded?.monthKey === monthKey ? loaded.slots : NO_SLOTS;
+  // Resposta de outro mes ou de outro fuso (troca com a leitura em voo) nao vale
+  // para a grade atual.
+  const ownSlots =
+    loaded?.monthKey === monthKey && loaded.timeZone === timeZone ? loaded.slots : NO_SLOTS;
 
   const ownSlotsByDate = useMemo(() => {
     const map: Record<string, OwnReservedSlot[]> = {};

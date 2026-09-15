@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAdminAvailability } from '@/actions/sessions';
+import { getCivilDateParts, toDateKey } from '@/lib/civil-date-key';
 import type { AvailabilitySlot, UseCalendarReturn } from '@/hooks/useCalendar';
 
 export interface AdminScheduleSession {
@@ -25,6 +26,11 @@ interface AdminSlotDTO {
   session: { id: string; status: string; studentName?: string } | null;
 }
 
+export interface UseAdminScheduleOptions {
+  /** Fuso IANA do professor: mes civil aberto, janela pedida e dia de cada slot (GAP-08). */
+  timeZone?: string;
+}
+
 /**
  * Fonte unica da agenda do professor: usa a rota admin, que devolve TODOS os
  * slots da janela (livres, bloqueados e vendidos) com a sessao ocupante.
@@ -32,10 +38,11 @@ interface AdminSlotDTO {
  * `sessions`) e o `AvailabilityEditor` (via `slots` como `existingSlots`),
  * de modo que um unico `refresh` re-busca as duas coisas.
  */
-export function useAdminSchedule(): UseAdminScheduleReturn {
-  const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+export function useAdminSchedule(options?: UseAdminScheduleOptions): UseAdminScheduleReturn {
+  const timeZone = options?.timeZone;
+  const today = getCivilDateParts(new Date(), timeZone);
+  const [currentMonth, setCurrentMonth] = useState(today.month - 1);
+  const [currentYear, setCurrentYear] = useState(today.year);
   const [adminSlots, setAdminSlots] = useState<AdminSlotDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +61,7 @@ export function useAdminSchedule(): UseAdminScheduleReturn {
     setError(null);
     setFatalError(null);
     try {
-      const result = await getAdminAvailability(monthKey);
+      const result = await getAdminAvailability(monthKey, timeZone);
       if (result.error) {
         setError(result.error);
         setAdminSlots([]);
@@ -67,7 +74,7 @@ export function useAdminSchedule(): UseAdminScheduleReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [monthKey]);
+  }, [monthKey, timeZone]);
 
   useEffect(() => {
     void fetchSlots();
@@ -104,12 +111,13 @@ export function useAdminSchedule(): UseAdminScheduleReturn {
   const slotsByDate = useMemo(() => {
     const map: Record<string, AvailabilitySlot[]> = {};
     for (const slot of slots) {
-      const dateKey = slot.startAt.slice(0, 10);
+      // Com fuso, o dia civil do professor; sem fuso, o dia UTC de antes.
+      const dateKey = timeZone ? toDateKey(slot.startAt, timeZone) : slot.startAt.slice(0, 10);
       if (!map[dateKey]) map[dateKey] = [];
       map[dateKey].push(slot);
     }
     return map;
-  }, [slots]);
+  }, [slots, timeZone]);
 
   const prevMonth = useCallback(() => {
     if (currentMonth === 0) {

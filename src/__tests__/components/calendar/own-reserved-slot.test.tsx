@@ -183,7 +183,7 @@ describe('useOwnReservations - falha nunca expoe horario proprio como livre', ()
 
     const { result } = renderReservations();
 
-    await waitFor(() => expect(mocks.getOwnReservedSlots).toHaveBeenCalledWith('2099-01'));
+    await waitFor(() => expect(mocks.getOwnReservedSlots).toHaveBeenCalledWith('2099-01', 'UTC'));
     await act(async () => {
       await Promise.resolve();
     });

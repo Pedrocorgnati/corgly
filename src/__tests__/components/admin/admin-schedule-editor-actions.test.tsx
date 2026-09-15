@@ -155,7 +155,7 @@ describe('AdminScheduleClient - acoes do editor e cor do slot (GAP-04)', () => {
     await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith('Slot bloqueado.'));
     expect(patches).toEqual([BLOCK_LIVRE]);
     await waitFor(() => expect(mocks.getAdminAvailability.mock.calls.length).toBeGreaterThan(n));
-    expect(mocks.getAdminAvailability).toHaveBeenLastCalledWith(DATA.slice(0, 7));
+    expect(mocks.getAdminAvailability).toHaveBeenLastCalledWith(DATA.slice(0, 7), undefined);
     // Comportamento atual de `schedule-client.tsx:118`, documentado e nao alterado (GAP-17).
     await waitFor(() => expect(screen.queryByTestId('admin-availability')).not.toBeInTheDocument());
   });

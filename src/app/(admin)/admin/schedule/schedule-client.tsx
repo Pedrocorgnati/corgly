@@ -11,7 +11,12 @@ import { useAdminSchedule } from '@/hooks/useAdminSchedule';
 import { ROUTES } from '@/lib/constants/routes';
 import type { AvailabilitySlot } from '@/hooks/useCalendar';
 
-export function AdminScheduleClient() {
+interface AdminScheduleClientProps {
+  /** Fuso IANA canonico do professor, lido pela pagina no servidor (GAP-08). */
+  adminTimezone?: string;
+}
+
+export function AdminScheduleClient({ adminTimezone }: AdminScheduleClientProps = {}) {
   const [showEditor, setShowEditor] = useState(false);
   const [showBulkBlock, setShowBulkBlock] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -20,8 +25,8 @@ export function AdminScheduleClient() {
     session?: { id: string; status: string; studentName?: string };
   } | null>(null);
 
-  // Fonte unica da tela: enxerga slot livre, bloqueado e vendido.
-  const schedule = useAdminSchedule();
+  // Fonte unica da tela: enxerga slot livre, bloqueado e vendido, no mes civil do professor.
+  const schedule = useAdminSchedule({ timeZone: adminTimezone });
 
   const handleRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -72,6 +77,7 @@ export function AdminScheduleClient() {
             calendar={schedule}
             sessions={schedule.sessions}
             onSlotClick={handleSlotClick}
+            timeZone={adminTimezone}
           />
         </div>
 
@@ -88,11 +94,13 @@ export function AdminScheduleClient() {
                   month: '2-digit',
                   hour: '2-digit',
                   minute: '2-digit',
+                  timeZone: adminTimezone,
                 })}
                 {' - '}
                 {new Date(selectedSlot.slot.endAt).toLocaleTimeString('pt-BR', {
                   hour: '2-digit',
                   minute: '2-digit',
+                  timeZone: adminTimezone,
                 })}
               </p>
               <p data-testid="admin-schedule-slot-detail-state" className="text-sm text-muted-foreground mt-1">

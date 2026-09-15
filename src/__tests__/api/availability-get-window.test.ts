@@ -1,0 +1,126 @@
+// @vitest-environment node
+/**
+ * GAP-08 - `GET /api/v1/availability` rejeita data civil impossivel com 400.
+ *
+ * A rota validava so o formato `\d{4}-\d{2}-\d{2}`: `2026-02-30` rolava para
+ * marco no `Date` e virava 200, `2026-13-01` sem `until` estourava `RangeError`
+ * no `toISOString` e o GET rejeitava, e `until=2026-13-10` passava com janela
+ * `NaN` direto para o servico. Ordem, teto e o `catch` do GET ficam iguais.
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest, NextResponse } from 'next/server';
+
+vi.mock('@/lib/auth-guard', () => ({ requireAdmin: vi.fn() }));
+vi.mock('@/lib/auth', () => ({
+  apiResponse: (data: unknown, error?: string | null, message?: string | null) => ({
+    data,
+    error: error ?? null,
+    message: message ?? null,
+  }),
+}));
+vi.mock('@/lib/logger', () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+vi.mock('@/services/availability.service', () => ({
+  availabilityService: { getAvailable: vi.fn(), listForAdmin: vi.fn(), generateSlots: vi.fn() },
+}));
+vi.mock('@/lib/canonical-timezone', () => ({
+  getCanonicalTimezone: vi.fn(async () => 'America/Sao_Paulo'),
+}));
+
+import { availabilityService } from '@/services/availability.service';
+import { GET } from '@/app/api/v1/availability/route';
+
+const MSG_DATE = 'Parâmetro date inválido. Use formato YYYY-MM-DD.';
+const MSG_UNTIL = 'Parâmetro until inválido. Use formato YYYY-MM-DD.';
+const MSG_ORDEM = 'Parâmetro until deve ser posterior a date.';
+const MSG_TETO = 'Janela solicitada excede o horizonte máximo de 84 dias.';
+
+const getAvailable = vi.mocked(availabilityService.getAvailable);
+
+function pedir(query: string) {
+  return GET(new NextRequest(`http://localhost/api/v1/availability?${query}`));
+}
+
+async function erroDe(res: Response): Promise<unknown> {
+  const corpo = (await res.json()) as { error: unknown };
+  return corpo.error;
+}
+
+describe('GET /api/v1/availability - data civil valida (GAP-08)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAvailable.mockResolvedValue([]);
+  });
+
+  it('REGRESSAO: R1 janela valida chega ao servico com date e until exclusivo', async () => {
+    const res = await pedir('date=2026-09-01&until=2026-10-02');
+    expect(res.status).toBe(200);
+    expect(getAvailable.mock.calls[0][0]).toBe('2026-09-01');
+    expect(getAvailable.mock.calls[0][1]).toBe('2026-10-02');
+  });
+
+  it('REGRESSAO: R2 until igual ou anterior a date responde 400', async () => {
+    for (const query of ['date=2026-09-01&until=2026-09-01', 'date=2026-09-02&until=2026-09-01']) {
+      const res = await pedir(query);
+      expect(res.status).toBe(400);
+      expect(await erroDe(res)).toBe(MSG_ORDEM);
+    }
+    expect(getAvailable).not.toHaveBeenCalled();
+  });
+
+  it('REGRESSAO: R3 teto de 84 dias', async () => {
+    const acima = await pedir('date=2026-09-01&until=2026-11-25');
+    expect(acima.status).toBe(400);
+    expect(await erroDe(acima)).toBe(MSG_TETO);
+
+    const noTeto = await pedir('date=2026-09-01&until=2026-11-24');
+    expect(noTeto.status).toBe(200);
+    expect(getAvailable).toHaveBeenCalledTimes(1);
+  });
+
+  it('RED: R4 date 2026-02-30 responde 400 sem chamar o servico', async () => {
+    const res = await pedir('date=2026-02-30&until=2026-03-10');
+    expect(res.status).toBe(400);
+    expect(await erroDe(res)).toBe(MSG_DATE);
+    expect(getAvailable).not.toHaveBeenCalled();
+  });
+
+  it('RED: R5 date 2026-13-01 sem until responde 400 em vez de rejeitar', async () => {
+    const promessa = pedir('date=2026-13-01');
+    await expect(promessa).resolves.toBeInstanceOf(NextResponse);
+    const res = await promessa;
+    expect(res.status).toBe(400);
+    expect(await erroDe(res)).toBe(MSG_DATE);
+  });
+
+  it('RED: R6 until 2026-04-31 responde 400 sem chamar o servico', async () => {
+    const res = await pedir('date=2026-04-01&until=2026-04-31');
+    expect(res.status).toBe(400);
+    expect(await erroDe(res)).toBe(MSG_UNTIL);
+    expect(getAvailable).not.toHaveBeenCalled();
+  });
+
+  it('RED: R7 until 2026-13-10 responde 400 sem chamar o servico', async () => {
+    const res = await pedir('date=2026-01-01&until=2026-13-10');
+    expect(res.status).toBe(400);
+    expect(await erroDe(res)).toBe(MSG_UNTIL);
+    expect(getAvailable).not.toHaveBeenCalled();
+  });
+
+  it('CONTROLE: R8 sem date responde 400', async () => {
+    const res = await GET(new NextRequest('http://localhost/api/v1/availability'));
+    expect(res.status).toBe(400);
+    expect(await erroDe(res)).toBe(MSG_DATE);
+  });
+
+  it('CONTROLE: R9 falha do servico vira 500 sem rejeitar', async () => {
+    getAvailable.mockRejectedValueOnce(new Error('falha simulada'));
+    const promessa = pedir('date=2026-09-01&until=2026-10-02');
+    await expect(promessa).resolves.toBeInstanceOf(NextResponse);
+    const res = await promessa;
+    expect(res.status).toBe(500);
+    expect(await erroDe(res)).toBe('Erro interno.');
+    expect(getAvailable).toHaveBeenCalledTimes(1);
+  });
+});

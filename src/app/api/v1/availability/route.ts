@@ -5,6 +5,7 @@ import { apiResponse } from '@/lib/auth';
 import { AppError } from '@/lib/errors';
 import { requireAdmin } from '@/lib/auth-guard';
 import { fusoIanaValido } from '@/lib/canonical-timezone';
+import { isValidCivilDateKey } from '@/lib/canonical-timezone-window';
 
 /** GET /api/v1/availability?date=YYYY-MM-DD[&until=YYYY-MM-DD] */
 export async function GET(request: NextRequest) {
@@ -12,14 +13,16 @@ export async function GET(request: NextRequest) {
   const date = searchParams.get('date');
   const until = searchParams.get('until');
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  // Data civil que existe no calendario, nao so o formato (GAP-08): 2026-02-30 sai em
+  // 400 aqui, antes de qualquer conta de Date.
+  if (!isValidCivilDateKey(date)) {
     return NextResponse.json(
       apiResponse(null, 'Parâmetro date inválido. Use formato YYYY-MM-DD.'),
       { status: 400 },
     );
   }
 
-  if (until !== null && !/^\d{4}-\d{2}-\d{2}$/.test(until)) {
+  if (until !== null && !isValidCivilDateKey(until)) {
     return NextResponse.json(
       apiResponse(null, 'Parâmetro until inválido. Use formato YYYY-MM-DD.'),
       { status: 400 },
