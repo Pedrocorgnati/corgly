@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@/test/utils';
+import { render, screen, fireEvent, waitFor, within } from '@/test/utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTranslator } from 'next-intl';
 import { BulkBlockModal } from '@/components/admin/BulkBlockModal';
@@ -194,5 +194,31 @@ describe('BulkBlockModal — previa real (item 008)', () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
     expect(screen.queryByTestId('modal-bulk-block-confirm-button')).not.toBeInTheDocument();
     expect(screen.getByTestId('modal-bulk-block-preview-button')).toBeInTheDocument();
+  });
+
+  // C9.5: a previa usa a copy decidida no gate ST005, vinda do catalogo bulkBlockModal.previa
+  it('[RED C9.5] deve exibir a previa na copy decidida no gate ST005', async () => {
+    mockGet.mockResolvedValueOnce({ data: { sessionsToCancel: 3, slotsToBlock: 6 } });
+
+    render(<BulkBlockModal open onOpenChange={vi.fn()} onComplete={vi.fn()} />);
+    preencherFormulario();
+    fireEvent.click(screen.getByTestId('modal-bulk-block-preview-button'));
+
+    const previa = await screen.findByTestId('modal-bulk-block-preview');
+    const tModal = createTranslator({
+      locale: 'pt-BR',
+      messages: ptBR,
+      namespace: 'bulkBlockModal',
+    });
+    const esperado = [
+      tModal('previa.sessionsToCancel', { sessionsToCancel: 3 }),
+      tModal('previa.slotsToBlock', { slotsToBlock: 6 }),
+    ];
+    for (const texto of esperado) expect(texto).not.toContain('bulkBlockModal.');
+    expect(esperado).toEqual([
+      'até 3 sessões serão canceladas',
+      'pelo menos 6 slots serão bloqueados',
+    ]);
+    expect(within(previa).getAllByRole('listitem').map((item) => item.textContent)).toEqual(esperado);
   });
 });

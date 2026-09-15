@@ -820,14 +820,12 @@ export class SessionService {
   }
 
   /**
-   * Admin: previa do bulk cancel. Conta, sem escrever nada, quantas sessoes
-   * seriam canceladas e quantos slots seriam bloqueados na mesma janela.
-   *
-   * Os predicados sao os MESMOS da execucao: `status: SCHEDULED` + janela para
-   * sessoes (igual ao `findMany` de `bulkCancel`), `isBlocked: false` +
-   * `sessions: { none: ... }` para slots (igual ao `updateMany`). E o limite
-   * superior de `cancelled`: a execucao pode cancelar menos se alguma sessao
-   * cair em `errors`.
+   * Admin: previa do bulk cancel, sem efeito. Semantica decidida no
+   * gate ST005 do GAP-09 (opcao 2, previsao minima): os predicados sao os da
+   * execucao no instante da leitura. Sem concorrencia entre a previa e a
+   * confirmacao, `sessionsToCancel` e limite superior de `cancelled` (sessao em
+   * `errors` segue agendada) e `slotsToBlock` e piso de `blocked`, porque a execucao
+   * cancela antes de bloquear e o slot liberado pelo cancelamento tambem e bloqueado.
    */
   async bulkCancelPreview(data: {
     startDate: string;

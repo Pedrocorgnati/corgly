@@ -2114,6 +2114,10 @@
       "parcial": "{cancelled} sessões canceladas, {refunded} créditos reembolsados, {blocked} horários bloqueados. {falhas, plural, one {# sessão não cancelada} other {# sessões não canceladas}}; veja a lista no modal.",
       "listaTitulo": "Sessões não canceladas:",
       "item": "{sessionId}: {code}"
+    },
+    "previa": {
+      "sessionsToCancel": "até {sessionsToCancel} sessões serão canceladas",
+      "slotsToBlock": "pelo menos {slotsToBlock} slots serão bloqueados"
     }
   }
 }

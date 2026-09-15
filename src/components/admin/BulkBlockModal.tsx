@@ -199,8 +199,8 @@ export function BulkBlockModal({
             <div data-testid="modal-bulk-block-preview" className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
               <p className="text-sm font-medium text-amber-700">Preview da operação:</p>
               <ul className="text-sm text-muted-foreground mt-1 list-disc list-inside">
-                <li>{preview.sessionsToCancel} sessões serão canceladas</li>
-                <li>{preview.slotsToBlock} slots serão bloqueados</li>
+                <li>{t('previa.sessionsToCancel', { sessionsToCancel: preview.sessionsToCancel })}</li>
+                <li>{t('previa.slotsToBlock', { slotsToBlock: preview.slotsToBlock })}</li>
               </ul>
             </div>
           )}

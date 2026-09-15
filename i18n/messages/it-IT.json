@@ -2114,6 +2114,10 @@
       "parcial": "{cancelled} sessioni annullate, {refunded} crediti rimborsati, {blocked} orari bloccati. {falhas, plural, one {# sessione non annullata} other {# sessioni non annullate}}; consulta la lista nel modale.",
       "listaTitulo": "Sessioni non annullate:",
       "item": "{sessionId}: {code}"
+    },
+    "previa": {
+      "sessionsToCancel": "fino a {sessionsToCancel} sessioni saranno annullate",
+      "slotsToBlock": "almeno {slotsToBlock} orari saranno bloccati"
     }
   }
 }

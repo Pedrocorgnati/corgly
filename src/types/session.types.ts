@@ -95,9 +95,10 @@ export interface BulkCancelResult {
 }
 
 // ---------------------------------------------------------------------------
-// Previa do bulk cancel (admin) — contagem sem efeito, mesmos predicados da
-// execucao. Consumida por `GET /api/v1/sessions/bulk-cancel` e pelo
-// BulkBlockModal antes de liberar o botao destrutivo.
+// Previa do bulk cancel (admin): contagem sem efeito, com a semantica decidida
+// no gate ST005 do GAP-09 (docstring de SessionService.bulkCancelPreview).
+// Consumida por `GET /api/v1/sessions/bulk-cancel` e pelo BulkBlockModal antes
+// de liberar o botao destrutivo.
 // ---------------------------------------------------------------------------
 export interface BulkCancelPreview {
   sessionsToCancel: number;
