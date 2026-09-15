@@ -46,11 +46,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Comparacao por INSTANTE, nao lexicografica: `DateOrDateTimeString` aceita
-    // ISO-8601 completo com offset de fuso, e ai a ordem de texto julga errado
-    // (`2026-05-01T00:00:00Z` e POSTERIOR a `2026-04-30T23:00:00-03:00` como
-    // texto e ANTERIOR como instante). A UI so manda date-only, mas a rota e
-    // superficie publica e valida o que o schema aceita.
+    // Comparacao por INSTANTE, nao lexicografica. `DateOrDateTimeString` aceita
+    // date-only e ISO-8601 com sufixo `Z`; offset de fuso (`-03:00`) cai no 400 do
+    // schema acima, porque `z.string().datetime()` nao recebe `{ offset: true }`.
+    // Mesmo nesse contrato a ordem de texto julga errado: `2026-04-30T23:59:59Z` e
+    // MAIOR que `2026-04-30T23:59:59.500Z` como texto e MENOR como instante, e
+    // `2026-04-30` vem antes de `2026-04-30T00:00:00Z` como texto e empata como
+    // instante. A UI so manda date-only, mas a rota e superficie publica e valida
+    // o que o schema aceita.
     if (new Date(parsed.data.endDate).getTime() < new Date(parsed.data.startDate).getTime()) {
       return NextResponse.json(
         apiResponse(null, 'Dados inválidos.', 'endDate deve ser maior ou igual a startDate.'),

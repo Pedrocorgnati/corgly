@@ -99,3 +99,64 @@ describe('GET e POST /api/v1/sessions/bulk-cancel (GAP-09)', () => {
     expect(mockBulkCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+// GAP-008: a previa ordena startDate e endDate pelo INSTANTE, nao pelo texto, dentro
+// do contrato aceito por BulkCancelSchema (date-only e ISO com sufixo Z). Offset de
+// fuso diferente de Z cai no 400 do schema antes da comparacao; fica fora deste bloco.
+describe('[GAP-008] GET bulk-cancel ordena por instante', () => {
+  function pedidoPeriodo(startDate: string, endDate: string): NextRequest {
+    return new NextRequest(
+      'http://localhost/api/v1/sessions/bulk-cancel?' + new URLSearchParams({ startDate, endDate }),
+      { headers: { 'x-user-role': 'ADMIN' } },
+    );
+  }
+
+  beforeEach(() => {
+    mockPreview.mockReset();
+    mockPreview.mockResolvedValue({ sessionsToCancel: 2, slotsToBlock: 4 });
+  });
+
+  it('deve aceitar fracao de segundo posterior mesmo com o texto invertido (z-ms-valido)', async () => {
+    const startDate = '2026-04-30T23:59:59Z';
+    const endDate = '2026-04-30T23:59:59.500Z';
+
+    const res = await GET(pedidoPeriodo(startDate, endDate));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ data: { sessionsToCancel: 2, slotsToBlock: 4 }, error: null, message: null });
+    expect(mockPreview).toHaveBeenCalledTimes(1);
+    expect(mockPreview).toHaveBeenCalledWith({ startDate, endDate });
+  });
+
+  it('deve recusar fracao de segundo anterior mesmo com o texto em ordem (z-ms-invertido)', async () => {
+    const res = await GET(pedidoPeriodo('2026-04-30T23:59:59.500Z', '2026-04-30T23:59:59Z'));
+
+    expect(res.status).toBe(400);
+    const corpo = await res.json();
+    expect(corpo.error).toBe('Dados inválidos.');
+    expect(corpo.message).toBe('endDate deve ser maior ou igual a startDate.');
+    expect(mockPreview).not.toHaveBeenCalled();
+  });
+
+  it('deve aceitar date-only no mesmo instante do datetime inicial (z-vs-dateonly)', async () => {
+    const startDate = '2026-04-30T00:00:00Z';
+    const endDate = '2026-04-30';
+
+    const res = await GET(pedidoPeriodo(startDate, endDate));
+
+    expect(res.status).toBe(200);
+    expect(mockPreview).toHaveBeenCalledTimes(1);
+    expect(mockPreview).toHaveBeenCalledWith({ startDate, endDate });
+  });
+
+  it('deve manter o intervalo date-only funcionando (dateonly)', async () => {
+    const startDate = '2026-04-01';
+    const endDate = '2026-04-30';
+
+    const res = await GET(pedidoPeriodo(startDate, endDate));
+
+    expect(res.status).toBe(200);
+    expect(mockPreview).toHaveBeenCalledTimes(1);
+    expect(mockPreview).toHaveBeenCalledWith({ startDate, endDate });
+  });
+});

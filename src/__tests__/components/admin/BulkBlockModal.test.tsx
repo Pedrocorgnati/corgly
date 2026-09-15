@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@/test/utils';
+import { act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTranslator } from 'next-intl';
 import { BulkBlockModal } from '@/components/admin/BulkBlockModal';
@@ -134,6 +135,63 @@ describe('BulkBlockModal — previa real (item 008)', () => {
       expect(screen.getByTestId('modal-bulk-block-preview-button')).not.toBeDisabled();
     });
     expect(screen.queryByTestId('modal-bulk-block-preview-error')).not.toBeInTheDocument();
+  });
+
+  // GAP-008: duas respostas VALIDAS fora de ordem. A requisicao B (periodo novo)
+  // responde antes da A (periodo antigo); a ordem vem so dos resolvers. A resposta
+  // antiga nao pode substituir os contadores de B nem mexer na confirmacao.
+  it('deve manter a previa da requisicao mais recente quando a antiga responde por ultimo', async () => {
+    let resolverA: (v: unknown) => void = () => {};
+    let resolverB: (v: unknown) => void = () => {};
+    const promessaA = new Promise((resolve) => {
+      resolverA = resolve;
+    });
+    const promessaB = new Promise((resolve) => {
+      resolverB = resolve;
+    });
+    mockGet.mockReturnValueOnce(promessaA);
+    mockGet.mockReturnValueOnce(promessaB);
+
+    render(<BulkBlockModal open onOpenChange={vi.fn()} onComplete={vi.fn()} />);
+    preencherFormulario();
+    // Requisicao A: periodo 2026-04-01 a 2026-04-30.
+    fireEvent.click(screen.getByTestId('modal-bulk-block-preview-button'));
+
+    // Periodo B: `invalidatePreview` reabilita o botao de previa.
+    fireEvent.change(screen.getByTestId('modal-bulk-block-end-input'), {
+      target: { value: '2026-05-31' },
+    });
+    fireEvent.click(screen.getByTestId('modal-bulk-block-preview-button'));
+
+    expect(mockGet).toHaveBeenCalledTimes(2);
+    expect(mockGet).toHaveBeenNthCalledWith(1, '/api/v1/sessions/bulk-cancel', {
+      params: { startDate: '2026-04-01', endDate: '2026-04-30' },
+    });
+    expect(mockGet).toHaveBeenNthCalledWith(2, '/api/v1/sessions/bulk-cancel', {
+      params: { startDate: '2026-04-01', endDate: '2026-05-31' },
+    });
+
+    // B responde primeiro.
+    resolverB({ data: { sessionsToCancel: 3, slotsToBlock: 5 } });
+    const previa = await screen.findByTestId('modal-bulk-block-preview');
+    expect(previa).toHaveTextContent('3 sessões serão canceladas');
+    expect(previa).toHaveTextContent('5 slots serão bloqueados');
+    expect(screen.getByTestId('modal-bulk-block-confirm-button')).toBeInTheDocument();
+
+    // A responde por ultimo; `act` drena a continuacao de `handlePreview` antes das assercoes.
+    await act(async () => {
+      resolverA({ data: { sessionsToCancel: 7, slotsToBlock: 12 } });
+      await promessaA;
+    });
+
+    const previaFinal = screen.getByTestId('modal-bulk-block-preview');
+    expect(previaFinal).toHaveTextContent('3 sessões serão canceladas');
+    expect(previaFinal).toHaveTextContent('5 slots serão bloqueados');
+    expect(previaFinal).not.toHaveTextContent('7 sessões serão canceladas');
+    expect(screen.queryByTestId('modal-bulk-block-preview-error')).not.toBeInTheDocument();
+    const confirmar = screen.getByTestId('modal-bulk-block-confirm-button');
+    expect(confirmar).toBeInTheDocument();
+    expect(confirmar).not.toBeDisabled();
   });
 
   // C9.3 — o toast pos-execucao le as chaves reais do BulkCancelResult
