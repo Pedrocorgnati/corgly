@@ -184,18 +184,31 @@ describe('GoogleCalendarSyncService', () => {
     });
 
     it('nao revoga ocupacoes sincronizadas na mesma rodada', async () => {
-      const now = new Date();
+      // Relogio falso so para Date: o milissegundo vira entre a montagem do
+      // fixture e o marco da rodada (syncStartedAt), sempre.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        vi.setSystemTime(new Date('2026-09-10T09:00:00.000Z'));
 
-      (listBusyEvents as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      // Ocupacao com syncedAt = agora (mesma rodada)
-      (listActiveOverlapping as ReturnType<typeof vi.fn>).mockResolvedValue([
-        makeOcupacao('event-1', '2026-09-10T10:00:00Z', '2026-09-10T11:00:00Z', now),
-      ]);
+        (listBusyEvents as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+        // Ocupacao da mesma rodada: syncedAt = marco da rodada, que o servico
+        // repassa como timeMin. Um new Date() do teste correria contra o marco.
+        (listActiveOverlapping as ReturnType<typeof vi.fn>).mockImplementation(
+          async (timeMin: Date) => [
+            makeOcupacao('event-1', '2026-09-10T10:00:00Z', '2026-09-10T11:00:00Z', timeMin),
+          ],
+        );
 
-      await service.syncBusyIntervals('user-123');
+        vi.setSystemTime(new Date('2026-09-10T09:00:00.001Z'));
 
-      // Nao deve revogar porque foi sincronizado na mesma rodada
-      expect(externalBusyService.revokeBusy).not.toHaveBeenCalled();
+        await service.syncBusyIntervals('user-123');
+
+        expect(listActiveOverlapping).toHaveBeenCalledTimes(1);
+        // Nao deve revogar porque foi sincronizado na mesma rodada
+        expect(externalBusyService.revokeBusy).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });
