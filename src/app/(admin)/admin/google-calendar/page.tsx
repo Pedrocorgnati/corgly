@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { PageWrapper } from '@/components/shared';
 import { GoogleCalendarConnection } from '@/components/admin/GoogleCalendarConnection';
+import { GoogleOAuthResultBanner } from '@/components/admin/GoogleOAuthResultBanner';
 import { getCanonicalTimezone } from '@/lib/canonical-timezone';
 
 import { fetchGoogleCalendarStatus } from './fetch-google-calendar-status';
@@ -11,6 +12,10 @@ export const metadata: Metadata = {
   title: 'Admin — Conexão Google',
 };
 
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 /**
  * Tela de estado da conexao com a agenda Google (loop 09-06, item 020).
  *
@@ -19,8 +24,15 @@ export const metadata: Metadata = {
  * `getCanonicalTimezone`, nunca do navegador. Erro de carregamento (incluindo
  * o 502 da verificacao junto ao Google) cai no ramo explicito abaixo, nunca
  * num estado de conexao inventado (Zero Estados Indefinidos).
+ *
+ * GAP-12: recebe os `searchParams` que o callback do Google devolve no
+ * redirect e renderiza o banner de resultado do consentimento
+ * (`GoogleOAuthResultBanner`, testid `google-oauth-result-banner`).
  */
-export default async function AdminGoogleCalendarPage() {
+export default async function AdminGoogleCalendarPage(props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const searchParams = await props.searchParams;
   const [resultado, timezone] = await Promise.all([
     fetchGoogleCalendarStatus(),
     getCanonicalTimezone(),
@@ -33,6 +45,14 @@ export default async function AdminGoogleCalendarPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Estado da integração que bloqueia seus horários ocupados
         </p>
+      </div>
+
+      <div className="mb-4">
+        <GoogleOAuthResultBanner
+          google={firstParam(searchParams.google)}
+          reason={firstParam(searchParams.reason)}
+          channel={firstParam(searchParams.channel)}
+        />
       </div>
 
       {resultado.kind === 'error' ? (

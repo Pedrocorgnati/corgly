@@ -116,18 +116,21 @@ describe('POST /api/v1/google/calendar/revoke', () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
-  it('sucesso: chama o Google com o token decifrado, remove a linha e audita sem segredo', async () => {
+  it('sucesso: revoga no Google com o token no CORPO do POST, para o canal depois, remove a linha e audita sem segredo', async () => {
     const res = await POST(buildRequest());
     expect(res.status).toBe(200);
-    const calledUrl = mocks.fetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain('https://oauth2.googleapis.com/revoke?token=');
-    expect(calledUrl).toContain(encodeURIComponent(REFRESH_TOKEN));
+    const [url, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://oauth2.googleapis.com/revoke');
+    expect(url).not.toContain('?token=');
+    expect(url).not.toContain(REFRESH_TOKEN);
+    expect(init.method).toBe('POST');
+    expect(String(init.body)).toContain(`token=${encodeURIComponent(REFRESH_TOKEN)}`);
     expect(mocks.credentialDelete).toHaveBeenCalledWith({ where: { userId: ADMIN_ID } });
     expect(mocks.auditLog).toHaveBeenCalledWith(
       'GOOGLE_CALENDAR_DISCONNECTED',
       { type: 'GoogleCalendarCredential', id: 'cred-1' },
       ADMIN_ID,
-      expect.objectContaining({ scope: CREDENTIAL.scope }),
+      expect.objectContaining({ scope: CREDENTIAL.scope, channelStop: 'stopped' }),
     );
     const auditSerial = JSON.stringify(mocks.auditLog.mock.calls);
     expect(auditSerial).not.toContain(REFRESH_TOKEN);
@@ -169,7 +172,7 @@ describe('POST /api/v1/google/calendar/revoke', () => {
     warnSpy.mockRestore();
   });
 
-  it('para canal antes de revogar OAuth e apagar a credencial', async () => {
+  it('ordem do GAP-12: revoga OAuth ANTES de parar o canal e de apagar a credencial', async () => {
     mocks.credentialFindUnique.mockResolvedValue({
       ...CREDENTIAL,
       channelId: 'channel-1',
@@ -189,10 +192,10 @@ describe('POST /api/v1/google/calendar/revoke', () => {
     const res = await POST(buildRequest());
 
     expect(res.status).toBe(200);
-    expect(order).toEqual(['stop', 'oauth', 'delete']);
+    expect(order).toEqual(['oauth', 'stop', 'delete']);
   });
 
-  it('falha transitoria no stop retorna 502 sem revogar ou apagar', async () => {
+  it('falha transitoria no stop DEPOIS da revogacao: nao devolve 502, remove a credencial e registra o ocorrido (GAP-12)', async () => {
     mocks.credentialFindUnique.mockResolvedValue({
       ...CREDENTIAL,
       channelId: 'channel-1',
@@ -202,8 +205,14 @@ describe('POST /api/v1/google/calendar/revoke', () => {
 
     const res = await POST(buildRequest());
 
-    expect(res.status).toBe(502);
-    expect(mocks.fetch).not.toHaveBeenCalled();
-    expect(mocks.credentialDelete).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.credentialDelete).toHaveBeenCalledWith({ where: { userId: ADMIN_ID } });
+    expect(mocks.auditLog).toHaveBeenCalledWith(
+      'GOOGLE_CALENDAR_DISCONNECTED',
+      expect.anything(),
+      ADMIN_ID,
+      expect.objectContaining({ channelStop: 'failed-after-revoke' }),
+    );
   });
 });

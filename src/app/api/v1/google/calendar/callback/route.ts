@@ -25,8 +25,15 @@ const WRITE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
 ];
 
-function redirectToSchedule(request: NextRequest, params: Record<string, string>): NextResponse {
-  const url = new URL('/admin/schedule', request.url);
+function redirectToGoogleCalendar(
+  request: NextRequest,
+  params: Record<string, string>,
+): NextResponse {
+  // GAP-12: o resultado do consentimento precisa aparecer na tela da conexao.
+  // O redirect volta para /admin/google-calendar (que renderiza o banner com
+  // esses searchParams), nao para /admin/schedule, onde o professor nao via
+  // confirmacao alguma (Zero Silencio).
+  const url = new URL('/admin/google-calendar', request.url);
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(k, v);
   }
@@ -39,7 +46,7 @@ export async function GET(request: NextRequest) {
   // 1. Professor recusou o consentimento (ex.: error=access_denied): nao chamar o Google.
   const oauthError = searchParams.get('error');
   if (oauthError) {
-    return redirectToSchedule(request, { google: 'error', reason: oauthError });
+    return redirectToGoogleCalendar(request, { google: 'error', reason: oauthError });
   }
 
   // 2. State assinado (anti-CSRF): invalido ou expirado interrompe tudo.
@@ -48,13 +55,15 @@ export async function GET(request: NextRequest) {
   try {
     userId = verifyOAuthState(state).userId;
   } catch {
-    return redirectToSchedule(request, { google: 'error', reason: 'invalid_state' });
+    return redirectToGoogleCalendar(request, { google: 'error', reason: 'invalid_state' });
   }
 
-  // 3. Troca do codigo por tokens.
+  // 3. Troca do codigo por tokens. Fetch e parse DENTRO do try/catch (GAP-12):
+  //    falha de rede ou corpo ilegivel redireciona com exchange_failed em vez
+  //    de estourar 500 no callback do Google.
   const code = searchParams.get('code');
   if (!code) {
-    return redirectToSchedule(request, { google: 'error', reason: 'exchange_failed' });
+    return redirectToGoogleCalendar(request, { google: 'error', reason: 'exchange_failed' });
   }
 
   let config;
@@ -67,26 +76,31 @@ export async function GET(request: NextRequest) {
     throw err;
   }
 
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: config.redirectUri,
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-    }),
-  });
-  if (!tokenRes.ok) {
-    return redirectToSchedule(request, { google: 'error', reason: 'exchange_failed' });
-  }
-  const tokenBody = (await tokenRes.json()) as {
+  let tokenBody: {
     scope?: string;
     refresh_token?: string;
     access_token?: string;
     expires_in?: number;
   };
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: config.redirectUri,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+      }),
+    });
+    if (!tokenRes.ok) {
+      return redirectToGoogleCalendar(request, { google: 'error', reason: 'exchange_failed' });
+    }
+    tokenBody = (await tokenRes.json()) as typeof tokenBody;
+  } catch {
+    return redirectToGoogleCalendar(request, { google: 'error', reason: 'exchange_failed' });
+  }
 
   // 4. Assertiva de escopo (token a token, sem casamento por substring): o
   // consentimento precisa ter concedido exatamente a leitura; qualquer escopo
@@ -96,13 +110,13 @@ export async function GET(request: NextRequest) {
   const hasReadonly = grantedScopes.includes(GOOGLE_CALENDAR_READONLY_SCOPE);
   const hasWrite = WRITE_SCOPES.some((s) => grantedScopes.includes(s));
   if (!hasReadonly || hasWrite) {
-    return redirectToSchedule(request, { google: 'error', reason: 'scope_rejected' });
+    return redirectToGoogleCalendar(request, { google: 'error', reason: 'scope_rejected' });
   }
 
   // 5. Sem refresh_token (consentimento reaproveitado sem prompt=consent): nao
   // ha o que guardar; o professor precisa refazer o consentimento.
   if (!tokenBody.refresh_token) {
-    return redirectToSchedule(request, { google: 'error', reason: 'missing_refresh_token' });
+    return redirectToGoogleCalendar(request, { google: 'error', reason: 'missing_refresh_token' });
   }
 
   // 6. Persistencia cifrada (upsert por professor). access_token/expires_in
@@ -120,9 +134,9 @@ export async function GET(request: NextRequest) {
   try {
     await googleCalendarPushService.createChannel(credential.userId);
   } catch {
-    return redirectToSchedule(request, { google: 'connected', channel: 'pending' });
+    return redirectToGoogleCalendar(request, { google: 'connected', channel: 'pending' });
   }
 
   // 8. Sucesso.
-  return redirectToSchedule(request, { google: 'connected' });
+  return redirectToGoogleCalendar(request, { google: 'connected' });
 }

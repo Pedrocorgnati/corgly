@@ -60,10 +60,12 @@ function okExchange(body: Record<string, unknown>) {
   });
 }
 
-function expectScheduleRedirect(res: Response, params: Record<string, string>) {
+function expectGoogleCalendarRedirect(res: Response, params: Record<string, string>) {
   expect(res.status).toBe(307);
   const location = new URL(res.headers.get('location')!);
-  expect(location.pathname).toBe('/admin/schedule');
+  // GAP-12: o resultado do consentimento aparece na tela da conexao, que
+  // renderiza o banner a partir desses searchParams.
+  expect(location.pathname).toBe('/admin/google-calendar');
   for (const [k, v] of Object.entries(params)) {
     expect(location.searchParams.get(k)).toBe(v);
   }
@@ -90,21 +92,40 @@ describe('GET /api/v1/google/calendar/callback', () => {
 
   it('error=access_denied: redirect sem chamar o Google', async () => {
     const res = await GET(buildRequest({ error: 'access_denied' }));
-    expectScheduleRedirect(res, { google: 'error', reason: 'access_denied' });
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'access_denied' });
     expect(mocks.fetch).not.toHaveBeenCalled();
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
   it('state invalido: redirect invalid_state sem chamar o Google', async () => {
     const res = await GET(buildRequest({ code: 'x', state: 'state-forjado' }));
-    expectScheduleRedirect(res, { google: 'error', reason: 'invalid_state' });
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'invalid_state' });
     expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it('falha de rede no exchange: redirect exchange_failed em vez de 500 (GAP-12)', async () => {
+    mocks.fetch.mockRejectedValue(new Error('ECONNREFUSED'));
+    const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'exchange_failed' });
+    expect(mocks.upsert).not.toHaveBeenCalled();
+  });
+
+  it('corpo ilegivel no exchange: redirect exchange_failed em vez de 500 (GAP-12)', async () => {
+    mocks.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => {
+        throw new Error('corpo nao e JSON');
+      },
+    });
+    const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'exchange_failed' });
+    expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
   it('exchange com 400: redirect exchange_failed', async () => {
     mocks.fetch.mockResolvedValue({ ok: false, status: 400, json: async () => ({}) });
     const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
-    expectScheduleRedirect(res, { google: 'error', reason: 'exchange_failed' });
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'exchange_failed' });
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
@@ -115,7 +136,7 @@ describe('GET /api/v1/google/calendar/callback', () => {
       access_token: 'access-descartavel',
     });
     const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
-    expectScheduleRedirect(res, { google: 'error', reason: 'scope_rejected' });
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'scope_rejected' });
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
@@ -125,14 +146,14 @@ describe('GET /api/v1/google/calendar/callback', () => {
       refresh_token: REFRESH_TOKEN,
     });
     const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
-    expectScheduleRedirect(res, { google: 'error', reason: 'scope_rejected' });
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'scope_rejected' });
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
   it('sem refresh_token: redirect missing_refresh_token', async () => {
     okExchange({ scope: READONLY, access_token: 'access-descartavel' });
     const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
-    expectScheduleRedirect(res, { google: 'error', reason: 'missing_refresh_token' });
+    expectGoogleCalendarRedirect(res, { google: 'error', reason: 'missing_refresh_token' });
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 
@@ -144,7 +165,7 @@ describe('GET /api/v1/google/calendar/callback', () => {
       expires_in: 3600,
     });
     const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
-    expectScheduleRedirect(res, { google: 'connected' });
+    expectGoogleCalendarRedirect(res, { google: 'connected' });
     expect(mocks.upsert).toHaveBeenCalledTimes(1);
     const arg = mocks.upsert.mock.calls[0][0];
     expect(arg.where).toEqual({ userId: ADMIN_ID });
@@ -163,7 +184,7 @@ describe('GET /api/v1/google/calendar/callback', () => {
 
     const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
 
-    expectScheduleRedirect(res, { google: 'connected', channel: 'pending' });
+    expectGoogleCalendarRedirect(res, { google: 'connected', channel: 'pending' });
     expect(mocks.upsert).toHaveBeenCalledTimes(1);
   });
 
@@ -189,7 +210,7 @@ describe('GET /api/v1/google/calendar/callback', () => {
 
     const res = await GET(buildRequest({ code: 'x', state: signOAuthState(ADMIN_ID) }));
 
-    expectScheduleRedirect(res, { google: 'connected', channel: 'pending' });
+    expectGoogleCalendarRedirect(res, { google: 'connected', channel: 'pending' });
     expect(mocks.upsert).toHaveBeenCalledTimes(1);
   });
 });
