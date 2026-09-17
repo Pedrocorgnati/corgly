@@ -16,24 +16,38 @@ const CreateRecurringPatternSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Formato HH:MM esperado'),
 });
 
-/** GET /api/v1/recurring-patterns — lista padrões ativos (admin; filtro opcional por aluno) */
+/**
+ * GET /api/v1/recurring-patterns?studentId={uuid} — lista os padrões ativos de UM aluno (admin).
+ * `studentId` é obrigatório e validado como UUID (mesmo contrato do POST): ausente ou inválido
+ * responde 400 antes de qualquer consulta. Ordem: `dayOfWeek`, `startTime` e `id`, ascendentes.
+ */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof NextResponse) return auth;
 
-  const studentId = request.nextUrl.searchParams.get('studentId');
+  // GAP-010: sem studentId a listagem vazava padrões de todos os alunos (exposição cruzada).
+  const parsedStudentId = CreateRecurringPatternSchema.shape.studentId.safeParse(
+    request.nextUrl.searchParams.get('studentId') ?? '',
+  );
+  if (!parsedStudentId.success) {
+    return NextResponse.json(
+      apiResponse(null, parsedStudentId.error.issues[0]?.message ?? 'studentId invalido.'),
+      { status: 400 },
+    );
+  }
+  const studentId = parsedStudentId.data;
 
   try {
     const patterns = await prisma.recurringPattern.findMany({
-      where: { isActive: true, ...(studentId ? { studentId } : {}) },
-      orderBy: { studentId: 'asc', dayOfWeek: 'asc' },
+      where: { isActive: true, studentId },
+      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }, { id: 'asc' }],
     });
 
     return NextResponse.json(apiResponse(patterns));
   } catch (err) {
     logger.error(
       'GET /api/v1/recurring-patterns',
-      { action: 'patterns.list', userId: auth.id, targetStudentId: studentId ?? null },
+      { action: 'patterns.list', userId: auth.id, targetStudentId: studentId },
       err,
     );
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
