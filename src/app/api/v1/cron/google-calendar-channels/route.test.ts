@@ -1,6 +1,10 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+const SINT = 'mensagem-sintetica-gap11';
 
 const mocks = vi.hoisted(() => ({ renew: vi.fn() }));
 
@@ -38,5 +42,16 @@ describe('GET /api/v1/cron/google-calendar-channels', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ renewed: 2, failed: 1 });
     expect(mocks.renew).toHaveBeenCalledTimes(1);
+  });
+
+  it('[RED L2] falha registra so nome e codigo do erro', async () => {
+    mocks.renew.mockRejectedValue(new AppError('GOOGLE_API_ERROR', SINT, 502));
+    expect((await GET(request('cron-secret-test'))).status).toBe(500);
+    expect(vi.mocked(logger.error).mock.calls).toEqual([
+      [
+        'Cron de canais Google Calendar falhou',
+        { action: 'cron.google-calendar-channels', errorName: 'AppError', errorCode: 'GOOGLE_API_ERROR' },
+      ],
+    ]);
   });
 });

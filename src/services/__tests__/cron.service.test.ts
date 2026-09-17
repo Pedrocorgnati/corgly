@@ -1,5 +1,9 @@
 // @vitest-environment node
 import { CronService } from '../cron.service';
+import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+const SINT = 'mensagem-sintetica-gap11';
 
 // ─── Mock Prisma ──────────────────────────────────────────────────────────────
 const prismaMocks = vi.hoisted(() => ({
@@ -244,5 +248,22 @@ describe('CronService.renewGoogleCalendarChannels', () => {
     const result = await service.renewGoogleCalendarChannels();
 
     expect(result).toEqual({ renewed: 1, errors: ['user-failed'] });
+  });
+
+  it('[RED L3] falha da renovacao registra so nome e codigo do erro', async () => {
+    prismaMocks.googleCredentialFindMany.mockResolvedValue([{ userId: 'user-failed' }]);
+    googlePushMocks.renewChannel.mockRejectedValueOnce(new AppError('GOOGLE_API_ERROR', SINT, 502));
+    const spy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+
+    const result = await service.renewGoogleCalendarChannels();
+
+    expect(result).toEqual({ renewed: 0, errors: ['user-failed'] });
+    expect(spy.mock.calls).toEqual([
+      [
+        '[CronService.renewGoogleCalendarChannels] renewal error',
+        { action: 'cron.google-calendar', userId: 'user-failed', errorName: 'AppError', errorCode: 'GOOGLE_API_ERROR' },
+      ],
+    ]);
+    spy.mockRestore();
   });
 });

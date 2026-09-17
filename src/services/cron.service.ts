@@ -528,7 +528,8 @@ export class CronService {
 
   /**
    * Renova canais push do Google Calendar proximos de expirar.
-   * Executado a cada 6 horas via Vercel Cron.
+   * Executado a cada 6 horas via Vercel Cron (`GET /api/v1/cron/google-calendar-channels`)
+   * e via PM2 (`POST /api/cron`, job `google-calendar-channels`).
    *
    * Canais expiram em ~7 dias. Renovamos quando faltam < 24 horas.
    *
@@ -564,7 +565,13 @@ export class CronService {
           renewed++;
         }
       } catch (e) {
-        logger.error('[CronService.renewGoogleCalendarChannels] renewal error', { action: 'cron.google-calendar', userId: cred.userId }, e);
+        const code = (e as { code?: unknown } | null)?.code;
+        logger.error('[CronService.renewGoogleCalendarChannels] renewal error', {
+          action: 'cron.google-calendar',
+          userId: cred.userId,
+          errorName: e instanceof Error ? e.name : 'UnknownError',
+          errorCode: typeof code === 'string' ? code : undefined,
+        });
         errors.push(cred.userId);
       }
     }

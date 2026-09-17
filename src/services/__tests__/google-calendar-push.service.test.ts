@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 const prismaMocks = vi.hoisted(() => ({
   findUnique: vi.fn(),
@@ -258,5 +259,75 @@ describe('GoogleCalendarPushService', () => {
 
     expect(await service.renewChannel('user-1')).toBe(true);
     expect(order).toEqual(['pending', 'watch', 'persisted', 'stopped-old']);
+  });
+
+  const isola = (s: GoogleCalendarPushService) =>
+    vi.spyOn(s as unknown as { provisionChannel: () => Promise<unknown> }, 'provisionChannel').mockResolvedValue({});
+  const avisosDeExpiracao = () => vi.mocked(logger.warn).mock.calls.filter(([, ctx]) => {
+    const action = (ctx as { action?: string } | undefined)?.action;
+    return action === 'google-calendar.channel.missing' || action === 'google-calendar.channel.expired';
+  });
+
+  it('[RED D1] expiracao ausente gera aviso com full sync', async () => {
+    prismaMocks.findUnique.mockResolvedValueOnce({
+      channelId: 'channel-old',
+      resourceId: 'resource-old',
+      channelExpiration: null,
+      syncToken: 'sync-current',
+    });
+    const service = new GoogleCalendarPushService();
+    isola(service);
+    expect(await service.renewChannel('user-1')).toBe(true);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ action: 'google-calendar.channel.missing', userId: 'user-1', fullSync: true }),
+    );
+  });
+
+  it('[RED D2] expiracao vencida gera aviso', async () => {
+    prismaMocks.findUnique.mockResolvedValueOnce({
+      channelId: 'channel-old',
+      resourceId: 'resource-old',
+      channelExpiration: new Date(Date.now() - 60 * 60 * 1000),
+      syncToken: 'sync-current',
+    });
+    const service = new GoogleCalendarPushService();
+    isola(service);
+    expect(await service.renewChannel('user-1')).toBe(true);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ action: 'google-calendar.channel.expired', userId: 'user-1' }),
+    );
+  });
+
+  it('[CONTROLE D3] expiracao futura nao gera aviso de ausente nem de vencido', async () => {
+    prismaMocks.findUnique.mockResolvedValueOnce({
+      channelId: 'channel-old',
+      resourceId: 'resource-old',
+      channelExpiration: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      syncToken: 'sync-current',
+    });
+    const service = new GoogleCalendarPushService();
+    isola(service);
+    expect(await service.renewChannel('user-1')).toBe(true);
+    expect(avisosDeExpiracao()).toEqual([]);
+  });
+
+  it('[REGRESSAO E1] canal antigo so para depois da promocao', async () => {
+    const current = {
+      channelId: 'channel-old',
+      resourceId: 'resource-old',
+      channelExpiration: new Date(Date.now() + 60 * 60 * 1000),
+      channelTokenEnc: null,
+      syncToken: 'sync-current',
+    };
+    prismaMocks.findUnique.mockResolvedValueOnce(current).mockResolvedValueOnce(current);
+    const order: string[] = [];
+    prismaMocks.updateMany.mockImplementation(async () => { order.push('persisted'); return { count: 1 }; });
+    clientMocks.stopWatch.mockImplementation(async (id: string) => { order.push(`stop:${id}`); });
+    await new GoogleCalendarPushService().renewChannel('user-1');
+    expect(clientMocks.stopWatch).toHaveBeenCalledWith('channel-old', 'resource-old');
+    expect(order.indexOf('persisted')).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('stop:channel-old')).toBeGreaterThan(order.indexOf('persisted'));
   });
 });

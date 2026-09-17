@@ -419,3 +419,75 @@ describe('proxy: rotas de cron autenticam por CRON_SECRET, nao por sessao', () =
     expect(res.status).toBe(429);
   });
 });
+
+describe('proxy: travessia de cron e webhook (GAP-11)', () => {
+  const BEARER = 'Bearer valor-sintetico';
+  const ERRADO = 'Bearer valor-sintetico-errado';
+  const CANAIS = '/api/v1/cron/google-calendar-channels';
+  const RECON = '/api/v1/cron/google-calendar-reconciliation';
+  const com = (path: string, method = 'GET', auth = true, bearer = BEARER) =>
+    new NextRequest(`http://localhost${path}`, { method, headers: auth ? { authorization: bearer } : {} });
+  const atravessa = async (path: string) => {
+    const res = await proxy(com(path));
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+    expect(mockGetPayload).not.toHaveBeenCalled();
+    expect(forwarded(res, 'authorization')).toBe(BEARER);
+    expect(res.headers.get('x-request-id')).not.toBeNull();
+    expect(forwarded(res, 'x-request-id')).toBe(res.headers.get('x-request-id'));
+  };
+  const barrado = async (req: NextRequest) => {
+    const res = await proxy(req);
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe('Não autorizado.');
+    expect(mockGetPayload).not.toHaveBeenCalled();
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+    mockGetPayload.mockReturnValue(null);
+    vi.stubEnv('CRON_SECRET', 'valor-sintetico');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('[REGRESSAO B1] GET de canais com Bearer chega a rota', async () => {
+    await atravessa(CANAIS);
+  });
+
+  it('[REGRESSAO B2] GET de reconciliacao com Bearer chega a rota', async () => {
+    await atravessa(RECON);
+  });
+
+  it('[REGRESSAO B3] POST /api/cron com Bearer sai pelo ramo fora de /api/v1', async () => {
+    const res = await proxy(com('/api/cron', 'POST'));
+    expect(res.status).toBe(200);
+    expect(mockGetPayload).not.toHaveBeenCalled();
+  });
+
+  it('[REGRESSAO B4] webhook do Google sem auth segue publico', async () => {
+    const res = await proxy(com('/api/v1/google/calendar/webhook', 'POST', false));
+    expect(res.status).toBe(200);
+  });
+
+  it('[CONTROLE B5] segredo valido fora do prefixo de cron nao abre rota de sessao', async () => {
+    const res = await proxy(com('/api/v1/google/calendar/sync', 'POST'));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toBe('Não autorizado. Faça login para continuar.');
+  });
+
+  it('[CONTROLE B6] POST de canais com Bearer errado devolve 401', async () => {
+    await barrado(com(CANAIS, 'POST', true, ERRADO));
+  });
+
+  it('[CONTROLE B7] GET de canais sem auth devolve 401', async () => {
+    await barrado(com(CANAIS, 'GET', false));
+  });
+
+  it('[CONTROLE B8] GET abaixo de canais com Bearer errado devolve 401', async () => {
+    await barrado(com(CANAIS + '/extra', 'GET', true, ERRADO));
+  });
+});

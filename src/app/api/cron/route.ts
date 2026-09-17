@@ -1,22 +1,25 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { cronService } from '@/services/cron.service'
+import { logger } from '@/lib/logger'
 
 type CronJob =
   | 'credit-expiration'
   | 'reminders'
   | 'auto-confirmation'
   | 'google-calendar-reconciliation'
+  | 'google-calendar-channels'
 const VALID_JOBS: CronJob[] = [
   'credit-expiration',
   'reminders',
   'auto-confirmation',
   'google-calendar-reconciliation',
+  'google-calendar-channels',
 ]
 
 /**
  * POST /api/cron
  * Endpoint unificado para disparo de cron jobs.
- * Body: { job: 'credit-expiration' | 'reminders' | 'auto-confirmation' | 'google-calendar-reconciliation' }
+ * Body: { job: 'credit-expiration' | 'reminders' | 'auto-confirmation' | 'google-calendar-reconciliation' | 'google-calendar-channels' }
  * Auth: Authorization: Bearer ${CRON_SECRET}
  *
  * Usado por: PM2 scripts/trigger-cron.js e testes E2E (E2E-008).
@@ -64,6 +67,9 @@ export async function POST(request: NextRequest) {
       case 'google-calendar-reconciliation':
         result = await cronService.runGoogleCalendarReconciliation()
         break
+      case 'google-calendar-channels':
+        result = await cronService.renewGoogleCalendarChannels()
+        break
     }
 
     return NextResponse.json({
@@ -73,15 +79,14 @@ export async function POST(request: NextRequest) {
       result,
     })
   } catch (err) {
-    console.error(`[POST /api/cron] Job "${job}" failed:`, err)
-    return NextResponse.json(
-      {
-        success: false,
-        jobRan: job,
-        duration: Date.now() - start,
-        error: err instanceof Error ? err.message : 'Unknown error',
-      },
-      { status: 500 },
-    )
+    const duration = Date.now() - start
+    const code = (err as { code?: unknown } | null)?.code
+    logger.error('[POST /api/cron] job failed', {
+      action: 'cron.dispatch',
+      job,
+      errorName: err instanceof Error ? err.name : 'UnknownError',
+      errorCode: typeof code === 'string' ? code : undefined,
+    })
+    return NextResponse.json({ success: false, jobRan: job, duration, error: 'Job failed' }, { status: 500 })
   }
 }

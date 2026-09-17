@@ -16,9 +16,12 @@ export async function GET(request: NextRequest) {
     const result = await cronService.renewGoogleCalendarChannels();
     return NextResponse.json({ renewed: result.renewed, failed: result.errors.length });
   } catch (error) {
+    const code = (error as { code?: unknown } | null)?.code;
     logger.error('Cron de canais Google Calendar falhou', {
       action: 'cron.google-calendar-channels',
-    }, error);
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+      errorCode: typeof code === 'string' ? code : undefined,
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

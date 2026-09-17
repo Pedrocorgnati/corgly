@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { googleCalendarPushService } from '@/services/google-calendar-push.service';
 import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 import crypto from 'crypto';
 
 /**
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
         return response;
       }
       // Outros erros retornam 500
-      console.error('Erro na sincronizacao incremental:', err);
+      logger.error('Erro na sincronizacao incremental', { action: 'google-calendar.webhook.sync', userId: credential.userId, errorName: err instanceof Error ? err.name : 'UnknownError', errorCode: typeof (err as { code?: unknown } | null)?.code === 'string' ? (err as { code: string }).code : undefined });
       return NextResponse.json(
         { error: 'Sync failed' },
         { status: 500 },

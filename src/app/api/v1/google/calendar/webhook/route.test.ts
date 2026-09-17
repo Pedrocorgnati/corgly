@@ -7,6 +7,7 @@ import { POST } from './route';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
 
 // Mock do prisma
 vi.mock('@/lib/prisma', () => ({
@@ -171,5 +172,70 @@ describe('POST /api/v1/google/calendar/webhook', () => {
     expect(response.status).toBe(401);
     const { googleCalendarPushService } = await import('@/services/google-calendar-push.service');
     expect(googleCalendarPushService.incrementalSync).not.toHaveBeenCalled();
+  });
+
+  it('[REGRESSAO F1] exists com token valido e canal vinculado sincroniza', async () => {
+    const { googleCalendarPushService } = await import('@/services/google-calendar-push.service');
+    const crypto = await import('crypto');
+    const validHash = crypto.createHash('sha256').update('token-1').digest('hex');
+    (prisma.googleCalendarCredential.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockCredential,
+      channelTokenHash: validHash,
+    });
+    (googleCalendarPushService.incrementalSync as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const response = await POST(createRequest({
+      'X-Goog-Channel-ID': 'channel-1',
+      'X-Goog-Channel-Token': 'token-1',
+      'X-Goog-Resource-ID': 'resource-1',
+      'X-Goog-Resource-State': 'exists',
+      'X-Goog-Message-Number': '101',
+    }));
+
+    expect(response.status).toBe(204);
+    expect(googleCalendarPushService.incrementalSync).toHaveBeenCalledWith(mockCredential.userId, {
+      channelId: 'channel-1',
+      messageNumber: BigInt(101),
+    });
+  });
+
+  it('[RED L4] falha do sync registra so nome e codigo do erro', async () => {
+    const { googleCalendarPushService } = await import('@/services/google-calendar-push.service');
+    const crypto = await import('crypto');
+    const validHash = crypto.createHash('sha256').update('token-1').digest('hex');
+    (prisma.googleCalendarCredential.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockCredential,
+      channelTokenHash: validHash,
+    });
+    (googleCalendarPushService.incrementalSync as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('detalhe-interno-sintetico-gap11'),
+    );
+    const spy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+    const cru = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await POST(createRequest({
+      'X-Goog-Channel-ID': 'channel-1',
+      'X-Goog-Channel-Token': 'token-1',
+      'X-Goog-Resource-ID': 'resource-1',
+      'X-Goog-Resource-State': 'exists',
+      'X-Goog-Message-Number': '101',
+    }));
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Sync failed' });
+    expect(spy.mock.calls).toEqual([
+      [
+        'Erro na sincronizacao incremental',
+        { action: 'google-calendar.webhook.sync', userId: 'user-1', errorName: 'Error', errorCode: undefined },
+      ],
+    ]);
+    expect(
+      spy.mock.calls.flat().some(
+        (a) => a instanceof Error || String(JSON.stringify(a)).includes('detalhe-interno-sintetico-gap11'),
+      ),
+    ).toBe(false);
+    expect(cru).not.toHaveBeenCalled();
+    spy.mockRestore();
+    cru.mockRestore();
   });
 });

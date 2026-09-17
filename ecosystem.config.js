@@ -104,5 +104,21 @@ module.exports = {
       error_file: 'logs/cron-google-calendar-reconciliation-error.log',
       out_file: 'logs/cron-google-calendar-reconciliation-out.log',
     },
+
+    // Cron: Google Calendar Channels (a cada 6 horas)
+    {
+      name: 'corgly-cron-google-calendar-channels',
+      script: 'scripts/trigger-cron.js',
+      cron_restart: '0 */6 * * *',
+      watch: false,
+      autorestart: false,
+      env: {
+        NODE_ENV: 'production',
+        JOB: 'google-calendar-channels',
+      },
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: 'logs/cron-google-calendar-channels-error.log',
+      out_file: 'logs/cron-google-calendar-channels-out.log',
+    },
   ],
 }

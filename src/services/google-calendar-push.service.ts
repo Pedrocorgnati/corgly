@@ -438,6 +438,11 @@ export class GoogleCalendarPushService {
     });
 
     if (!cred?.channelId || !cred.resourceId || !cred.channelExpiration) {
+      logger.warn('Canal Google ausente ou incompleto; renovacao com full sync', {
+        action: 'google-calendar.channel.missing',
+        userId,
+        fullSync: true,
+      });
       await this.provisionChannel(userId, { runInitialSync: true });
       return true;
     }
@@ -447,6 +452,13 @@ export class GoogleCalendarPushService {
 
     // Renovar se faltar menos de 24 horas
     if (hoursUntilExpiration <= 24) {
+      if (hoursUntilExpiration <= 0) {
+        logger.warn('Canal Google vencido; notificacoes do intervalo podem ter se perdido', {
+          action: 'google-calendar.channel.expired',
+          userId,
+          fullSync: !cred.syncToken,
+        });
+      }
       await this.provisionChannel(userId, { runInitialSync: !cred.syncToken });
       return true;
     }
