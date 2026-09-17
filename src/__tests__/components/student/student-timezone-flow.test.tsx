@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const SLOT = {
@@ -11,7 +11,6 @@ const SLOT = {
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   useCalendar: vi.fn(),
-  useTimezone: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -22,10 +21,6 @@ vi.mock('@/hooks/useCalendar', () => ({
   useCalendar: mocks.useCalendar,
 }));
 
-vi.mock('@/hooks/useTimezone', () => ({
-  useTimezone: mocks.useTimezone,
-}));
-
 // Item 036: a leitura das reservas proprias tem teste proprio
 // (own-reserved-slot.test.tsx); aqui fica vazia e sincrona.
 vi.mock('@/hooks/useOwnReservations', () => ({
@@ -33,8 +28,8 @@ vi.mock('@/hooks/useOwnReservations', () => ({
 }));
 
 vi.mock('@/components/calendar/CalendarView', () => ({
-  CalendarView: ({ onSelectDate }: { onSelectDate: (date: string) => void }) => (
-    <button data-testid="calendar-select-date" onClick={() => onSelectDate('2026-09-10')}>
+  CalendarView: ({ onSelectDate, timeZone }: { onSelectDate: (date: string) => void; timeZone?: string }) => (
+    <button data-testid="calendar-select-date" data-time-zone={timeZone} onClick={() => onSelectDate('2026-09-10')}>
       selecionar data
     </button>
   ),
@@ -85,14 +80,23 @@ vi.mock('@/components/calendar/BookingConfirmModal', () => ({
 }));
 
 import { CalendarSchedule } from '@/components/student/calendar-schedule';
+import { useTimezone } from '@/hooks/useTimezone';
 
 describe('CalendarSchedule - propagação do fuso persistido', () => {
+  // GAP-028: o hook `useTimezone` roda real neste describe (nenhum `vi.mock`),
+  // e a rede fica proibida para provar que o fluxo do aluno nao le
+  // `/api/v1/admin/settings`.
+  const espionarFetch = () => vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('rede proibida neste teste'));
+  let fetchSpy: ReturnType<typeof espionarFetch>;
+
   afterEach(() => {
     vi.useRealTimers();
+    fetchSpy.mockRestore();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchSpy = espionarFetch();
     // Relogio antes do SLOT: a selecao recusa horario ja vencido.
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-10T12:00:00.000Z'));
@@ -107,11 +111,6 @@ describe('CalendarSchedule - propagação do fuso persistido', () => {
       nextMonth: vi.fn(),
       refresh: vi.fn(),
     });
-    mocks.useTimezone.mockImplementation((studentTimezone: string, adminTimezone: string) => ({
-      studentTz: studentTimezone,
-      adminTz: adminTimezone,
-      formatDualTz: vi.fn(),
-    }));
   });
 
   it('envia o mesmo User.timezone ao agrupamento, à lista e à confirmação', () => {
@@ -123,13 +122,13 @@ describe('CalendarSchedule - propagação do fuso persistido', () => {
       />,
     );
 
+    const calendario = screen.getByTestId('calendar-select-date');
+    expect(calendario).toHaveAttribute('data-time-zone', 'America/Sao_Paulo');
+    expect(calendario).not.toHaveAttribute('data-time-zone', 'Europe/Rome');
+
     expect(mocks.useCalendar).toHaveBeenCalledWith({
       timeZone: 'America/Sao_Paulo',
     });
-    expect(mocks.useTimezone).toHaveBeenCalledWith(
-      'America/Sao_Paulo',
-      'Europe/Rome',
-    );
     expect(screen.getByTestId('slot-picker')).toHaveAttribute(
       'data-student-timezone',
       'America/Sao_Paulo',
@@ -151,5 +150,23 @@ describe('CalendarSchedule - propagação do fuso persistido', () => {
       'data-admin-timezone',
       'Europe/Rome',
     );
+
+    expect(vi.isMockFunction(globalThis.fetch)).toBe(true);
+    const chamadasAdmin = fetchSpy.mock.calls.filter(([alvo]) =>
+      String(alvo instanceof Request ? alvo.url : alvo).includes('/api/v1/admin/settings'),
+    );
+    expect(chamadasAdmin).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('formata o horario dual pelo useTimezone real, com os dois fusos no resultado', () => {
+    const instante = new Date('2026-09-11T00:00:00.000Z');
+    const dual = renderHook(() => useTimezone('America/Sao_Paulo', 'Europe/Rome')).result.current.formatDualTz(instante);
+    const invertido = renderHook(() => useTimezone('Europe/Rome', 'America/Sao_Paulo')).result.current.formatDualTz(instante);
+    expect(dual.indexOf('21:00')).toBeGreaterThanOrEqual(0);
+    expect(dual.indexOf('02:00')).toBeGreaterThan(dual.indexOf('21:00'));
+    expect(invertido.indexOf('02:00')).toBeGreaterThanOrEqual(0);
+    expect(invertido.indexOf('21:00')).toBeGreaterThan(invertido.indexOf('02:00'));
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
