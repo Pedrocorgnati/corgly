@@ -490,4 +490,8 @@ describe('proxy: travessia de cron e webhook (GAP-11)', () => {
   it('[CONTROLE B8] GET abaixo de canais com Bearer errado devolve 401', async () => {
     await barrado(com(CANAIS + '/extra', 'GET', true, ERRADO));
   });
+
+  it('[REGRESSAO B9] GET do alias renew com Bearer chega a rota', async () => {
+    await atravessa('/api/v1/cron/google-calendar-renew');
+  });
 });
