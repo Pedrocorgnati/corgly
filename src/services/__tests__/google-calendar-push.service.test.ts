@@ -258,7 +258,7 @@ describe('GoogleCalendarPushService', () => {
     const service = new GoogleCalendarPushService();
 
     expect(await service.renewChannel('user-1')).toBe(true);
-    expect(order).toEqual(['pending', 'watch', 'persisted', 'stopped-old']);
+    expect(order).toEqual(['watch', 'persisted', 'stopped-old']);
   });
 
   const isola = (s: GoogleCalendarPushService) =>
@@ -329,5 +329,78 @@ describe('GoogleCalendarPushService', () => {
     expect(clientMocks.stopWatch).toHaveBeenCalledWith('channel-old', 'resource-old');
     expect(order.indexOf('persisted')).toBeGreaterThanOrEqual(0);
     expect(order.indexOf('stop:channel-old')).toBeGreaterThan(order.indexOf('persisted'));
+  });
+
+  const canalAtual = () => ({
+    channelId: 'channel-old',
+    resourceId: 'resource-old',
+    channelExpiration: new Date(Date.now() + 60 * 60 * 1000),
+    channelTokenEnc: null,
+    syncToken: 'sync-current',
+  });
+  const CHAVES_DE_CANAL = ['channelId', 'channelTokenHash', 'resourceId', 'channelExpiration'];
+
+  it('[RED W1] canal persistido segue o antigo durante o watch', async () => {
+    const current = canalAtual();
+    prismaMocks.findUnique.mockResolvedValueOnce(current).mockResolvedValueOnce(current);
+    let gravado: string[] = [];
+    clientMocks.watchEvents.mockImplementation(async (_url: string, channelId: string) => {
+      gravado = prismaMocks.update.mock.calls.flatMap(([a]) => Object.keys((a as { data: object }).data));
+      return { channelId, resourceId: 'resource-new', expiration: new Date('2026-09-16T00:00:00Z') };
+    });
+    await new GoogleCalendarPushService().renewChannel('user-1');
+    expect(gravado.filter((k) => ['channelId', 'channelTokenHash', 'resourceId'].includes(k))).toEqual([]);
+  });
+
+  it('[REGRESSAO W2] promocao grava resource e expiracao do canal novo', async () => {
+    const current = canalAtual();
+    prismaMocks.findUnique.mockResolvedValueOnce(current).mockResolvedValueOnce(current);
+    await new GoogleCalendarPushService().renewChannel('user-1');
+    const ultimo = prismaMocks.updateMany.mock.calls.at(-1)?.[0] as { data: object } | undefined;
+    expect(ultimo?.data).toEqual(expect.objectContaining({
+      resourceId: 'resource-new',
+      channelExpiration: expect.any(Date),
+    }));
+  });
+
+  it('[REGRESSAO W3] promocao sem linha rejeita e preserva o canal antigo', async () => {
+    const current = canalAtual();
+    prismaMocks.findUnique.mockResolvedValueOnce(current).mockResolvedValueOnce(current);
+    prismaMocks.updateMany.mockResolvedValue({ count: 0 });
+    await expect(new GoogleCalendarPushService().renewChannel('user-1'))
+      .rejects.toMatchObject({ code: 'GOOGLE_CHANNEL_STATE_CHANGED' });
+    expect(clientMocks.stopWatch).not.toHaveBeenCalledWith('channel-old', expect.anything());
+  });
+
+  it('[RED W5] falha do watch nao altera o canal corrente', async () => {
+    const current = canalAtual();
+    prismaMocks.findUnique.mockResolvedValueOnce(current).mockResolvedValueOnce(current);
+    const erro = new AppError('GOOGLE_API_ERROR', 'Google 503', 502);
+    clientMocks.watchEvents.mockRejectedValue(erro);
+    await expect(new GoogleCalendarPushService().renewChannel('user-1')).rejects.toBe(erro);
+    const gravado = [...prismaMocks.update.mock.calls, ...prismaMocks.updateMany.mock.calls]
+      .flatMap(([a]) => Object.keys((a as { data: object }).data));
+    expect(gravado.filter((k) => CHAVES_DE_CANAL.includes(k))).toEqual([]);
+    expect(clientMocks.stopWatch).not.toHaveBeenCalledWith('channel-old', expect.anything());
+  });
+
+  it('[REGRESSAO W6] falha ao parar o antigo depois da promocao so gera aviso', async () => {
+    const current = canalAtual();
+    prismaMocks.findUnique.mockResolvedValueOnce(current).mockResolvedValueOnce(current);
+    const order: string[] = [];
+    prismaMocks.update.mockImplementation(async () => { order.push('update'); return {}; });
+    prismaMocks.updateMany.mockImplementation(async () => { order.push('updateMany'); return { count: 1 }; });
+    clientMocks.stopWatch.mockImplementation(async () => {
+      order.push('stop');
+      throw new AppError('GOOGLE_API_ERROR', 'Google 503', 502);
+    });
+    expect(await new GoogleCalendarPushService().renewChannel('user-1')).toBe(true);
+    const promocao = order.indexOf('updateMany');
+    expect(promocao).toBeGreaterThanOrEqual(0);
+    expect(order.slice(promocao + 1).filter((o) => o !== 'stop')).toEqual([]);
+    expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ action: 'google-calendar.channel.replace', userId: 'user-1' }),
+    );
   });
 });

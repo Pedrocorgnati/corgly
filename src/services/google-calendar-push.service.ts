@@ -141,7 +141,11 @@ export class GoogleCalendarPushService {
       : generateChannelToken();
     const channelTokenHash = hashToken(channelToken);
 
-    if (!resumablePending) {
+    // Renovacao de canal ativo: o canal antigo segue gravado ate a promocao,
+    // para o webhook continuar reconhecendo as notificacoes dele durante o watch.
+    const replacingActive = Boolean(oldChannel) && !resumablePending;
+
+    if (!resumablePending && !replacingActive) {
       await prisma.googleCalendarCredential.update({
         where: { userId },
         data: {
@@ -157,15 +161,42 @@ export class GoogleCalendarPushService {
 
     const client = await getCalendarClient(userId);
     const watchResult = await client.watchEvents(webhookUrl, channelId, channelToken);
-    const promoted = await prisma.googleCalendarCredential.updateMany({
-      where: { userId, channelId },
-      data: {
-        resourceId: watchResult.resourceId,
-        channelExpiration: watchResult.expiration,
-        channelTokenEnc: null,
-      },
-    });
+    const promoted = replacingActive && oldChannel
+      ? await prisma.googleCalendarCredential.updateMany({
+        where: {
+          userId,
+          channelId: oldChannel.channelId,
+          resourceId: oldChannel.resourceId,
+        },
+        data: {
+          channelId,
+          channelTokenHash,
+          resourceId: watchResult.resourceId,
+          channelExpiration: watchResult.expiration,
+          channelTokenEnc: null,
+          lastMessageNumber: null,
+        },
+      })
+      : await prisma.googleCalendarCredential.updateMany({
+        where: { userId, channelId },
+        data: {
+          resourceId: watchResult.resourceId,
+          channelExpiration: watchResult.expiration,
+          channelTokenEnc: null,
+        },
+      });
     if (promoted.count !== 1) {
+      if (replacingActive) {
+        try {
+          await client.stopWatch(channelId, watchResult.resourceId);
+        } catch {
+          // melhor esforco: o canal novo expira sozinho no Google
+        }
+        logger.warn('Canal Google novo descartado apos corrida de renovacao', {
+          action: 'google-calendar.channel.orphan',
+          userId,
+        });
+      }
       throw new AppError(
         'GOOGLE_CHANNEL_STATE_CHANGED',
         'O canal corrente mudou durante a criacao.',
