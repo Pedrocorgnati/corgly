@@ -77,7 +77,7 @@ describe('sanitizeSentryEvent', () => {
 
     expect(sanitized.breadcrumbs[0].message).toBe('pedido recebido');
     expect(sanitized.breadcrumbs[1].message).toContain('[Filtered]');
-    expect(sanitized.breadcrumbs[1].data.code).toBe('abc');
+    expect(sanitized.breadcrumbs[1].data?.code).toBe('abc');
     expect(sanitized.tags.rota).toBe('/api/v1/google/calendar/callback');
     expect(sanitized.user.id).toBe('admin-1');
   });
