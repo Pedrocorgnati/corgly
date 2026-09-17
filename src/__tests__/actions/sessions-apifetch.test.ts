@@ -252,6 +252,50 @@ describe('chamadores recebem par, nao rejeicao (item 009)', () => {
     });
   });
 
+  it('C-M: getSessions pagina 3 com 405 sem corpo devolve a pagina 3 vazia', async () => {
+    stubFetch(resposta(405, null));
+
+    await expect(getSessions({ page: 3 })).resolves.toEqual({
+      data: [],
+      total: 0,
+      page: 3,
+      limit: PAGINATION.DEFAULT,
+      totalPages: 0,
+    });
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        action: 'actions.sessions.apiFetch',
+        path: expect.stringContaining('page=3'),
+        status: 405,
+      }),
+      expect.any(Error),
+    );
+  });
+
+  it('C-N: getSessions pagina 3 com 502 HTML devolve a pagina 3 vazia', async () => {
+    stubFetch(resposta(502, HTML_GATEWAY, 'text/html'));
+
+    await expect(getSessions({ page: 3 })).resolves.toEqual({
+      data: [],
+      total: 0,
+      page: 3,
+      limit: PAGINATION.DEFAULT,
+      totalPages: 0,
+    });
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        action: 'actions.sessions.apiFetch',
+        path: expect.stringContaining('page=3'),
+        status: 502,
+      }),
+      expect.any(Error),
+    );
+  });
+
   it('C-J: bookSession com 502 HTML nao revalida rota', async () => {
     stubFetch(resposta(502, HTML_GATEWAY, 'text/html'));
 

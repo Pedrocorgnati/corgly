@@ -122,7 +122,7 @@ export async function getSessions(params?: {
     `/api/v1/sessions?${qs.toString()}`,
   );
 
-  return result.data ?? { data: [], total: 0, page: 1, limit: PAGINATION.DEFAULT, totalPages: 0 };
+  return result.data ?? { data: [], total: 0, page: params?.page ?? 1, limit: PAGINATION.DEFAULT, totalPages: 0 };
 }
 
 export async function getSession(id: string) {
