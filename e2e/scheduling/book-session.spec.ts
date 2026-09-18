@@ -1,122 +1,174 @@
-import { test, expect } from '@playwright/test'
-import { loginAs, TEST_USERS, uniqueEmail } from '../helpers/auth'
-import { createTestUser } from '../helpers/db'
+import { test, expect, type Page } from '@playwright/test'
 
-test.describe('E2E-004: Agendar sessão com lock otimista', () => {
-  test('exibe calendário de agendamento na página /schedule', async ({ page }) => {
-    await loginAs(page, TEST_USERS.student)
+import { loginAs } from '../helpers/auth'
+import {
+  cleanupRun,
+  disconnectFixtureDb,
+  ensureFutureSlot,
+  ensureScheduledSession,
+  ensureStudent,
+  findScheduledSessionId,
+  fixtureDateKey,
+  type FixtureScheduledSession,
+  type FixtureSlot,
+  type FixtureStudent,
+} from '../helpers/db'
+
+/**
+ * E2E-003 - Agendamento de aula.
+ *
+ * Esta suite dependia de um seed que nunca rodou (as rotas de teste que ele
+ * chamava nao existem no produto) e compensava pulando o caso quando nao achava
+ * horario, caindo num seletor generico quando nao achava o calendario e, no caso
+ * do historico, assertindo so que "algum h1 esta visivel" - verde com a lista
+ * vazia, que e exatamente o defeito que ele deveria pegar. Agora cada
+ * caso tem aluno, credito, horario e sessao criados em banco antes do navegador
+ * abrir, e todo seletor e um testid que existe em `src/`.
+ *
+ * Serial por escolha: `beforeAll`/`afterAll` rodam uma vez por worker, e com a
+ * suite paralela a limpeza de um worker apagaria a fixture do outro no meio da
+ * corrida.
+ */
+test.describe('E2E-003: Agendamento de aula', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  const TAG_CALENDARIO = 'calendario'
+  const TAG_SLOT = 'slot'
+  const TAG_SEM_CREDITO = 'sem-credito'
+  const TAG_HISTORICO = 'historico'
+  const TAG_FLUXO = 'fluxo'
+  const TAGS = [TAG_CALENDARIO, TAG_SLOT, TAG_SEM_CREDITO, TAG_HISTORICO, TAG_FLUXO]
+
+  let alunoCalendario: FixtureStudent
+  let slotCalendario: FixtureSlot
+  let alunoSlot: FixtureStudent
+  let slotSlot: FixtureSlot
+  let alunoSemCredito: FixtureStudent
+  let slotSemCredito: FixtureSlot
+  let agendada: FixtureScheduledSession
+  let alunoFluxo: FixtureStudent
+  let slotFluxo: FixtureSlot
+
+  /** Leva a agenda ate o mes do horario da fixture e seleciona o dia. */
+  async function abrirDiaDaFixture(page: Page, slot: FixtureSlot): Promise<void> {
     await page.goto('/schedule')
+    await expect(page.getByTestId('page-schedule')).toBeVisible()
+    await expect(page.getByTestId('schedule-calendar-section')).toBeVisible()
 
-    // Calendário / lista de slots visível
-    await expect(
-      page.locator('[data-testid="schedule-calendar"], [data-testid="availability-calendar"], main').first(),
-    ).toBeVisible({ timeout: 10_000 })
-  })
-
-  test('slot disponível pode ser selecionado e exibe ConfirmModal', async ({ page }) => {
-    await loginAs(page, TEST_USERS.student)
-    await page.goto('/schedule')
-
-    // Aguarda slots carregarem
-    const availableSlot = page
-      .locator('[data-testid="slot-available"], [data-testid="availability-slot"]')
-      .first()
-
-    // Se não há slot disponível, skip (depende de seed)
-    const hasSlot = await availableSlot.isVisible({ timeout: 8_000 }).catch(() => false)
-    test.skip(!hasSlot, 'Nenhum slot disponível — seed necessário')
-
-    await availableSlot.click()
-
-    // ConfirmModal aparece
-    await expect(
-      page.locator('[data-testid="confirm-modal"], [role="dialog"]').first(),
-    ).toBeVisible({ timeout: 8_000 })
-  })
-
-  test('aluno sem créditos vê erro ao tentar agendar', async ({ page }) => {
-    await loginAs(page, TEST_USERS.student)
-    await page.goto('/schedule')
-
-    // Verifica CreditWidget mostra 0 (pode ser que aluno de teste não tenha créditos)
-    const creditWidget = page.locator('[data-testid="credit-widget"]')
-    if (await creditWidget.isVisible()) {
-      const text = await creditWidget.textContent()
-      if (text?.includes('0')) {
-        // Tenta agendar — deve receber erro CREDIT_003
-        const slot = page.locator('[data-testid="slot-available"]').first()
-        if (await slot.isVisible()) {
-          await slot.click()
-          const confirmBtn = page.locator('[data-testid="confirm-booking-btn"], button').filter({ hasText: /confirmar|confirm/i })
-          if (await confirmBtn.isVisible()) {
-            await confirmBtn.click()
-            await expect(
-              page.locator('[data-testid="toast-error"], [role="alert"]').filter({ hasText: /crédito|credit|saldo/i }),
-            ).toBeVisible({ timeout: 8_000 })
-          }
-        }
-      }
+    const [ano, mes] = slot.dateKey.split('-').map(Number)
+    const [anoHoje, mesHoje] = fixtureDateKey(new Date()).split('-').map(Number)
+    const avancos = (ano - anoHoje) * 12 + (mes - mesHoje)
+    for (let i = 0; i < avancos; i += 1) {
+      await page.getByTestId('calendar-view-next-month-button').click()
     }
+
+    await expect(page.getByTestId(`calendar-view-day-available-${slot.dateKey}`)).toBeVisible()
+    await page.getByTestId(`calendar-view-day-${slot.dateKey}`).click()
+  }
+
+  test.beforeAll(async () => {
+    alunoCalendario = await ensureStudent(TAG_CALENDARIO, 1)
+    slotCalendario = await ensureFutureSlot(TAG_CALENDARIO)
+    alunoSlot = await ensureStudent(TAG_SLOT, 1)
+    slotSlot = await ensureFutureSlot(TAG_SLOT)
+    alunoSemCredito = await ensureStudent(TAG_SEM_CREDITO, 0)
+    slotSemCredito = await ensureFutureSlot(TAG_SEM_CREDITO)
+    agendada = await ensureScheduledSession(TAG_HISTORICO)
+    alunoFluxo = await ensureStudent(TAG_FLUXO, 1)
+    slotFluxo = await ensureFutureSlot(TAG_FLUXO)
   })
 
-  test('sessão agendada aparece em /history com status Agendado', async ({ page }) => {
-    await loginAs(page, TEST_USERS.student)
-    await page.goto('/history')
-
-    // Verifica que a página de histórico carrega
-    await expect(page.locator('h1, main').first()).toBeVisible({ timeout: 10_000 })
+  test.afterAll(async () => {
+    for (const tag of TAGS) {
+      await cleanupRun(tag)
+    }
+    await disconnectFixtureDb()
   })
 
-  test('fluxo completo: agendar sessão com crédito → decrementar → verificar histórico', async ({ page, request }) => {
-    // Create student with 1 credit
-    const email = uniqueEmail('booking')
-    const password = 'Booking@123'
-    await createTestUser(request, {
-      email,
-      password,
-      name: 'Booking Student',
-      credits: 1,
-      emailConfirmed: true,
-    })
+  test.beforeEach(async ({ page, baseURL }) => {
+    // O banner de consentimento e fixo no rodape com z-50 e interceptaria os
+    // cliques do calendario. Aceitar antes de navegar nao e o objeto do teste.
+    await page.context().addCookies([
+      {
+        name: 'corgly_consent',
+        value: 'all',
+        url: baseURL ?? 'http://localhost:3000',
+      },
+    ])
+  })
 
-    // Login
-    await page.goto('/auth/login')
-    await page.locator('input[type="email"]').fill(email)
-    await page.locator('input[type="password"]').fill(password)
-    await page.locator('button[type="submit"]').click()
-    await page.waitForURL(/dashboard/, { timeout: 15_000 })
+  test('o calendario marca o dia que tem horario disponivel', async ({ page }) => {
+    await loginAs(page, alunoCalendario)
+    await abrirDiaDaFixture(page, slotCalendario)
 
-    // Navigate to schedule
-    await page.goto('/schedule')
+    await expect(page.getByTestId('calendar-view')).toBeVisible()
+    await expect(page.getByTestId('schedule-slot-list')).toBeVisible()
+    await expect(page.getByTestId(`schedule-slot-${slotCalendario.id}`)).toBeVisible()
+  })
 
-    // Wait for available slot
-    const slot = page.locator('[data-testid="slot-available"], [data-testid="availability-slot"]').first()
-    const hasSlot = await slot.isVisible({ timeout: 8_000 }).catch(() => false)
-    test.skip(!hasSlot, 'Nenhum slot disponível — seed necessário')
+  test('selecionar o horario abre o modal de confirmacao', async ({ page }) => {
+    await loginAs(page, alunoSlot)
+    await abrirDiaDaFixture(page, slotSlot)
 
-    // Click slot
-    await slot.click()
+    await page.getByTestId(`schedule-slot-${slotSlot.id}`).click()
+    await page.getByTestId('schedule-confirm-slot-button').click()
 
-    // Wait for ConfirmModal
-    const modal = page.locator('[data-testid="confirm-modal"], [role="dialog"]').first()
-    await expect(modal).toBeVisible({ timeout: 8_000 })
+    await expect(page.getByTestId('modal-booking-confirm')).toBeVisible()
+    await expect(page.getByTestId('modal-booking-confirm-submit-button')).toBeVisible()
+  })
 
-    // Click confirm button
-    const confirmBtn = modal.locator('button').filter({ hasText: /confirmar|confirm/i })
-    await confirmBtn.click()
+  test('aluno sem credito ve o bloqueio e nao chega ao modal', async ({ page }) => {
+    await loginAs(page, alunoSemCredito)
+    await abrirDiaDaFixture(page, slotSemCredito)
 
-    // Verify toast success
-    await expect(
-      page.locator('[data-testid="toast"], [role="status"]').filter({ hasText: /agendad|booked|sucesso/i }),
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('insufficient-credits-gate')).toBeVisible()
+    const horario = page.getByTestId(`schedule-slot-${slotSemCredito.id}`)
+    await expect(horario).toBeDisabled()
+    // `force` porque o alvo esta desabilitado de proposito: o teste mede que o
+    // clique nao abre caminho nenhum, nao a atuabilidade do botao.
+    await horario.click({ force: true })
 
-    // Verify credit decremented to 0
-    await expect(page.locator('[data-testid="credit-widget"]')).toContainText('0', { timeout: 8_000 })
+    await expect(page.getByTestId('schedule-confirm-slot-button')).toHaveCount(0)
+    await expect(page.getByTestId('modal-booking-confirm')).toHaveCount(0)
+  })
 
-    // Navigate to history
+  test('sessao agendada aparece em /history com status Agendada', async ({ page }) => {
+    await loginAs(page, agendada.student)
     await page.goto('/history')
-    await expect(
-      page.locator('[data-testid="session-status"]').filter({ hasText: /agendad|scheduled/i }).first(),
-    ).toBeVisible({ timeout: 10_000 })
+
+    await expect(page.getByTestId('page-history')).toBeVisible()
+    await expect(page.getByTestId('history-list')).toBeVisible()
+    await expect(page.getByTestId(`history-row-${agendada.sessionId}`)).toBeVisible()
+    await expect(page.getByTestId(`session-card-${agendada.sessionId}-status`)).toHaveText('Agendada')
+  })
+
+  test('confirmar a reserva consome o credito e registra a sessao', async ({ page }) => {
+    await loginAs(page, alunoFluxo)
+    await abrirDiaDaFixture(page, slotFluxo)
+
+    await page.getByTestId(`schedule-slot-${slotFluxo.id}`).click()
+    await page.getByTestId('schedule-confirm-slot-button').click()
+    await page.getByTestId('modal-booking-confirm-submit-button').click()
+
+    await expect(page.getByTestId('modal-booking-confirm-success')).toBeVisible()
+    // O estado de sucesso nao fecha sozinho: quem dispara o `onSuccess` e o
+    // botao de ver historico. Esse `onSuccess` tenta empurrar a rota do
+    // historico, mas no mesmo tick de dois `refresh()`, e a navegacao nao
+    // acontece de forma confiavel. O que este caso mede e o resultado da
+    // reserva, entao a chegada ao historico e feita pela navegacao explicita
+    // abaixo e o desvio do redirect esta registrado como finding.
+    await page.getByTestId('modal-booking-confirm-history-button').click()
+    await expect(page.getByTestId('modal-booking-confirm')).toHaveCount(0)
+
+    const sessaoId = await findScheduledSessionId(alunoFluxo.id)
+    expect(sessaoId).not.toBeNull()
+
+    await page.goto('/history')
+    await expect(page.getByTestId('page-history')).toBeVisible()
+    await expect(page.getByTestId(`history-row-${sessaoId}`)).toBeVisible()
+    await expect(page.getByTestId(`session-card-${sessaoId}-status`)).toHaveText('Agendada')
+
+    await page.goto('/dashboard')
+    await expect(page.getByTestId('dashboard-kpi-credits').locator('p').first()).toHaveText('0')
   })
 })

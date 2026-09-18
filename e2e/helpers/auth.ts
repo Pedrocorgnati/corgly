@@ -1,30 +1,24 @@
 import type { Page } from '@playwright/test'
 
-export interface TestUser {
-  email: string
-  password: string
-  name: string
-  role: 'STUDENT' | 'ADMIN'
-}
+import { FIXTURE_IDENTITIES, ensureIdentity, type FixtureIdentity } from './db'
 
-/** Usuários de teste pré-criados via seed */
+export type TestUser = FixtureIdentity
+
+/**
+ * Identidades de teste. Antes o comentario dizia "pre-criadas via seed", mas o
+ * seed era um wrapper para `/api/test/*`, rota que nao existe no produto: em
+ * banco limpo o login falhava. Agora a projecao vem do registro de fixture e
+ * quem cria a identidade e o proprio `loginAs`.
+ */
 export const TEST_USERS: Record<string, TestUser> = {
-  student: {
-    email: 'e2e-student@corgly.test',
-    password: 'E2eStudent@123',
-    name: 'Aluno E2E',
-    role: 'STUDENT',
-  },
-  admin: {
-    email: 'e2e-admin@corgly.test',
-    password: 'E2eAdmin@123',
-    name: 'Admin E2E',
-    role: 'ADMIN',
-  },
+  student: FIXTURE_IDENTITIES.student,
+  studentNoCredits: FIXTURE_IDENTITIES.studentNoCredits,
+  admin: FIXTURE_IDENTITIES.admin,
 }
 
 /** Faz login via UI e aguarda redirecionamento para /dashboard */
 export async function loginAs(page: Page, user: TestUser): Promise<void> {
+  await ensureIdentity(user)
   await page.goto('/auth/login')
   await page.locator('input[type="email"]').fill(user.email)
   await page.locator('input[type="password"]').fill(user.password)
