@@ -91,10 +91,13 @@ export async function GET(request: NextRequest) {
   return respondeCom({
     state,
     connectedAt: credential.connectedAt.toISOString(),
-    // Produtor futuro do carimbo: job de reconciliacao do item 023 do loop
-    // (source.md, L319 obriga o item 023 a alimentar esta tela). Ate la, null
-    // literal — a UI exibe "Nenhuma sincronizacao concluida ainda".
-    lastSuccessfulSyncAt: null,
+    // Carimbo real da ultima sincronizacao concluida: gravado pelo push
+    // service em GoogleCalendarCredential.lastSyncAt. null apenas quando
+    // nenhuma sincronizacao terminou ainda (credencial conectada, sync
+    // pendente) — a UI exibe "Nenhuma sincronizacao concluida ainda".
+    lastSuccessfulSyncAt: credential.lastSyncAt
+      ? credential.lastSyncAt.toISOString()
+      : null,
     scope: credential.scope,
   });
 }

@@ -9,9 +9,10 @@ import { z } from 'zod';
  * `grant_type=refresh_token`).
  *
  * `connectedAt` e `scope` sao `null` no estado `disconnected`.
- * `lastSuccessfulSyncAt` e `null` ate o item 023 do loop existir: o produtor
- * do carimbo e o job de reconciliacao, ainda nao implementado. A UI trata o
- * `null` com texto explicito, entao o campo ja existe no contrato.
+ * `lastSuccessfulSyncAt` e o carimbo real da ultima sincronizacao concluida,
+ * lido de `GoogleCalendarCredential.lastSyncAt` (push service); `null` apenas
+ * quando nenhuma sincronizacao terminou ainda. Decisao registrada em
+ * `docs/ops/GAP-10-DECISOES.md`.
  *
  * Sem `expiresIn`, sem token, sem nenhum campo de segredo: o refresh token
  * NUNCA sai do servidor e o access token da verificacao e descartado em

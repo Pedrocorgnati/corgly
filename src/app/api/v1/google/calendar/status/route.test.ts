@@ -49,6 +49,7 @@ const CREDENTIAL = {
   refreshTokenEnc: encryptCredential(REFRESH_TOKEN),
   scope: 'https://www.googleapis.com/auth/calendar.readonly',
   connectedAt: new Date('2026-09-01T12:00:00.000Z'),
+  lastSyncAt: new Date('2026-09-05T08:30:00.000Z'),
 };
 
 function buildRequest(opts: { role?: 'ADMIN' | 'STUDENT'; headers?: boolean } = {}) {
@@ -112,14 +113,16 @@ describe('GET /api/v1/google/calendar/status', () => {
     expect(mocks.fetch).not.toHaveBeenCalled();
   });
 
-  it('refresh token valido no Google: connected com connectedAt e scope', async () => {
+  it('refresh token valido no Google: connected com connectedAt, scope e carimbo real de sync', async () => {
     const res = await GET(buildRequest());
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data.state).toBe('connected');
     expect(body.data.connectedAt).toBe('2026-09-01T12:00:00.000Z');
     expect(body.data.scope).toBe(CREDENTIAL.scope);
-    expect(body.data.lastSuccessfulSyncAt).toBeNull();
+    // Carimbo real vindo de GoogleCalendarCredential.lastSyncAt (GAP-10),
+    // nao mais null fixo.
+    expect(body.data.lastSuccessfulSyncAt).toBe('2026-09-05T08:30:00.000Z');
 
     const [calledUrl, calledInit] = mocks.fetch.mock.calls[0] as [string, RequestInit];
     expect(calledUrl).toBe('https://oauth2.googleapis.com/token');
@@ -131,7 +134,7 @@ describe('GET /api/v1/google/calendar/status', () => {
     expect(JSON.stringify(body)).not.toContain('access-token-descartavel');
   });
 
-  it('invalid_grant do Google: expired e a credencial local NAO e removida', async () => {
+  it('invalid_grant do Google: expired, credencial local NAO removida e carimbo real preservado', async () => {
     mocks.fetch.mockResolvedValue({
       ok: false,
       status: 400,
@@ -143,6 +146,21 @@ describe('GET /api/v1/google/calendar/status', () => {
     expect(body.data.state).toBe('expired');
     expect(body.data.connectedAt).toBe('2026-09-01T12:00:00.000Z');
     expect(body.data.scope).toBe(CREDENTIAL.scope);
+    // GAP-10: carimbo da ultima sincronizacao bem-sucedida continua visivel
+    // mesmo expirada — a tela distingue "nunca sincronizou" de "sync antiga".
+    expect(body.data.lastSuccessfulSyncAt).toBe('2026-09-05T08:30:00.000Z');
+  });
+
+  it('connected sem nenhuma sincronizacao concluida: carimbo null', async () => {
+    mocks.credentialFindUnique.mockResolvedValue({
+      ...CREDENTIAL,
+      lastSyncAt: null,
+    });
+    const res = await GET(buildRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.state).toBe('connected');
+    expect(body.data.lastSuccessfulSyncAt).toBeNull();
   });
 
   it('5xx do Google na verificacao: 502 com codigo rastreavel', async () => {
