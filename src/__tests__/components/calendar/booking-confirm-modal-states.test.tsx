@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BookingConfirmModal } from '@/components/calendar/BookingConfirmModal';
@@ -29,17 +30,24 @@ const slot = {
   isBlocked: false,
 } as AvailabilitySlot;
 
-function renderModal() {
-  return render(
-    <BookingConfirmModal
-      slot={slot}
-      studentTz="America/Sao_Paulo"
-      adminTz="America/Sao_Paulo"
-      open
-      onClose={vi.fn()}
-      onSuccess={vi.fn()}
-    />,
-  );
+// O helper `@/test/utils` nao serve aqui: ele monta o `NextIntlClientProvider`
+// do `next-intl`, que esta mockado acima so com `useTranslations`. O
+// `userEvent.setup()` e o mesmo que aquele helper faz por dentro.
+function renderModal(userOptions: Parameters<typeof userEvent.setup>[0] = {}) {
+  const user = userEvent.setup(userOptions);
+  return {
+    user,
+    ...render(
+      <BookingConfirmModal
+        slot={slot}
+        studentTz="America/Sao_Paulo"
+        adminTz="America/Sao_Paulo"
+        open
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    ),
+  };
 }
 
 beforeEach(() => {
@@ -61,9 +69,9 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
         finish = resolve;
       }),
     );
-    renderModal();
+    const { user } = renderModal();
 
-    fireEvent.click(screen.getByTestId('modal-booking-confirm-submit-button'));
+    await user.click(screen.getByTestId('modal-booking-confirm-submit-button'));
     expect(await screen.findByTestId('modal-booking-confirm-loading')).toBeInTheDocument();
 
     await act(async () => {
@@ -78,12 +86,18 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
         finish = resolve;
       }),
     );
-    renderModal();
+    const { user } = renderModal({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     const confirmButton = screen.getByTestId('modal-booking-confirm-submit-button');
-    fireEvent.click(confirmButton);
-    fireEvent.click(confirmButton);
+    await user.click(confirmButton);
+    // O primeiro clique troca para `confirming` e desmonta o botao; o segundo
+    // clique do aluno cai no no ja destacado. O `pointerEventsCheck` desligado
+    // no `setup` e o que permite encenar essa segunda pressao. O que se prova
+    // aqui e que nem ela nem a guarda `requestInFlightRef` deixam sair uma
+    // segunda reserva.
+    await user.click(confirmButton);
 
+    expect(await screen.findByTestId('modal-booking-confirm-loading')).toBeInTheDocument();
     expect(bookSessionMock).toHaveBeenCalledTimes(1);
     expect(bookSessionMock).toHaveBeenCalledWith('slot-1', expect.any(String));
 
@@ -98,9 +112,9 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
       error: 'Falha ao reservar.',
       code: null,
     });
-    renderModal();
+    const { user } = renderModal();
 
-    fireEvent.click(screen.getByTestId('modal-booking-confirm-submit-button'));
+    await user.click(screen.getByTestId('modal-booking-confirm-submit-button'));
 
     expect(await screen.findByTestId('modal-booking-confirm-error')).toHaveTextContent(
       'Falha ao reservar.',
@@ -114,9 +128,9 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
       error: 'Créditos insuficientes.',
       code: 'INSUFFICIENT_CREDITS',
     });
-    renderModal();
+    const { user } = renderModal();
 
-    fireEvent.click(screen.getByTestId('modal-booking-confirm-submit-button'));
+    await user.click(screen.getByTestId('modal-booking-confirm-submit-button'));
 
     expect(
       await screen.findByTestId('modal-booking-confirm-insufficient-credits'),
@@ -143,18 +157,75 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
         code: 'SESSION_057',
       })
       .mockResolvedValueOnce({ data: null, error: null, code: null });
-    renderModal();
+    const { user } = renderModal();
 
-    fireEvent.click(screen.getByTestId('modal-booking-confirm-submit-button'));
+    await user.click(screen.getByTestId('modal-booking-confirm-submit-button'));
     expect(await screen.findByTestId('modal-booking-confirm-conflict')).toHaveTextContent(
       'Horário indisponível.',
     );
 
-    fireEvent.click(screen.getByTestId('modal-booking-confirm-alternative-slot-2'));
+    await user.click(screen.getByTestId('modal-booking-confirm-alternative-slot-2'));
 
     expect(await screen.findByTestId('modal-booking-confirm-success')).toBeInTheDocument();
     expect(bookSessionMock).toHaveBeenNthCalledWith(1, 'slot-1', expect.any(String));
     expect(bookSessionMock).toHaveBeenNthCalledWith(2, 'slot-2', expect.any(String));
     expect(bookSessionMock.mock.calls[0]?.[1]).not.toBe(bookSessionMock.mock.calls[1]?.[1]);
+  });
+
+  it('mostra erro recuperavel quando a alternativa do conflito tambem falha', async () => {
+    bookSessionMock
+      .mockResolvedValueOnce({
+        data: {
+          alternatives: [
+            {
+              id: 'slot-2',
+              startAt: '2026-06-20T15:00:00.000Z',
+              endAt: '2026-06-20T15:50:00.000Z',
+            },
+          ],
+        },
+        error: 'Horário indisponível.',
+        code: 'SESSION_057',
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: 'A alternativa acabou de ser reservada.',
+        code: null,
+      })
+      .mockResolvedValueOnce({ data: null, error: null, code: null });
+    const { user } = renderModal();
+
+    await user.click(screen.getByTestId('modal-booking-confirm-submit-button'));
+    expect(await screen.findByTestId('modal-booking-confirm-conflict')).toHaveTextContent(
+      'Horário indisponível.',
+    );
+
+    // Segundo desfecho do 409: a alternativa escolhida tambem falha e o aluno
+    // para num estado terminal visivel, nao no spinner.
+    await user.click(screen.getByTestId('modal-booking-confirm-alternative-slot-2'));
+
+    expect(await screen.findByTestId('modal-booking-confirm-error')).toHaveTextContent(
+      'A alternativa acabou de ser reservada.',
+    );
+    expect(screen.queryByTestId('modal-booking-confirm-loading')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('modal-booking-confirm-conflict')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('modal-booking-confirm-success')).not.toBeInTheDocument();
+
+    // O erro e recuperavel: o retry devolve o modal ao estado inicial.
+    await user.click(screen.getByTestId('modal-booking-confirm-retry-button'));
+
+    expect(screen.getByTestId('modal-booking-confirm-summary')).toBeInTheDocument();
+    expect(screen.getByTestId('modal-booking-confirm-submit-button')).toBeEnabled();
+    expect(screen.queryByTestId('modal-booking-confirm-error')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('modal-booking-confirm-submit-button'));
+
+    expect(await screen.findByTestId('modal-booking-confirm-success')).toBeInTheDocument();
+    expect(bookSessionMock).toHaveBeenCalledTimes(3);
+    expect(bookSessionMock).toHaveBeenNthCalledWith(3, 'slot-1', expect.any(String));
+    // A chave idempotente e por slot: a terceira tentativa reusa a do `slot-1`
+    // e nenhuma delas reusa a do `slot-2`.
+    expect(bookSessionMock.mock.calls[2]?.[1]).toBe(bookSessionMock.mock.calls[0]?.[1]);
+    expect(bookSessionMock.mock.calls[2]?.[1]).not.toBe(bookSessionMock.mock.calls[1]?.[1]);
   });
 });
