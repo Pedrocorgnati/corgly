@@ -581,30 +581,71 @@ export class CronService {
 
   /**
    * Job de reconciliacao periodica do Google Calendar.
-   * Executado a cada hora via Vercel Cron.
+   * Disparado pelo Vercel Cron (`vercel.json`) e pelo PM2 (`ecosystem.config.js`),
+   * que definem a cadencia.
    *
    * Rede de seguranca para o canal push:
    * - Verifica credenciais com lastSyncAt envelhecido (> 1h)
    * - Dispara sincronizacao completa para credenciais envelhecidas
    * - Registra sucesso/falha no model Job
-   * - Emite alarme (log estruturado) quando falha
+   * - Registra cada falha em log estruturado com `stage` (list, job-create, sync,
+   *   job-update). Log sozinho nao e alarme: o sink observavel e decisao do
+   *   operador (loop 09-06, GAP-10).
    *
    * @returns Numero de credenciais reconciliadas e lista de alarmes
    */
   async runGoogleCalendarReconciliation(): Promise<{ reconciled: number; alarms: string[] }> {
     const { googleCalendarPushService } = await import('./google-calendar-push.service');
     const { JobType, JobStatus } = await import('@prisma/client');
+    const { AppError } = await import('@/lib/errors');
 
     const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hora
     const now = new Date();
     const alarms: string[] = [];
     let reconciled = 0;
 
+    // Contexto de erro so com nome e codigo validados: src/lib/logger.ts serializa
+    // message e stack sem redacao, e a mensagem original pode trazer URL de conexao
+    // ou token.
+    const ACTION = 'cron.google-calendar-reconciliation';
+    const PREFIXO = '[CronService.runGoogleCalendarReconciliation] ';
+    const NOME_SEGURO = /^[A-Za-z0-9_]{1,80}$/;
+    const nomeDe = (e: unknown): string =>
+      e instanceof Error && NOME_SEGURO.test(e.name) ? e.name : 'UnknownError';
+    const codigoDe = (e: unknown): string | undefined => {
+      const code = (e as { code?: unknown } | null | undefined)?.code;
+      return typeof code === 'string' && NOME_SEGURO.test(code) ? code : undefined;
+    };
+    const registrarFalha = (
+      mensagem: string,
+      stage: string,
+      error: unknown,
+      ids: { userId?: string; jobId?: string },
+    ): void => {
+      logger.error(PREFIXO + mensagem, {
+        action: ACTION,
+        stage,
+        ...ids,
+        errorName: nomeDe(error),
+        errorCode: codigoDe(error),
+      });
+    };
+
     // Buscar todas as credenciais conectadas. A reconciliacao e a rede de
     // seguranca inclusive quando o canal push esta ausente ou morto.
-    const credentials = await prisma.googleCalendarCredential.findMany({
-      select: { userId: true, lastSyncAt: true },
-    });
+    let credentials: Array<{ userId: string; lastSyncAt: Date | null }>;
+    try {
+      credentials = await prisma.googleCalendarCredential.findMany({
+        select: { userId: true, lastSyncAt: true },
+      });
+    } catch (error) {
+      registrarFalha('credential listing failed', 'list', error, {});
+      throw new AppError(
+        'GOOGLE_RECONCILIATION_LIST_FAILED',
+        'Falha ao listar credenciais Google para reconciliacao.',
+        500,
+      );
+    }
 
     for (const cred of credentials) {
       const stale = !cred.lastSyncAt ||
@@ -620,22 +661,58 @@ export class CronService {
         lastSyncAt: cred.lastSyncAt,
       });
 
-      // Criar Job para rastrear
-      const job = await prisma.job.create({
-        data: {
-          type: JobType.GOOGLE_CALENDAR_RECONCILIATION,
-          status: JobStatus.RUNNING,
-          startedAt: now,
-          payload: { userId: cred.userId },
-        },
-      });
+      // Criar Job para rastrear. Sem Job nao ha onde gravar o resultado: registra
+      // e segue para a proxima credencial.
+      let job: { id: string };
+      try {
+        job = await prisma.job.create({
+          data: {
+            type: JobType.GOOGLE_CALENDAR_RECONCILIATION,
+            status: JobStatus.RUNNING,
+            startedAt: now,
+            payload: { userId: cred.userId },
+          },
+        });
+      } catch (error) {
+        registrarFalha('job create failed', 'job-create', error, { userId: cred.userId });
+        continue;
+      }
 
       try {
         // Disparar sincronizacao completa
         // Reutiliza o full sync existente, protegido pelo lease distribuido.
         await googleCalendarPushService.initialSync(cred.userId);
+      } catch (error) {
+        registrarFalha('reconciliation failed', 'sync', error, {
+          userId: cred.userId,
+          jobId: job.id,
+        });
+        // Marcar Job como falho, com texto fixo no lugar da mensagem; nome e codigo so no log
+        try {
+          await prisma.job.update({
+            where: { id: job.id },
+            data: {
+              status: JobStatus.FAILED,
+              completedAt: new Date(),
+              finalErrorCode: 'RECONCILIATION_FAILED',
+              finalErrorMessage: 'Falha na sincronizacao da reconciliacao.',
+              finalErrorAt: new Date(),
+            },
+          });
+        } catch (updateError) {
+          registrarFalha('job update failed', 'job-update', updateError, {
+            userId: cred.userId,
+            jobId: job.id,
+          });
+        }
+        continue;
+      }
 
-        // Marcar Job como sucedido
+      // A sincronizacao terminou: conta como reconciliada mesmo se o Job nao for atualizado.
+      reconciled++;
+
+      // Marcar Job como sucedido
+      try {
         await prisma.job.update({
           where: { id: job.id },
           data: {
@@ -643,25 +720,10 @@ export class CronService {
             completedAt: new Date(),
           },
         });
-
-        reconciled++;
-      } catch (error) {
-        // Marcar Job como falho
-        await prisma.job.update({
-          where: { id: job.id },
-          data: {
-            status: JobStatus.FAILED,
-            completedAt: new Date(),
-            finalErrorCode: 'RECONCILIATION_FAILED',
-            finalErrorMessage: error instanceof Error ? error.message : String(error),
-            finalErrorAt: new Date(),
-          },
-        });
-
-        logger.error('[CronService.runGoogleCalendarReconciliation] reconciliation failed', {
-          action: 'cron.google-calendar-reconciliation',
+      } catch (updateError) {
+        registrarFalha('job update failed', 'job-update', updateError, {
           userId: cred.userId,
-          error: error instanceof Error ? error.message : String(error),
+          jobId: job.id,
         });
       }
     }

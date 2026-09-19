@@ -20,9 +20,14 @@ export async function GET(request: NextRequest) {
       alarms: result.alarms,
     });
   } catch (error) {
+    // So nome e codigo com guarda de tipo: src/lib/logger.ts serializa message e stack sem redacao.
+    const nomeSeguro = /^[A-Za-z0-9_]{1,80}$/;
+    const code = (error as { code?: unknown } | null | undefined)?.code;
     logger.error('Cron de reconciliacao Google Calendar falhou', {
       action: 'cron.google-calendar-reconciliation',
-    }, error);
+      errorName: error instanceof Error && nomeSeguro.test(error.name) ? error.name : 'UnknownError',
+      errorCode: typeof code === 'string' && nomeSeguro.test(code) ? code : undefined,
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -37,8 +37,23 @@ vi.mock('@/lib/prisma', () => ({
   },
 }));
 
+vi.mock('@/lib/google/credential-crypto', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/google/credential-crypto')>();
+  return { ...real, decryptCredential: vi.fn(real.decryptCredential) };
+});
+
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 import { googleCalendarStatusSchema } from '@/app/(admin)/admin/google-calendar/google-calendar-status.contract';
-import { encryptCredential } from '@/lib/google/credential-crypto';
+import { decryptCredential, encryptCredential } from '@/lib/google/credential-crypto';
+import { logger } from '@/lib/logger';
 import { GET } from './route';
 
 const ADMIN_ID = 'admin-1';
@@ -205,5 +220,62 @@ describe('GET /api/v1/google/calendar/status', () => {
     errorSpy.mockRestore();
     logSpy.mockRestore();
     warnSpy.mockRestore();
+  });
+
+  it('RED R1: connected devolve o ISO de credential.lastSyncAt', async () => {
+    mocks.credentialFindUnique.mockResolvedValue({
+      ...CREDENTIAL,
+      lastSyncAt: new Date('2026-09-08T15:30:00.000Z'),
+    });
+    const res = await GET(buildRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.state).toBe('connected');
+    expect(body.data.lastSuccessfulSyncAt).toBe('2026-09-08T15:30:00.000Z');
+    expect(googleCalendarStatusSchema.safeParse(body.data).success).toBe(true);
+  });
+
+  it('RED R2: expired devolve o ISO de credential.lastSyncAt', async () => {
+    mocks.credentialFindUnique.mockResolvedValue({
+      ...CREDENTIAL,
+      lastSyncAt: new Date('2026-09-08T15:30:00.000Z'),
+    });
+    mocks.fetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'invalid_grant' }),
+    });
+    const res = await GET(buildRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.state).toBe('expired');
+    expect(body.data.lastSuccessfulSyncAt).toBe('2026-09-08T15:30:00.000Z');
+  });
+
+  it('RED R3: falha ao decifrar a credencial devolve 500 com codigo fixo sem a mensagem interna', async () => {
+    vi.mocked(decryptCredential).mockImplementationOnce(() => {
+      throw new Error('detalhe-interno-sintetico-gap10');
+    });
+    const res = await GET(buildRequest()).catch(() => null);
+    expect(res).toBeInstanceOf(Response);
+    if (!res) return;
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.data).toBeNull();
+    expect(body.code).toBe('GOOGLE_CREDENTIAL_MALFORMED');
+    expect(body.error).toBe('Erro interno.');
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    const chamadas = vi.mocked(logger.error).mock.calls;
+    expect(chamadas).toHaveLength(1);
+    const chamada = chamadas[0] ?? [];
+    expect(chamada.length).toBe(2);
+    expect(chamada[1]).toMatchObject({
+      action: 'google-calendar.status',
+      stage: 'decrypt',
+      errorName: 'Error',
+    });
+    const serializado = JSON.stringify([body, vi.mocked(logger.error).mock.calls]);
+    expect(serializado.includes('detalhe-interno-sintetico-gap10')).toBe(false);
+    expect(serializado.includes('stack')).toBe(false);
   });
 });

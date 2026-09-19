@@ -4,6 +4,7 @@ import { apiResponse } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { AppError } from '@/lib/errors';
 import { decryptCredential } from '@/lib/google/credential-crypto';
+import { logger } from '@/lib/logger';
 import { getGoogleOAuthConfig } from '@/lib/google/oauth-config';
 import {
   googleCalendarStatusSchema,
@@ -61,7 +62,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(apiResponse(null, 'Erro interno.'), { status: 500 });
   }
 
-  const refreshToken = decryptCredential(credential.refreshTokenEnc);
+  let refreshToken: string;
+  try {
+    refreshToken = decryptCredential(credential.refreshTokenEnc);
+  } catch (err) {
+    // So o nome da classe: message e stack do erro nao vao ao log nem ao payload.
+    logger.error('GET /api/v1/google/calendar/status', {
+      action: 'google-calendar.status',
+      stage: 'decrypt',
+      errorName: err instanceof Error ? err.name : 'unknown',
+    });
+    return NextResponse.json(
+      apiResponse(null, 'Erro interno.', null, 'GOOGLE_CREDENTIAL_MALFORMED'),
+      { status: 500 },
+    );
+  }
 
   let tokenRes: Response;
   try {
@@ -94,7 +109,7 @@ export async function GET(request: NextRequest) {
     // Carimbo real da ultima sincronizacao concluida: gravado pelo push
     // service em GoogleCalendarCredential.lastSyncAt. null apenas quando
     // nenhuma sincronizacao terminou ainda (credencial conectada, sync
-    // pendente) — a UI exibe "Nenhuma sincronizacao concluida ainda".
+    // pendente); a UI exibe "Nenhuma sincronizacao concluida ainda".
     lastSuccessfulSyncAt: credential.lastSyncAt
       ? credential.lastSyncAt.toISOString()
       : null,

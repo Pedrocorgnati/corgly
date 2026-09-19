@@ -114,4 +114,28 @@ describe('GoogleCalendarConnection', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('REGRESSAO K1: expired com carimbo mostra a ultima sincronizacao', () => {
+    const roma = new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'Europe/Rome',
+    }).format(new Date('2026-09-08T15:30:00.000Z'));
+    render(
+      <GoogleCalendarConnection
+        status={statusDto({
+          state: 'expired',
+          connectedAt: '2026-09-01T12:00:00.000Z',
+          lastSuccessfulSyncAt: '2026-09-08T15:30:00.000Z',
+          scope: 'https://www.googleapis.com/auth/calendar.readonly',
+        })}
+        timezone="Europe/Rome"
+      />,
+    );
+
+    expect(screen.getByText('Conexão com a agenda Google expirada')).toBeInTheDocument();
+    const lastSync = screen.getByTestId('google-connection-last-sync');
+    expect(lastSync).toHaveTextContent(roma);
+    expect(lastSync).not.toHaveTextContent(formatEsperado('2026-09-08T15:30:00.000Z'));
+  });
 });
