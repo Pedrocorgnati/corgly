@@ -142,6 +142,7 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
   });
 
   it('mostra as alternativas do conflito e permite tentar a escolhida', async () => {
+    let finish!: (value: { data: null; error: null; code: null }) => void;
     bookSessionMock
       .mockResolvedValueOnce({
         data: {
@@ -156,17 +157,30 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
         error: 'Horário indisponível.',
         code: 'SESSION_057',
       })
-      .mockResolvedValueOnce({ data: null, error: null, code: null });
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
     const { user } = renderModal();
 
     await user.click(screen.getByTestId('modal-booking-confirm-submit-button'));
     expect(await screen.findByTestId('modal-booking-confirm-conflict')).toHaveTextContent(
       'Horário indisponível.',
     );
+    const alternative = screen.getByTestId('modal-booking-confirm-alternative-slot-2');
+    expect(alternative).toHaveTextContent('2026-06-20T15:00:00.000Z');
 
-    await user.click(screen.getByTestId('modal-booking-confirm-alternative-slot-2'));
+    await user.click(alternative);
+    expect(await screen.findByTestId('modal-booking-confirm-loading')).toBeInTheDocument();
+    expect(bookSessionMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      finish({ data: null, error: null, code: null });
+    });
 
     expect(await screen.findByTestId('modal-booking-confirm-success')).toBeInTheDocument();
+    expect(screen.queryByTestId('modal-booking-confirm-conflict')).not.toBeInTheDocument();
     expect(bookSessionMock).toHaveBeenNthCalledWith(1, 'slot-1', expect.any(String));
     expect(bookSessionMock).toHaveBeenNthCalledWith(2, 'slot-2', expect.any(String));
     expect(bookSessionMock.mock.calls[0]?.[1]).not.toBe(bookSessionMock.mock.calls[1]?.[1]);
@@ -207,6 +221,7 @@ describe('BookingConfirmModal: estados visiveis do caminho do aluno', () => {
     expect(await screen.findByTestId('modal-booking-confirm-error')).toHaveTextContent(
       'A alternativa acabou de ser reservada.',
     );
+    expect(bookSessionMock).toHaveBeenNthCalledWith(2, 'slot-2', expect.any(String));
     expect(screen.queryByTestId('modal-booking-confirm-loading')).not.toBeInTheDocument();
     expect(screen.queryByTestId('modal-booking-confirm-conflict')).not.toBeInTheDocument();
     expect(screen.queryByTestId('modal-booking-confirm-success')).not.toBeInTheDocument();
