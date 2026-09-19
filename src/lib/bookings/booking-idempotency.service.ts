@@ -19,6 +19,16 @@ import type { ReminderSentAt, SessionWithMeta } from '@/types/session.types';
 const DEFAULT_LOCK_TTL_MS = 2 * 60 * 1000;
 const DEFAULT_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
+// `Number(env ?? default)` nao basta: o `??` so cai no default com `undefined`
+// ou `null`. Variavel definida e vazia vira TTL 0 (registro e lock nascem
+// expirados), `'abc'` vira NaN e `'-5'` vira TTL no passado (GAP-13).
+function resolveTtlMs(raw: string | undefined, fallback: number): number {
+  const value = raw?.trim();
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export interface BookingAlternativeSlot {
   id: string;
   startAt: string;
@@ -103,9 +113,10 @@ function parseBookingResult(value: Prisma.JsonValue | string | null | undefined)
 }
 
 export class BookingIdempotencyService {
-  private readonly lockTtlMs = Number(process.env.BOOKING_LOCK_TTL_MS ?? DEFAULT_LOCK_TTL_MS);
-  private readonly idempotencyTtlMs = Number(
-    process.env.BOOKING_IDEMPOTENCY_TTL_MS ?? DEFAULT_IDEMPOTENCY_TTL_MS,
+  private readonly lockTtlMs = resolveTtlMs(process.env.BOOKING_LOCK_TTL_MS, DEFAULT_LOCK_TTL_MS);
+  private readonly idempotencyTtlMs = resolveTtlMs(
+    process.env.BOOKING_IDEMPOTENCY_TTL_MS,
+    DEFAULT_IDEMPOTENCY_TTL_MS,
   );
 
   async lockAndBook(
