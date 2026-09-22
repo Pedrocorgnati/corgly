@@ -120,37 +120,30 @@ describe('/admin/exercises', () => {
     });
   });
 
-  it('renderiza exatamente 12 colunas e distingue os 11 dados das ações', async () => {
+  it('renderiza exatamente 7 colunas e distingue os 6 dados das ações', async () => {
     await renderTable();
 
     expect(screen.getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
       'Título interno',
-      'Título do aluno',
       'Tipo predominante',
-      'Idioma de apoio',
-      'Nível',
       'Matéria',
       'Tags',
-      'Itens',
-      'Status',
       'Alunos ativos',
-      'Última edição',
+      'Status',
       'Ações',
     ]);
 
     const row = within(screen.getByTestId(`admin-exercises-row-${EXERCISE_ID}`));
     expect(row.getByText('Passado composto')).toBeInTheDocument();
-    expect(row.getByText('Present perfect')).toBeInTheDocument();
     expect(row.getByText('Leitura e escolha')).toBeInTheDocument();
-    expect(row.getByText('Inglês (Estados Unidos)')).toBeInTheDocument();
-    expect(row.getByText('Nível 2')).toBeInTheDocument();
     expect(row.getByText('Gramática')).toBeInTheDocument();
     expect(row.getByText('A2')).toBeInTheDocument();
     expect(row.getByText('verbos')).toBeInTheDocument();
-    expect(row.getByText('3')).toBeInTheDocument();
-    expect(row.getByText('Publicado')).toBeInTheDocument();
     expect(row.getByText('4')).toBeInTheDocument();
-    expect(row.getByText('08/09/2026')).toBeInTheDocument();
+
+    const statusBadge = row.getByTestId(`admin-exercises-status-${EXERCISE_ID}`);
+    expect(statusBadge).toHaveAttribute('title', 'Publicado');
+    expect(statusBadge).toHaveAttribute('aria-label', 'Publicado');
 
     expect(screen.getByLabelText('Nível')).toBeInTheDocument();
     expect(screen.getByLabelText('Matéria')).toBeInTheDocument();
@@ -158,19 +151,19 @@ describe('/admin/exercises', () => {
     expect(screen.getByLabelText('Status')).toBeInTheDocument();
     expect(screen.getByLabelText('Tag')).toBeInTheDocument();
 
-    expect(row.getByRole('link', { name: 'Editar' })).toHaveAttribute(
+    expect(row.getByTestId(`exercise-row-edit-${EXERCISE_ID}`)).toHaveAttribute(
       'href',
       `/admin/exercises/${EXERCISE_ID}`,
     );
-    expect(row.getByRole('link', { name: 'Liberar' })).toHaveAttribute(
+    expect(row.getByTestId(`exercise-row-assign-${EXERCISE_ID}`)).toHaveAttribute(
       'href',
       `/admin/exercises/${EXERCISE_ID}/assignments`,
     );
-    expect(row.getByRole('link', { name: 'Preview como aluno' })).toHaveAttribute(
+    expect(row.getByTestId(`exercise-row-preview-${EXERCISE_ID}`)).toHaveAttribute(
       'href',
       `/admin/exercises/${EXERCISE_ID}?tab=review&preview=1`,
     );
-    expect(row.getByRole('button', { name: 'Arquivar' })).toBeEnabled();
+    expect(row.getByTestId(`exercise-row-archive-${EXERCISE_ID}`)).toBeEnabled();
     expect(row.queryByText(/duplicar/i)).not.toBeInTheDocument();
   });
 
@@ -178,7 +171,6 @@ describe('/admin/exercises', () => {
     mocks.getAdminExercises.mockResolvedValue(response([
       {
         ...exercise,
-        studentTitle: null,
         predominantKind: null,
         subject: null,
         tags: [],
@@ -187,7 +179,6 @@ describe('/admin/exercises', () => {
 
     await renderTable();
 
-    expect(screen.getByText('Sem título no idioma de apoio')).toBeInTheDocument();
     expect(screen.getByText('Sem tipo')).toBeInTheDocument();
     expect(screen.getByText('Sem matéria')).toBeInTheDocument();
     expect(screen.getByText('Sem tags')).toBeInTheDocument();

@@ -1,14 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { useLocale } from 'next-intl';
-import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
 import { useLandingLocale } from '@/hooks/useLandingLocale';
-import { apiClient } from '@/lib/api-client';
-import { API } from '@/lib/constants/routes';
-import { localeToSupportedLanguage, type Locale } from '../../../i18n/config';
+import { type Locale } from '../../../i18n/config';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type PersistMode = 'cookie' | 'profile';
 type DisplayVariant = 'flags' | 'compact';
 
 type FlagConfig = {
@@ -37,37 +31,20 @@ const FLAGS: FlagConfig[] = [
 ];
 
 export function LanguageFlags({
-  persist = 'cookie',
   variant = 'flags',
   className,
   inverted = false,
 }: {
-  persist?: PersistMode;
   variant?: DisplayVariant;
   className?: string;
   inverted?: boolean;
 }) {
-  const intlLocale = useLocale() as Locale;
-  const { locale: landingLocale, setLocale } = useLandingLocale();
-  const router = useRouter();
-  const current = persist === 'profile' ? intlLocale : landingLocale;
+  const { locale: current, setLocale } = useLandingLocale();
   const currentFlag = FLAGS.find((flag) => flag.locale === current) ?? FLAGS[0];
 
-  async function handleSelect(next: Locale) {
+  function handleSelect(next: Locale) {
     if (next === current) return;
-    if (persist === 'cookie') {
-      setLocale(next);
-      return;
-    }
-    try {
-      await apiClient.patch(API.PROFILE, {
-        preferredLanguage: localeToSupportedLanguage(next),
-      });
-      document.cookie = `corgly_locale=${next};path=/;max-age=31536000;SameSite=Lax`;
-      router.refresh();
-    } catch {
-      toast.error('Could not save language. Try again.');
-    }
+    setLocale(next);
   }
 
   if (variant === 'compact') {

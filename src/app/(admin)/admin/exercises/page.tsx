@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { Dumbbell } from 'lucide-react';
+import { Archive, Check, Dumbbell, PencilLine } from 'lucide-react';
 import { PAGINATION } from '@/lib/constants';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -16,7 +16,6 @@ import {
   type ExerciseItemKind,
   type SupportedLanguage,
 } from '@/lib/constants/enums';
-import { formatDatePtBR } from '@/lib/format-datetime';
 import { PageWrapper } from '@/components/shared';
 
 export const metadata: Metadata = {
@@ -75,6 +74,12 @@ const ITEM_KIND_LABELS: Record<ExerciseItemKind, string> = {
 const tableHeaderClass =
   'whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-muted-foreground';
 const tableCellClass = 'px-4 py-3 text-sm text-foreground align-top';
+
+const STATUS_ICONS = {
+  DRAFT: PencilLine,
+  PUBLISHED: Check,
+  ARCHIVED: Archive,
+} as const;
 
 function scalarParam(value: SearchParamValue): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? '';
@@ -302,22 +307,18 @@ export async function ExercisesTable({ searchParams }: Props) {
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className={tableHeaderClass}>Título interno</th>
-                <th className={tableHeaderClass}>Título do aluno</th>
                 <th className={tableHeaderClass}>Tipo predominante</th>
-                <th className={tableHeaderClass}>Idioma de apoio</th>
-                <th className={tableHeaderClass}>Nível</th>
                 <th className={tableHeaderClass}>Matéria</th>
                 <th className={tableHeaderClass}>Tags</th>
-                <th className={tableHeaderClass}>Itens</th>
-                <th className={tableHeaderClass}>Status</th>
                 <th className={tableHeaderClass}>Alunos ativos</th>
-                <th className={tableHeaderClass}>Última edição</th>
+                <th className={tableHeaderClass}>Status</th>
                 <th className={`${tableHeaderClass} text-right`}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((exercise) => {
                 const statusConfig = EXERCISE_STATUS_MAP[exercise.status];
+                const StatusIcon = STATUS_ICONS[exercise.status];
                 return (
                   <tr
                     key={exercise.id}
@@ -326,21 +327,12 @@ export async function ExercisesTable({ searchParams }: Props) {
                   >
                     <td className={`${tableCellClass} font-medium`}>{exercise.internalTitle}</td>
                     <td className={tableCellClass}>
-                      {exercise.studentTitle ?? (
-                        <span className="text-muted-foreground">Sem título no idioma de apoio</span>
-                      )}
-                    </td>
-                    <td className={tableCellClass}>
                       {exercise.predominantKind ? (
                         ITEM_KIND_LABELS[exercise.predominantKind]
                       ) : (
                         <span className="text-muted-foreground">Sem tipo</span>
                       )}
                     </td>
-                    <td className={tableCellClass}>
-                      {SUPPORT_LANGUAGE_LABELS[exercise.supportLanguage]}
-                    </td>
-                    <td className={tableCellClass}>Nível {exercise.level}</td>
                     <td className={tableCellClass}>
                       {exercise.subject ?? <span className="text-muted-foreground">Sem matéria</span>}
                     </td>
@@ -360,18 +352,16 @@ export async function ExercisesTable({ searchParams }: Props) {
                         <span className="text-muted-foreground">Sem tags</span>
                       )}
                     </td>
-                    <td className={tableCellClass}>{exercise.itemCount}</td>
-                    <td className={tableCellClass}>
-                      <Badge
-                        variant="outline"
-                        className={`${statusConfig.color} ${statusConfig.bg} ${statusConfig.border}`}
-                      >
-                        {statusConfig.label}
-                      </Badge>
-                    </td>
                     <td className={tableCellClass}>{exercise.activeAssignmentCount}</td>
-                    <td className={`${tableCellClass} whitespace-nowrap`}>
-                      {formatDatePtBR(exercise.updatedAt)}
+                    <td className={tableCellClass}>
+                      <span
+                        data-testid={`admin-exercises-status-${exercise.id}`}
+                        title={statusConfig.label}
+                        aria-label={statusConfig.label}
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${statusConfig.bg} ${statusConfig.border} ${statusConfig.color}`}
+                      >
+                        <StatusIcon className="h-4 w-4" aria-hidden />
+                      </span>
                     </td>
                     <td className={`${tableCellClass} text-right`}>
                       <ExerciseRowActions

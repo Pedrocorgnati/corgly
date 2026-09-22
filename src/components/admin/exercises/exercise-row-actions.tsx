@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Archive, Eye, Pencil, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { archiveAdminExercise, type AdminExercise } from '@/actions/admin-exercises';
 import { Button } from '@/components/ui/button';
@@ -56,29 +57,35 @@ export function ExerciseRowActions({
   return (
     <>
       <div
-        className="flex flex-wrap items-center justify-end gap-1"
+        className="flex items-center justify-end gap-1"
         data-testid={`exercise-row-actions-${exerciseId}`}
       >
         <Link
           href={editHref}
           className={actionLinkClass}
+          aria-label="Editar exercício"
+          title="Editar exercício"
           data-testid={`exercise-row-edit-${exerciseId}`}
         >
-          Editar
+          <Pencil className="h-4 w-4" aria-hidden />
         </Link>
         <Link
           href={`${editHref}/assignments`}
           className={actionLinkClass}
+          aria-label="Liberar exercício"
+          title="Liberar exercício"
           data-testid={`exercise-row-assign-${exerciseId}`}
         >
-          Liberar
+          <Send className="h-4 w-4" aria-hidden />
         </Link>
         <Link
           href={`${editHref}?tab=review&preview=1`}
           className={actionLinkClass}
+          aria-label="Visualizar preview como aluno"
+          title="Visualizar preview como aluno"
           data-testid={`exercise-row-preview-${exerciseId}`}
         >
-          Preview como aluno
+          <Eye className="h-4 w-4" aria-hidden />
         </Link>
         <Button
           type="button"
@@ -88,10 +95,12 @@ export function ExerciseRowActions({
           disabled={status === 'ARCHIVED' || archivePending}
           aria-busy={archivePending}
           aria-haspopup="dialog"
+          aria-label="Arquivar exercício"
+          title="Arquivar exercício"
           onClick={() => setConfirmOpen(true)}
           data-testid={`exercise-row-archive-${exerciseId}`}
         >
-          Arquivar
+          <Archive className="h-4 w-4" aria-hidden />
         </Button>
       </div>
 

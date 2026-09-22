@@ -1,7 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useLocale } from 'next-intl';
 import { Globe } from 'lucide-react';
 import {
   DropdownMenu,
@@ -10,7 +8,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { LOCALE_COOKIE, type Locale } from '../../../i18n/config';
+import { useLandingLocale } from '@/hooks/useLandingLocale';
+import { type Locale } from '../../../i18n/config';
 import { cn } from '@/lib/utils';
 
 const LANGUAGES: { code: Locale; label: string; flag: string }[] = [
@@ -21,15 +20,15 @@ const LANGUAGES: { code: Locale; label: string; flag: string }[] = [
 ];
 
 export function LanguageSelector() {
-  const locale = useLocale();
-  const router = useRouter();
+  // Mesmo chokepoint das bandeiras: estado semeado pelo servidor + escrita
+  // única (state + localStorage + cookie + perfil quando logado).
+  const { locale, setLocale } = useLandingLocale();
 
   const currentLang = LANGUAGES.find((l) => l.code === locale) ?? LANGUAGES[0];
 
   function handleLocaleChange(newLocale: Locale) {
     if (newLocale === locale) return;
-    document.cookie = `${LOCALE_COOKIE}=${newLocale};path=/;max-age=31536000;samesite=lax`;
-    router.refresh();
+    setLocale(newLocale);
   }
 
   return (

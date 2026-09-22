@@ -129,22 +129,22 @@ describe('ExerciseRowActions', () => {
     const links = within(actions).getAllByRole('link');
 
     expect(links).toHaveLength(3);
-    expect(within(actions).getByRole('link', { name: 'Editar' })).toHaveAttribute(
+    expect(within(actions).getByTestId(`exercise-row-edit-${EXERCISE_ID}`)).toHaveAttribute(
       'href',
       `/admin/exercises/${EXERCISE_ID}`,
     );
-    expect(within(actions).getByRole('link', { name: 'Liberar' })).toHaveAttribute(
+    expect(within(actions).getByTestId(`exercise-row-assign-${EXERCISE_ID}`)).toHaveAttribute(
       'href',
       `/admin/exercises/${EXERCISE_ID}/assignments`,
     );
     expect(
-      within(actions).getByRole('link', { name: 'Preview como aluno' }),
+      within(actions).getByTestId(`exercise-row-preview-${EXERCISE_ID}`),
     ).toHaveAttribute(
       'href',
       `/admin/exercises/${EXERCISE_ID}?tab=review&preview=1`,
     );
     expect(within(actions).getAllByRole('button')).toHaveLength(1);
-    expect(within(actions).getByRole('button', { name: 'Arquivar' })).toBeEnabled();
+    expect(within(actions).getByTestId(`exercise-row-archive-${EXERCISE_ID}`)).toBeEnabled();
     expect(screen.queryByText(/duplicar/i)).not.toBeInTheDocument();
     expect(mocks.archiveAdminExercise).not.toHaveBeenCalled();
   });
@@ -265,7 +265,7 @@ describe('ExerciseRowActions', () => {
     const actions = screen.getByTestId(`exercise-row-actions-${EXERCISE_ID}`);
     expect(within(actions).getAllByRole('link')).toHaveLength(3);
 
-    const archiveButton = within(actions).getByRole('button', { name: 'Arquivar' });
+    const archiveButton = within(actions).getByTestId(`exercise-row-archive-${EXERCISE_ID}`);
     expect(archiveButton).toBeDisabled();
     expect(archiveButton).toHaveAttribute('aria-busy', 'false');
 

@@ -64,7 +64,7 @@ export function AppHeader({ user, onMenuClick }: AppHeaderProps) {
               ADMIN
             </Badge>
           )}
-          <LanguageFlags persist="profile" />
+          <LanguageFlags />
           <ThemeToggle data-testid="header-theme-toggle-button" />
           <DropdownMenu>
             {/* Sem `render`, o <button> interno viraria <button> dentro do

@@ -630,6 +630,18 @@ export class ExerciseService {
       },
     });
 
+    // O `subject` do exercicio guarda o TITULO da aula (Content) vinculada, e
+    // o editor so oferece aulas ja cadastradas no select de materia. Publicar
+    // o exercicio sem publicar a aula deixaria o aluno com exercicio liberado
+    // apontando para conteudo indisponivel, entao a aula sobe junto. So
+    // DRAFT/SCHEDULED: PUBLISHED/ARCHIVED nunca sao reescritos aqui.
+    if (exercise.subject) {
+      await prisma.content.updateMany({
+        where: { title: exercise.subject, status: { in: ['DRAFT', 'SCHEDULED'] } },
+        data: { status: 'PUBLISHED', isPublished: true, publishedAt: new Date() },
+      });
+    }
+
     auditLog('EXERCISE_PUBLISH', { type: 'Exercise', id: exerciseId }, adminId, {
       itemCount: exercise.items.length,
     });

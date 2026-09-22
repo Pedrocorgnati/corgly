@@ -9,9 +9,11 @@ import { AppThemeProvider } from '@/components/shared/app-theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/hooks/useAuth';
+import { LandingLocaleProvider } from '@/hooks/landingLocaleContext';
 import { CookieBanner } from '@/components/ui/cookie-banner';
 import { AnalyticsProvider } from '@/components/shared/AnalyticsProvider';
 import { DevOverlayLoader } from '@/components/dev/DevOverlayLoader';
+import type { Locale } from '../../i18n/config';
 
 const inter = Inter({
   variable: '--font-sans',
@@ -107,9 +109,11 @@ export default async function RootLayout({
         <NextIntlClientProvider>
           <AppThemeProvider>
             <AuthProvider>
-              <TooltipProvider>
-                {children}
-              </TooltipProvider>
+              <LandingLocaleProvider initialLocale={locale as Locale}>
+                <TooltipProvider>
+                  {children}
+                </TooltipProvider>
+              </LandingLocaleProvider>
             </AuthProvider>
             <Toaster position="top-right" richColors />
             <CookieBanner />

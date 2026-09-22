@@ -23,12 +23,17 @@ import { TIMEZONES } from '@/lib/constants/geo';
  * Endonimos: cada idioma se apresenta na propria lingua, entao esta lista NAO
  * passa pelo catalogo — traduzi-la faria o menu mostrar "Portuguese" para quem
  * ja escolheu ingles, escondendo justamente a opcao que a pessoa procura.
+ *
+ * Os valores seguem o enum `SupportedLanguage` do backend (PT_BR) — o mesmo
+ * formato de `user.preferredLanguage` e do `UpdateProfileSchema`. A lista em
+ * formato `pt-BR` quebrava o select (valor fora das opcoes) e era rejeitada
+ * pela API na hora de salvar.
  */
 const LANGUAGES = [
-  { value: 'pt-BR', label: 'Português (Brasil)' },
-  { value: 'en-US', label: 'English (US)' },
-  { value: 'es-ES', label: 'Español' },
-  { value: 'it-IT', label: 'Italiano' },
+  { value: 'PT_BR', label: 'Português (Brasil)' },
+  { value: 'EN_US', label: 'English (US)' },
+  { value: 'ES_ES', label: 'Español' },
+  { value: 'IT_IT', label: 'Italiano' },
 ];
 
 /**
@@ -62,7 +67,7 @@ export function ProfileForm() {
     defaultValues: {
       name: '',
       timezone: 'America/Sao_Paulo',
-      preferredLanguage: 'pt-BR',
+      preferredLanguage: 'EN_US',
     },
     mode: 'onBlur',
     reValidateMode: 'onChange',
@@ -74,7 +79,7 @@ export function ProfileForm() {
       reset({
         name: user.name,
         timezone: user.timezone ?? 'America/Sao_Paulo',
-        preferredLanguage: (user as { preferredLanguage?: string }).preferredLanguage ?? 'pt-BR',
+        preferredLanguage: (user as { preferredLanguage?: string }).preferredLanguage ?? 'EN_US',
       });
       setMarketingOptIn(Boolean((user as { marketingOptIn?: boolean }).marketingOptIn));
     }
@@ -182,7 +187,7 @@ export function ProfileForm() {
             */}
             <Select
               defaultValue={
-                (user as { preferredLanguage?: string } | null)?.preferredLanguage ?? 'pt-BR'
+                (user as { preferredLanguage?: string } | null)?.preferredLanguage ?? 'EN_US'
               }
               onValueChange={(v) => setValue('preferredLanguage', v ?? '')}
               disabled={isLoading}

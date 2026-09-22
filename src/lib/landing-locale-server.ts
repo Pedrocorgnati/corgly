@@ -27,11 +27,8 @@ function fromAcceptLanguage(header: string | null): Locale | null {
 }
 
 export function resolveLandingLocaleFromRequest(request: NextRequest): Locale {
-  const param =
-    normalize(request.nextUrl.searchParams.get('locale')) ??
-    normalize(request.nextUrl.searchParams.get('lang'));
-  if (param) return param;
-
+  // Sem leitura de `?locale=`/`?lang=`: o parâmetro grudava na URL e mandava
+  // sobre cookie/DB a cada re-mount. A escolha persiste só no cookie.
   const cookieLocale = normalize(request.cookies.get(LOCALE_COOKIE)?.value);
   if (cookieLocale) return cookieLocale;
 

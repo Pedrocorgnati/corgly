@@ -28,7 +28,7 @@
  *   por decisao do source (secao 15).
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -93,6 +93,18 @@ const PHASE_1_KINDS: readonly Phase1ExerciseItemKind[] = [
   'MATCH_CLICK',
   'TEXT_CHOICE',
   'VERB_CLOZE',
+];
+
+/**
+ * Eixo de nivel do exercicio (A1..B2 = 1..4). O form guarda string e o
+ * `buildPayload` converte com `parseInt`. Exercicio legado com nivel fora da
+ * faixa ganha uma option extra para nao mudar o dado em silencio.
+ */
+const LEVEL_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '1', label: 'A1' },
+  { value: '2', label: 'A2' },
+  { value: '3', label: 'B1' },
+  { value: '4', label: 'B2' },
 ];
 
 /**
@@ -380,6 +392,34 @@ export function ExerciseEditor({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(initialPreviewOpen);
+  // Aulas cadastradas em /admin/content, usadas no select de Materia. `null`
+  // = carregando; `lessonsError` = fetch falhou e o form segue utilizavel.
+  const [lessons, setLessons] = useState<string[] | null>(null);
+  const [lessonsError, setLessonsError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch('/api/v1/admin/content?pageSize=100', { credentials: 'include' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((json: { data?: { items?: Array<{ title?: string }> } }) => {
+        if (cancelled) return;
+        const titles = (json.data?.items ?? [])
+          .map((item) => item.title)
+          .filter((title): title is string => Boolean(title));
+        setLessons(titles);
+      })
+      .catch(() => {
+        if (!cancelled) setLessonsError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const update = (patch: Partial<ExerciseFormValue>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -711,27 +751,52 @@ export function ExerciseEditor({
               </select>
             </label>
             <label className="text-sm">
-              <span className="block mb-1 text-muted-foreground">Nivel (inteiro, mesmo eixo da aula)</span>
-              <input
-                data-testid="form-exercise-level-input"
-                type="number"
-                min={0}
-                max={100}
-                step={1}
+              <span className="block mb-1 text-muted-foreground">Nível</span>
+              <select
+                data-testid="form-exercise-level-select"
                 value={form.level}
                 onChange={(e) => update({ level: e.target.value })}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2"
-              />
+              >
+                {LEVEL_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+                {!LEVEL_OPTIONS.some((option) => option.value === form.level) && (
+                  <option value={form.level}>Nível {form.level}</option>
+                )}
+              </select>
             </label>
             <label className="text-sm">
-              <span className="block mb-1 text-muted-foreground">Materia</span>
-              <input
-                data-testid="form-exercise-subject-input"
-                type="text"
+              <span className="block mb-1 text-muted-foreground">Matéria</span>
+              <select
+                data-testid="form-exercise-subject-select"
                 value={form.subject}
+                disabled={lessons === null && !lessonsError}
                 onChange={(e) => update({ subject: e.target.value })}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2"
-              />
+              >
+                <option value="">
+                  {lessons === null && !lessonsError ? 'Carregando aulas...' : 'Selecione uma aula'}
+                </option>
+                {form.subject && !lessons?.includes(form.subject) && (
+                  <option value={form.subject}>{form.subject}</option>
+                )}
+                {lessons?.map((title) => (
+                  <option key={title} value={title}>
+                    {title}
+                  </option>
+                ))}
+              </select>
+              {lessonsError && (
+                <span
+                  data-testid="form-exercise-subject-lessons-error"
+                  className="mt-1 block text-xs text-muted-foreground"
+                >
+                  Não foi possível carregar as aulas. Você ainda pode salvar o exercício.
+                </span>
+              )}
             </label>
             <label className="text-sm">
               <span className="block mb-1 text-muted-foreground">Tags (separadas por virgula)</span>
@@ -793,7 +858,7 @@ export function ExerciseEditor({
               <label className="text-sm block">
                 <span className="block mb-1 text-muted-foreground">Titulo do aluno ({activeLocale})</span>
                 <input
-                  data-testid="form-exercise-locale-title-input"
+                  data-testid={`form-exercise-translation-title-${activeLocale.toLowerCase()}`}
                   type="text"
                   value={tr.title}
                   onChange={(e) => updateTranslation(activeLocale, { title: e.target.value })}
@@ -803,7 +868,7 @@ export function ExerciseEditor({
               <label className="text-sm block">
                 <span className="block mb-1 text-muted-foreground">Resumo ({activeLocale})</span>
                 <textarea
-                  data-testid="form-exercise-locale-summary-input"
+                  data-testid={`form-exercise-translation-summary-${activeLocale.toLowerCase()}`}
                   value={tr.summary}
                   onChange={(e) => updateTranslation(activeLocale, { summary: e.target.value })}
                   rows={3}
@@ -1229,8 +1294,12 @@ export function ExerciseEditor({
           >
             <h2 className="text-sm font-medium text-foreground">Prontidao para publicar</h2>
             <ul className="space-y-1">
-              {readiness.checks.map((check) => (
-                <li key={check.label} className="flex items-start gap-2 text-sm">
+              {readiness.checks.map((check, checkIndex) => (
+                <li
+                  key={check.label}
+                  data-testid={`admin-exercise-editor-readiness-item-${checkIndex + 1}`}
+                  className="flex items-start gap-2 text-sm"
+                >
                   {check.ok ? (
                     <CircleCheck className="h-4 w-4 text-success shrink-0 mt-0.5" />
                   ) : (
@@ -1296,7 +1365,11 @@ export function ExerciseEditor({
           </div>
 
           <Dialog open={showPreview} onOpenChange={setShowPreview}>
-            <DialogContent showCloseButton={false} className="max-w-2xl p-0">
+            <DialogContent
+              data-testid="admin-exercise-editor-preview-dialog"
+              showCloseButton={false}
+              className="max-w-2xl p-0"
+            >
               <DialogTitle className="sr-only">Preview</DialogTitle>
               <ExercisePreview
                 items={form.items}

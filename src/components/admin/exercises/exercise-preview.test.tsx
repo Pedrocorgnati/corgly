@@ -141,12 +141,19 @@ describe('ExercisePreview', () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    fetchSpy = vi.fn();
+    fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { items: [] } }),
+    });
     vi.stubGlobal('fetch', fetchSpy);
   });
 
   afterEach(() => {
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // O editor busca as aulas de /admin/content ao montar (select de Materia);
+    // o preview em si nunca chama fetch — nenhuma outra URL pode aparecer.
+    for (const call of fetchSpy.mock.calls) {
+      expect(call[0]).toBe('/api/v1/admin/content?pageSize=100');
+    }
     vi.unstubAllGlobals();
   });
 
