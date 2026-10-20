@@ -1,0 +1,157 @@
+# Chapter 3: Three Contrasts English Ears Miss: Aspiration, Mid Vowels, Nasals
+
+Your English has trained your ear for the wrong differences. In English, a puff of air after p, t and k matters, and the gap between the vowel of "bed" and the vowel of "bad" matters. In Brazilian Portuguese those particular differences do very little work, while other differences, the ones your ear barely reports, decide which word you have just heard. This chapter is about three of those quiet contrasts.
+
+The first is aspiration, the puff of air that follows p, t and k in English and that Brazilian Portuguese mostly does not use. The second is the mid vowels, the open and closed versions of e and of o, which English does not mark as separate sounds. The third is nasality, the nasal vowels and nasal diphthongs that carry some of the most frequent words in the language.
+
+All three of these contrasts belong in the "changes meaning" column of the hierarchy you met in Chapter 1. Getting one of them wrong can turn one word into another in the ear of your listener, so all three belong at the top of your pronunciation work. The order inside this chapter is deliberate. You train perception first and production second, because that is the order the research supports.
+
+## Why perception comes first here
+
+A meta-analysis of high variability phonetic training, the technique that has you hear one contrast repeated in several different voices, reports gains in perception [F34]. A separate meta-analysis asks whether that same training improves production, and the answer is that the production gain is smaller and is retained less well [F33]. Listening practice is the part that pays reliably. Speaking practice is the part you will have to repeat.
+
+This book gives you transcription and respelling only. There are no audio files and no QR codes here. The several voices have to come from real Brazilian speakers, in whatever recordings you choose to use. What the book gives you in this chapter is the map of what to listen for, plus controlled production work once the ear has started to notice the contrasts.
+
+## A short respelling key for this chapter
+
+From this chapter onward, the book also uses broad IPA in square brackets, in Chapters 3 and 4 and in the minimal-pairs list of the appendix. Other chapters use respelling only. Both systems appear here, and neither replaces the other: the respelling is what you say to yourself, the IPA is what a phonetician would write.
+
+| Written form | Sounds roughly like | Illustration |
+| --- | --- | --- |
+| a (stressed) | "ah" in father | pato = PAH-too |
+| a closed o, often written with the circumflex | "oh" in note, said pure and without glide | avô = ah-VOH |
+| an open o, often written with the acute accent | "aw" in law, said short and without glide | avó = ah-VAW |
+| a closed e | "ay" in grey, said without glide | sede (headquarters) = SAY-djee |
+| an open e | "eh" in bet | sede (thirst) = SEH-djee |
+| final -o | "oo" in food | tudo = TOO-doo |
+| final -e | "ee" in see in most of Brazil | pode = PAW-djee |
+| a vowel followed by m or n, or written with ã or õ | the vowel said through the nose | mão = mowng, roughly |
+
+Two notes on the key. In most of Brazil, d before that final "ee" sounds like the "j" in "job", which is why the respellings above show -djee. And the two things that most need your attention in this chapter are that a closed vowel stays pure and that a nasal vowel really is said through the nose. All respelling forms in this chapter are the author's illustrations, not confirmed dictionary pronunciations.
+
+## Contrast 1: the puff after p, t and k
+
+Say "pin" and "spin" out loud in English and listen to the p. In "pin" there is a small burst of air right after the p. In "spin" there is not. English p, t and k come with that puff at the start of a stressed syllable. Brazilian Portuguese p, t and k mostly do not. When an English speaker hears a Portuguese p, they may hear a b, because the English ear decodes "no puff" as "voiced".
+
+The technical measure is voice onset time, the gap between the moment the stop is released and the moment voicing begins. In a study that measured these stops, voice onset time was about 55 ms for p, about 70 ms for t and about 80 ms for k in English, against about 12 ms, about 18 ms and about 38 ms in Brazilian Portuguese [F24]. A stop with zero or negative voice onset time is identified as voiced by an English speaker [F24], and that is exactly the trap, because the Brazilian Portuguese stops sit so far down that scale. One caution about that study matters here: it follows Brazilians learning English, which is the reverse direction from you, so applying those figures to Portuguese word pairs is an inference rather than a result measured on English speakers learning Portuguese [F24]. The structural point is on firmer ground: English and Brazilian Portuguese use voice onset time in different ways [F26].
+
+This is a meaning contrast, because p versus b, t versus d and k versus g are real word pairs. Here are the author's illustrations, queued for native-speaker review:
+
+- pato "duck" [ˈpatu] and bato "I hit" [ˈbatu]
+- tom "tone" [tõ] and dom "gift" [dõ]
+- cola "glue" [ˈkɔlɐ] and gola "collar" [ˈgɔlɐ]
+
+Read them with the respelling as well: PAH-too versus BAH-too, TOM versus DOM roughly, KOH-lah versus GOH-lah in the author's spelling.
+
+Now the label. The p versus b, t versus d and k versus g contrast is marked "changes meaning". The puff you add on top of a Portuguese p, t or k is marked "accent only": it does not create another word, but it announces your English immediately. Both are worth fixing, and the meaning contrast comes first.
+
+Two author's suggestions, neither of them sourced and neither carrying any figure. First, the paper test: hold a thin sheet of paper in front of your mouth and say the Portuguese word. If the paper moves a lot, you are probably still puffing. Second, the spin and stop bridge: your English already gives you unaspirated p, t and k in "spin", "stop" and "stock". Use the feel of the p in "spin" as your model for the Portuguese p at the start of a word, the t of "stop" for the Portuguese t, and the k of "stock" for the Portuguese k.
+
+## Contrast 2: the open and closed mid vowels
+
+English has, for practical purposes, one e-like vowel and one o-like vowel in this part of the mouth, and both of them glide: the "ay" of "day" moves, and the "oh" of "go" moves. Brazilian Portuguese has two of each, and they stay still.
+
+The pairs are closed e [e] against open e [ɛ], and closed o [o] against open o [ɔ]. The circumflex usually marks the closed vowel and the acute accent usually marks the open one, but plenty of everyday words carry the contrast with no accent mark at all, which is why the ear has to learn it.
+
+Speakers of American English have difficulty both hearing and producing these mid vowels, and learners tend to overcorrect [F18]. That last point deserves a warning sign. Once you know the contrast exists, you may start opening vowels that should stay closed and closing vowels that should open. So when you practise, work with pairs rather than with isolated words, and let the pair tell you which vowel is which.
+
+Here are the author's illustrations, again queued for native-speaker review:
+
+- avô [aˈvo] "grandfather" against avó [aˈvɔ] "grandmother"
+- pôde [ˈpodʒi] "managed to, could" against pode [ˈpɔdʒi] "can, is allowed"
+- sede [ˈsɛdʒi] "thirst" against sede [ˈsedʒi] "seat, headquarters"
+
+Say them with the respelling: ah-VOH against ah-VAW, POH-djee against PAW-djee, SEH-djee against SAY-djee. The spelling of the second pair differs by the accent mark only, and the spelling of the third pair does not differ at all, so the whole contrast lives in your mouth and your ear. That is why this one is marked "changes meaning": in these pairs the vowel is the only thing carrying the difference between two words.
+
+A useful habit while you listen: forget the English glide. A Portuguese closed o is not the "oh" of "go", it is a steady vowel with no movement at the end. The same holds for the closed e, which is not the moving vowel of "day". Pure and still, and the two qualities separate.
+
+## Contrast 3: nasal vowels and nasal diphthongs
+
+Brazilian Portuguese has five nasal vowels in the description this chapter relies on, and that description rests on a single speaker [F21]. Treat it as a description to learn from rather than a map of every Brazilian mouth. On top of the nasal vowels sit nasal diphthongs, the kind you meet in não and mão, where the glide is nasal too.
+
+The illustrations below are the author's own, queued for native-speaker review:
+
+- mão [mɐ̃w̃] "hand" against mau [maw] "bad"
+- lã [lɐ̃] "wool" against lá [la] "there"
+- não [nɐ̃w̃] "no, not", bem [bẽj̃] "well", bom [bõw̃] "good"
+
+In the respelling: mowng roughly against MAH-oo, and lowng roughly against lah. The m and n letters after a vowel are not full consonants for you to pronounce; they are the spelling's way of telling you that the vowel is nasal. That is a common place where an English speaker adds a consonant that Portuguese does not want. This is the author's observation, not a sourced claim.
+
+Nasality also matters to how you sound. In a study of nasal vowel production, the type of nasal vowel the learner produced weighed more on the accent judgment of English speakers than whether the learner had heard a native model beforehand [F23]. Two things follow for you. Choosing the right nasal quality is part of what listeners judge, and hearing a model once is not a substitute for getting the vowel type right.
+
+This contrast is marked "changes meaning" as well: mão and mau are different words, and lã and lá are different words, and the vowel alone decides which one you said. As the author's suggestion, with no figure and no source claim, start your training with the nasal shapes "ão" and "em", and only then move to the nasal vowels inside words.
+
+## A suggestion for the training order
+
+Here is how these three contrasts fit together in practice, as the author's suggestion rather than a sourced program. Work with minimal pairs in several voices before you try to say anything yourself, since that is where the reliable gain is [F34] and production gains come later and hold less well [F33]. Use the paper test and the spin and stop bridge to get the stops right. Keep the mid vowels pure and still, working in pairs so that overcorrection has nowhere to grow. Then start your nasal work with "ão" and "em".
+
+## UK/Australian English
+
+If your English is British, Australian, New Zealand or South African English, you are non-rhotic: the r after a vowel is not a full consonant in your accent. Two practical notes follow for this chapter.
+
+First, the aspiration bridge. American speakers have a flap bridge available to them, the tapped t and d of "better" and "ladder", and Chapter 4 explains how it is used. As a non-rhotic speaker you do not have that bridge, so build the aspiration connection another way. The s-cluster words work in your English exactly as they work in every other variety: "spin", "stop" and "stock" give you p, t and k with no puff, and those are your models for the Portuguese stops. Add the paper test on top of that, and the bridge stands without any flap.
+
+Second, the vowels. As the author's suggestion, your "law" vowel may be a useful anchor for the open o of Portuguese [ɔ]. Your "go" and "day" vowels both glide, so when you produce the Portuguese closed o [o] and closed e [e], strip the movement out and keep the vowel still. Australian speakers should check the same two vowels, which tend to glide at least as much. In both varieties, the English schwa has no home in these Portuguese vowels: avoid letting a reduced, neutral vowel creep in where Portuguese keeps its vowels distinct.
+
+The non-rhotic r itself is treated in Chapter 4. This box only covers the bridges you need for aspiration and the mid vowels.
+
+## If you speak Spanish
+
+Spanish changes this chapter in a specific way: it gives you a smaller vowel inventory than Portuguese, and it gives you soft consonants where Portuguese wants hard ones. Three traps are relevant here. The first two are the author's observations, not sourced claims.
+
+- Two Portuguese vowels may land on one Spanish vowel. A Spanish-trained ear can hear both mid vowels of Portuguese as the same sound, so avô and avó, and pôde and pode, may collapse. Check each mid vowel against its partner in a pair, not against your memory of Spanish "e" and "o".
+- Do not assume that a familiar-looking p, t or k is identical. Whether your Spanish habits help or hinder the unaspirated stops, test them with the paper test rather than trusting the assumption.
+- Spanish speakers may add a small n or m at the end of a nasal vowel. When you say mão or não, listen for the vowel itself changing quality, not for a consonant at the end.
+
+Also worth keeping in view: English-Spanish bilinguals depend on Spanish when learning Portuguese, whatever the order in which they acquired their languages [F62]. That dependence is not a defect. It is the material you manage, and Chapter 8 is built around it. On the sound side, English-Spanish bilinguals produce voiced stops as Spanish-style approximants [F36], so b, d and g come out soft and continuous instead of closed.
+
+A practice suggestion for this chapter: the full-stop drill. In Portuguese, produce b, d and g as real stops, with a complete closure and a clean release, especially between vowels. Say these author's illustrations slowly and keep the consonant hard rather than soft:
+
+- cada = KAH-dah
+- lado = LAH-doo
+- fogo = FOH-goo
+
+Put each word into a short phrase of your own, then say it again at conversational speed without letting the consonant soften.
+
+## Where to spend your time
+
+If you keep one idea from this chapter, keep the order: hear it first, say it second. The three contrasts here all change meaning, so they outrank the accent-only features that Chapter 4 collects. Use minimal pairs in several voices, keep the mid vowels pure and still, stop puffing your p, t and k, and put your nasality into the vowel itself.
+
+## Self-test
+
+Retrieving what you just read is what makes it stick: a meta-analysis of the testing effect compares testing with restudy [F94]. Answer from memory first, then check.
+
+1. What are the three contrasts this chapter trains?
+2. What is voice onset time, and which of the two languages uses the longer values?
+3. Give the English and the Brazilian Portuguese voice onset time figures as this chapter reports them, with the source.
+4. Why must you be careful when applying that source's figures to Portuguese word pairs?
+5. How does an English speaker identify a stop with zero or negative voice onset time?
+6. Which point about voice onset time does the chapter treat as firmer ground rather than as an inference?
+7. Name the two mid-vowel pairs the chapter describes in IPA terms.
+8. What is the warning attached to the mid-vowel contrast?
+9. How many nasal vowels does the description in this chapter give for Brazilian Portuguese, and what limitation travels with it?
+10. In the Spanish box, what should you do with b, d and g between vowels in Portuguese, and why is Spanish relevant at all?
+
+## Answer key
+
+1. The puff after p, t and k (aspiration, measured as voice onset time), the open and closed mid vowels (e and o), and the nasal vowels with the nasal diphthongs.
+2. The gap between the release of a stop and the start of voicing. English uses the longer values [F24].
+3. About 55 ms for p, 70 ms for t and 80 ms for k in English, against about 12 ms, 18 ms and 38 ms in Brazilian Portuguese [F24].
+4. That study follows Brazilians learning English, the reverse direction from this book's readers, so applying the figures to Portuguese pairs is an inference [F24].
+5. As voiced [F24].
+6. That English and Brazilian Portuguese use voice onset time in different ways [F26].
+7. Closed e [e] against open e [ɛ], and closed o [o] against open o [ɔ].
+8. Learners tend to overcorrect [F18]: opening vowels that should stay closed and closing vowels that should open.
+9. Five nasal vowels, and the description rests on a single speaker [F21].
+10. Produce them as full stops with complete closure rather than as Spanish-style approximants [F36]. Spanish is relevant because English-Spanish bilinguals depend on Spanish when learning Portuguese, whatever the acquisition order [F62].
+
+## Spaced review plan
+
+As the author's suggestion, here is a simple calendar for this chapter. Read it once today, then come back on these days:
+
+- D+1 after reading
+- D+3 after reading
+- D+8 after reading
+- D+27 after reading
+
+On each return, run the self-test from memory before you reread anything, then reread only the parts you missed. These review points are the author's adaptation of the interval idea in a spacing study [F90], which measured a single gap between two study sessions. That source did not test this calendar, and the points above are a suggestion, not a result reported by that study. Adjust the timing to your own week if you need to; the habit of returning and retrieving matters more than the exact day.
