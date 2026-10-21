@@ -21,6 +21,9 @@ export const ROUTES = {
   SUPPORT: '/support',
   SUPPORT_NEW: '/support/new',
   CONTACT: '/contact',
+  EBOOKS: '/ebooks',
+  EBOOK_DETAIL: (slug: string) => `/ebooks/${slug}`,
+  EBOOK_SUCCESS: (slug: string) => `/ebooks/${slug}/sucesso`,
   MAINTENANCE: '/maintenance',
 
   // Student

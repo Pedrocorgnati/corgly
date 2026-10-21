@@ -95,8 +95,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        // /ebooks/acesso/* fica fora: a URL carrega o token de acesso ao PDF e
+        // exige `Referrer-Policy: no-referrer` (D7, task-007 do loop de ebooks).
+        source: '/((?!ebooks/acesso/).*)',
         headers: securityHeaders,
+      },
+      {
+        source: '/ebooks/acesso/:path*',
+        headers: securityHeaders.map((header) =>
+          header.key === 'Referrer-Policy' ? { key: header.key, value: 'no-referrer' } : header,
+        ),
       },
       {
         // ISR cache headers for landing page

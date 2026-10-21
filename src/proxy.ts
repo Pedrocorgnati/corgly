@@ -40,6 +40,11 @@ const PUBLIC_API_PATHS = [
   '/api/v1/content',
   '/api/v1/email/unsubscribe',
   '/api/v1/privacy/data-requests', // DSR público: titular anônimo abre pedido sem sessão (LGPD Art. 18)
+  // Checkout de ebook: compra anonima, sem conta, por construcao. A rota aplica
+  // rate limit proprio (EBOOK_CHECKOUT) e confere Origin. Caminho COMPLETO de
+  // proposito: `/api/v1/ebooks` e as demais rotas sob ele continuam exigindo
+  // sessao.
+  '/api/v1/ebooks/checkout',
 ];
 
 // Rotas de API cujo GET e publico (aluno anonimo consulta horario) mas cujas
@@ -252,7 +257,12 @@ export async function proxy(request: NextRequest) {
     if (isPublicLandingPath(pathname)) {
       extraHeaders['x-landing-locale'] = resolveLandingLocaleFromRequest(request);
     }
-    return addSecurityHeaders(nextWithStripped(request, extraHeaders), correlationId);
+    const res = addSecurityHeaders(nextWithStripped(request, extraHeaders), correlationId);
+    // A URL de acesso ao ebook carrega o token: nenhum Referer pode vaza-lo.
+    if (pathname.startsWith('/ebooks/acesso/')) {
+      res.headers.set('Referrer-Policy', 'no-referrer');
+    }
+    return res;
   }
 
   // ─── Rate limiting (skip webhooks Stripe) ─────────────────────────────────

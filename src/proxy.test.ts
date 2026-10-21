@@ -238,6 +238,56 @@ describe('proxy: allowlist do pedido de magic-link', () => {
   });
 });
 
+describe('proxy: allowlist de /api/v1/ebooks/checkout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('POST anonimo em /api/v1/ebooks/checkout atravessa sem 401 e sem headers internos', async () => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq('/api/v1/ebooks/checkout', 'POST'));
+    expect(res.status).not.toBe(401);
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+    expect(forwarded(res, 'x-user-role')).toBeNull();
+  });
+
+  it.each([
+    // O namespace pai NAO entrou na lista: so o caminho completo do checkout e
+    // publico, entao /api/v1/ebooks e rotas futuras sob ele exigem sessao.
+    '/api/v1/ebooks',
+    '/api/v1/ebooks/outra',
+  ])('vizinha protegida %s sem sessao -> 401', async (path) => {
+    mockGetPayload.mockReturnValue(null);
+    const res = await proxy(apiReq(path, 'POST'));
+    expect(res.status).toBe(401);
+  });
+
+  it('rate limit GENERAL do proxy continua aplicado ao checkout', async () => {
+    mockGetPayload.mockReturnValue(null);
+    await proxy(apiReq('/api/v1/ebooks/checkout', 'POST'));
+    expect(mockCheckRateLimit).toHaveBeenCalledWith(
+      expect.stringMatching(/^general:/),
+      { maxRequests: 60, windowMs: 60_000 },
+    );
+  });
+
+  it('GENERAL estourado devolve 429 antes da rota', async () => {
+    mockGetPayload.mockReturnValue(null);
+    mockCheckRateLimit.mockResolvedValue({ allowed: false, resetAt: Date.now() + 30_000 });
+    const res = await proxy(apiReq('/api/v1/ebooks/checkout', 'POST'));
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).not.toBeNull();
+  });
+});
+
 describe('proxy: allowlist do callback OAuth do Google Calendar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -493,5 +543,33 @@ describe('proxy: travessia de cron e webhook (GAP-11)', () => {
 
   it('[REGRESSAO B9] GET do alias renew com Bearer chega a rota', async () => {
     await atravessa('/api/v1/cron/google-calendar-renew');
+  });
+});
+
+describe('proxy: /api/v1/webhooks/stripe/ebooks', () => {
+  // A Stripe chega sem sessao por construcao: a rota autentica pela assinatura
+  // e aplica rate limit proprio (WEBHOOK). O proxy nao muda: o prefixo
+  // `/api/v1/webhooks/stripe` ja e publico e `/api/v1/webhooks/` pula o GENERAL.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, resetAt: Date.now() + 1000 });
+    mockGetPayload.mockReturnValue(null);
+  });
+
+  it('POST anonimo atravessa sem 401 e sem headers internos', async () => {
+    const res = await proxy(apiReq('/api/v1/webhooks/stripe/ebooks', 'POST'));
+    expect(res.status).toBe(200);
+    expect(forwarded(res, 'x-user-id')).toBeNull();
+    expect(forwarded(res, 'x-user-role')).toBeNull();
+  });
+
+  it('rate limit GENERAL do proxy nao e aplicado ao webhook', async () => {
+    await proxy(apiReq('/api/v1/webhooks/stripe/ebooks', 'POST'));
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+  });
+
+  it('/api/v1/ebooks sem sessao continua 401', async () => {
+    const res = await proxy(apiReq('/api/v1/ebooks', 'POST'));
+    expect(res.status).toBe(401);
   });
 });

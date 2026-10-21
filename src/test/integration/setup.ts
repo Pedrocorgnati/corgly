@@ -66,6 +66,12 @@ export async function cleanDatabase(): Promise<void> {
     'external_busy_intervals',
     'google_calendar_credentials',
     'contents',
+    // Item 005: ledger e pedidos de ebook; filhas antes das maes.
+    'ebook_access_logs',
+    'ebook_delivery_events',
+    'ebook_access_tokens',
+    'ebook_orders',
+    'ebook_webhook_events',
     'users',
   ]
 

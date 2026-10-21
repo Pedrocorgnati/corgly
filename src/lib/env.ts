@@ -45,6 +45,12 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z
     .string()
     .startsWith('whsec_', 'STRIPE_WEBHOOK_SECRET deve começar com whsec_'),
+  // Segredo do endpoint dedicado de ebooks (/api/v1/webhooks/stripe/ebooks).
+  // Opcional no boot; a rota responde 503 quando ausente em runtime (D-B2).
+  STRIPE_EBOOKS_WEBHOOK_SECRET: z
+    .string()
+    .startsWith('whsec_', 'STRIPE_EBOOKS_WEBHOOK_SECRET deve comecar com whsec_')
+    .optional(),
 
   // Email (Resend)
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY é obrigatório'),

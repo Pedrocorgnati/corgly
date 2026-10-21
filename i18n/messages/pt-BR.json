@@ -221,7 +221,8 @@
         "how_it_works": "Como funciona",
         "method": "Método",
         "pricing": "Preços",
-        "faq": "FAQ"
+        "faq": "FAQ",
+        "ebooks": "Ebooks"
       },
       "nav_aria": "Navegação principal",
       "menuOpen": "Abrir menu"
@@ -2118,6 +2119,68 @@
     "previa": {
       "sessionsToCancel": "até {sessionsToCancel} sessões serão canceladas",
       "slotsToBlock": "pelo menos {slotsToBlock} slots serão bloqueados"
+    }
+  },
+  "ebooks": {
+    "catalog": {
+      "title": "Ebooks da Corgly",
+      "intro": "Material de estudo em formato digital, criado pela equipe da Corgly, para você praticar no seu ritmo e avançar com confiança.",
+      "empty": "Nenhum ebook disponível no momento. Volte em breve para ver as novidades.",
+      "emptyCta": "Voltar para o início",
+      "viewEbook": "Ver ebook",
+      "metaTitle": "Ebooks | Corgly",
+      "metaDescription": "Ebooks de estudo da Corgly: material digital para praticar e evoluir no seu ritmo."
+    },
+    "sale": {
+      "priceLabel": "Preço final",
+      "buyLabel": "Comprar agora",
+      "waiverLabel": "Quero receber o conteúdo digital imediatamente e entendo que, por isso, abro mão do direito de desistência após a compra.",
+      "loading": "Processando…",
+      "summaryTitle": "O que você encontra neste ebook",
+      "faqTitle": "Perguntas frequentes",
+      "errors": {
+        "rateLimited": "Muitas tentativas. Aguarde {seconds} segundos e tente novamente.",
+        "rateLimitedNoWait": "Muitas tentativas. Aguarde um pouco e tente novamente.",
+        "failed": "Não foi possível iniciar a compra agora. Tente novamente em instantes.",
+        "network": "Falha de conexão. Verifique sua internet e tente novamente."
+      }
+    },
+    "notFound": {
+      "title": "Ebook não encontrado",
+      "description": "Não encontramos este ebook. Ele pode ter sido removido ou o endereço pode estar incorreto.",
+      "backToCatalog": "Ver todos os ebooks",
+      "backHome": "Voltar para o início"
+    },
+    "success": {
+      "metaTitle": "Confirmação de compra | Corgly",
+      "retry": "Atualizar",
+      "backToSale": "Voltar para a página de compra",
+      "contact": "Falar com o suporte",
+      "pending": {
+        "title": "Pagamento em confirmação",
+        "body": "Seu pagamento está sendo confirmado. Você pode atualizar esta página para ver a situação mais recente."
+      },
+      "delivered": {
+        "title": "Entrega registrada",
+        "body": "Tudo certo: a entrega foi registrada e o link de acesso foi enviado para o e-mail usado na compra.",
+        "recovery": "Não encontrou o e-mail? Confira as pastas de spam ou promoções. Se ainda assim não chegar, fale com a nossa equipe pela página de contato."
+      },
+      "failedPayment": {
+        "title": "Pagamento não concluído",
+        "body": "O pagamento não foi concluído, então a compra não foi finalizada. Você pode tentar novamente pela página de compra."
+      },
+      "revoked": {
+        "title": "Acesso indisponível",
+        "body": "Esta compra foi cancelada ou estornada, então o acesso ao conteúdo não está disponível. Se ficar com dúvidas, fale com a nossa equipe."
+      },
+      "needsReview": {
+        "title": "Compra em verificação",
+        "body": "Sua compra precisa de uma verificação manual da nossa equipe. Vamos responder pelo e-mail usado na compra; se preferir, fale com a gente pela página de contato."
+      },
+      "missingSession": {
+        "title": "Compra não identificada",
+        "body": "Não foi possível identificar a compra a partir deste link. Volte para a página de compra para tentar novamente."
+      }
     }
   }
 }

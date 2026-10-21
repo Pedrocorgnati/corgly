@@ -22,6 +22,7 @@ const NAV_LINKS = [
   { key: 'how_it_works' as const, href: '/#como-funciona' },
   { key: 'pricing' as const, href: ROUTES.PRICING },
   { key: 'faq' as const, href: '/#faq' },
+  { key: 'ebooks' as const, href: ROUTES.EBOOKS },
 ];
 
 /**

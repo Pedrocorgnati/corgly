@@ -422,6 +422,9 @@ export class StripeService {
   private async dispatchWebhookEvent(event: Stripe.Event): Promise<boolean> {
     switch (event.type) {
       case 'checkout.session.completed':
+        // Sessao de ebook pertence ao endpoint /api/v1/webhooks/stripe/ebooks;
+        // false = IGNORED no ledger de creditos (processWebhookEvent).
+        if ((event.data.object as Stripe.Checkout.Session).metadata?.kind === 'ebook') return false;
         await this.onCheckoutCompleted(
           event.data.object as Stripe.Checkout.Session,
           event.id,

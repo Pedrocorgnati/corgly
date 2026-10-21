@@ -43,7 +43,10 @@
     "test:load:feedback": "k6 run tests/load/scenarios/10-feedback.js",
     "test:load:subscriptions": "k6 run tests/load/scenarios/11-subscriptions.js",
     "test:load:profile": "k6 run tests/load/scenarios/12-profile.js",
-    "test:load:admin-dashboard": "k6 run tests/load/scenarios/13-admin-dashboard.js"
+    "test:load:admin-dashboard": "k6 run tests/load/scenarios/13-admin-dashboard.js",
+    "ebooks:delivery:reconcile": "tsx --import ./scripts/ebooks-image-stub.mjs --conditions=react-server --env-file-if-exists=.env scripts/ebooks-delivery-recovery.ts reconcile",
+    "ebooks:delivery:recover": "tsx --import ./scripts/ebooks-image-stub.mjs --conditions=react-server --env-file-if-exists=.env scripts/ebooks-delivery-recovery.ts recover",
+    "ebooks:evidence": "tsx --import ./scripts/ebooks-image-stub.mjs --conditions=react-server --env-file-if-exists=.env scripts/ebooks-delivery-recovery.ts evidence"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

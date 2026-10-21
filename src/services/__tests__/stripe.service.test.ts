@@ -222,6 +222,110 @@ describe('StripeService.handleWebhook', () => {
       expect.objectContaining({ data: { isFirstPurchase: false } }),
     );
   });
+
+  // Guarda D-B13: a sessao de ebook pertence ao endpoint dedicado de ebooks;
+  // este webhook de creditos registra IGNORED e nao credita nada.
+  it('caso 5: checkout.session.completed com metadata kind ebook → IGNORED no ledger, sem CreditBatch/Payment e sem console.error', async () => {
+    const mockEvent = {
+      id: 'evt_ebook_completed',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_ebook_1',
+          metadata: { kind: 'ebook' },
+          payment_intent: 'pi_ebook_1',
+          amount_total: 2900,
+          currency: 'usd',
+        },
+      },
+    };
+
+    stripeMocks.webhooksConstructEvent.mockReturnValue(mockEvent);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      await service.handleWebhook(Buffer.from('{}'), 'valid-sig');
+
+      expect(prismaMocks.stripeWebhookEventUpdate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: 'IGNORED' }) }),
+      );
+      expect(prismaMocks.paymentFindUnique).not.toHaveBeenCalled();
+      expect(prismaMocks.transaction).not.toHaveBeenCalled();
+      expect(prismaMocks.creditBatchCreate).not.toHaveBeenCalled();
+      expect(prismaMocks.paymentCreate).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  // Caso 6: charge.refunded de PaymentIntent de ebook (nenhum Payment local) →
+  // o updateMany por stripePaymentIntentId casa 0 linhas, nada muda e nada lanca.
+  it('caso 6: charge.refunded de PaymentIntent de ebook → nenhum Payment alterado e sem exceção', async () => {
+    const mockEvent = {
+      id: 'evt_ebook_refund',
+      type: 'charge.refunded',
+      data: {
+        object: {
+          id: 'ch_ebook_1',
+          payment_intent: 'pi_ebook_refund_1',
+          amount_refunded: 2900,
+          refunded: true,
+        },
+      },
+    };
+
+    stripeMocks.webhooksConstructEvent.mockReturnValue(mockEvent);
+    // Nenhum Payment casa com o PI de ebook: o updateMany acerta 0 linhas.
+    prismaMocks.paymentUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.handleWebhook(Buffer.from('{}'), 'valid-sig')).resolves.toBeUndefined();
+
+    expect(prismaMocks.paymentUpdateMany).toHaveBeenCalledTimes(1);
+    expect(prismaMocks.paymentUpdateMany).toHaveBeenCalledWith({
+      where: { stripePaymentIntentId: 'pi_ebook_refund_1' },
+      data: { status: 'REFUNDED' },
+    });
+    await expect(prismaMocks.paymentUpdateMany.mock.results[0]?.value).resolves.toEqual({
+      count: 0,
+    });
+    expect(prismaMocks.transaction).not.toHaveBeenCalled();
+    expect(prismaMocks.creditBatchCreate).not.toHaveBeenCalled();
+    expect(prismaMocks.paymentCreate).not.toHaveBeenCalled();
+  });
+
+  // Caso 7: charge.dispute.created de PaymentIntent de ebook (nenhum Payment
+  // local) → mesmo caminho do caso 6, com o status de disputa.
+  it('caso 7: charge.dispute.created de PaymentIntent de ebook → nenhum Payment alterado e sem exceção', async () => {
+    const mockEvent = {
+      id: 'evt_ebook_dispute',
+      type: 'charge.dispute.created',
+      data: {
+        object: {
+          id: 'dp_ebook_1',
+          payment_intent: 'pi_ebook_dispute_1',
+          status: 'needs_response',
+        },
+      },
+    };
+
+    stripeMocks.webhooksConstructEvent.mockReturnValue(mockEvent);
+    prismaMocks.paymentUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.handleWebhook(Buffer.from('{}'), 'valid-sig')).resolves.toBeUndefined();
+
+    expect(prismaMocks.paymentUpdateMany).toHaveBeenCalledTimes(1);
+    expect(prismaMocks.paymentUpdateMany).toHaveBeenCalledWith({
+      where: { stripePaymentIntentId: 'pi_ebook_dispute_1' },
+      data: { status: 'FAILED' },
+    });
+    await expect(prismaMocks.paymentUpdateMany.mock.results[0]?.value).resolves.toEqual({
+      count: 0,
+    });
+    expect(prismaMocks.transaction).not.toHaveBeenCalled();
+    expect(prismaMocks.creditBatchCreate).not.toHaveBeenCalled();
+    expect(prismaMocks.paymentCreate).not.toHaveBeenCalled();
+  });
 });
 
 /**

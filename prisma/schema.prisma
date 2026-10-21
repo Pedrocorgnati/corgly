@@ -1887,3 +1887,127 @@ model AppSetting {
 
   @@map("app_settings")
 }
+
+// Item 003: persistencia do modulo de ebooks (pedido, token de acesso,
+// ledger de entrega, idempotencia de webhook e log de acesso).
+
+enum EbookPaymentStatus {
+  PENDING
+  PAID
+  ASYNC_PENDING
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  DISPUTED
+}
+
+enum EbookDeliveryStatus {
+  PENDING
+  CLAIMED
+  SENDING
+  ACCEPTED
+  DELIVERED
+  NEEDS_REVIEW
+}
+
+model EbookOrder {
+  id                      String              @id @default(uuid())
+  checkoutSessionId       String              @unique @db.VarChar(255)
+  stripePaymentIntentId   String?             @unique @db.VarChar(255)
+  slug                    String              @db.VarChar(64)
+  email                   String              @db.VarChar(320)
+  locale                  String              @db.VarChar(8)
+  amountTotal             Int
+  currency                String              @db.VarChar(3)
+  paymentStatus           EbookPaymentStatus  @default(PENDING)
+  deliveryStatus          EbookDeliveryStatus @default(PENDING)
+  deliveryClaimId         String?             @db.VarChar(191)
+  deliveryClaimedAt       DateTime?
+  deliveryAttempts        Int                 @default(0)
+  purchasedAt             DateTime
+  billingCountry          String?             @db.VarChar(2)
+  cardCountry             String?             @db.VarChar(2)
+  refundedAt              DateTime?
+  refundedAmount          Int                 @default(0)
+  disputedAt              DateTime?
+  disputeId               String?             @unique @db.VarChar(255)
+  disputeStatus           String?             @db.VarChar(40)
+  withdrawalWaiverAt      DateTime?
+  withdrawalWaiverVersion String?             @db.VarChar(40)
+  firstDownloadAt         DateTime?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  accessTokens   EbookAccessToken[]
+  deliveryEvents EbookDeliveryEvent[]
+  accessLogs     EbookAccessLog[]
+
+  @@index([paymentStatus, createdAt])
+  @@index([deliveryStatus, updatedAt])
+  @@index([email])
+  @@map("ebook_orders")
+}
+
+model EbookAccessToken {
+  id            String    @id @default(uuid())
+  orderId       String
+  tokenHash     String    @unique @db.Char(64)
+  downloadCount Int       @default(0)
+  revokedAt     DateTime?
+  revokedReason String?   @db.VarChar(40)
+  createdAt     DateTime  @default(now())
+
+  accessLogs EbookAccessLog[]
+
+  order EbookOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@map("ebook_access_tokens")
+}
+
+model EbookDeliveryEvent {
+  id        String   @id @default(uuid())
+  orderId   String
+  event     String   @db.VarChar(60)
+  result    String   @db.VarChar(40)
+  detail    String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  order EbookOrder @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, createdAt])
+  @@map("ebook_delivery_events")
+}
+
+model EbookAccessLog {
+  id         String   @id @default(uuid())
+  orderId    String
+  tokenId    String
+  ip         String   @db.VarChar(45)
+  accessedAt DateTime @default(now())
+
+  order EbookOrder       @relation(fields: [orderId], references: [id])
+  token EbookAccessToken @relation(fields: [tokenId], references: [id])
+
+  @@index([orderId, accessedAt])
+  @@index([tokenId])
+  @@map("ebook_access_logs")
+}
+
+model EbookWebhookEvent {
+  id                String                   @id @default(uuid())
+  eventId           String                   @unique @db.VarChar(255)
+  type              String                   @db.VarChar(120)
+  status            StripeWebhookEventStatus @default(RECEIVED)
+  checkoutSessionId String?                  @db.VarChar(255)
+  claimedAt         DateTime?
+  attempts          Int                      @default(0)
+  errorMessage      String?                  @db.Text
+  processedAt       DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@index([status, updatedAt])
+  @@index([checkoutSessionId])
+  @@map("ebook_webhook_events")
+}

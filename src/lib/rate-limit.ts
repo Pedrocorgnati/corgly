@@ -14,6 +14,8 @@
  *   POST /auth/forgot-password → 3 req / 15 min / IP
  *   POST /sessions             → 20 req / 1 min / userId
  *   POST /webhooks/stripe      → 100 req / 1 min / IP
+ *   POST /ebooks/checkout      → 10 req / 1 min / (IP+UA)
+ *   GET  /ebooks/acesso/*      → 10 req / 1 min / IP e token
  *   GET  /**                   → 100 req / 1 min / userId
  */
 
@@ -43,6 +45,14 @@ export const RATE_LIMITS = {
   // um aluno autenticado, nao contra bot anonimo; IP compartilhado (escola, NAT)
   // puniria a turma inteira.
   EXERCISE_ANSWER_SUBMIT: { maxRequests: 60, windowMs: 60_000 },
+  // Compra anonima de ebook: 10 req / 1 min por (IP+UA). Empilha com o GENERAL
+  // do proxy; cada POST valido cria uma Checkout Session na Stripe, entao o teto
+  // e mais baixo que o geral.
+  EBOOK_CHECKOUT: { maxRequests: 10, windowMs: 60_000 },
+  // Acesso anonimo ao link de ebook: download do PDF, pagina e POST de
+  // desistencia em /ebooks/acesso/{token}/*. 10 req / 1 min aplicado a duas
+  // chaves (IP e hash do token), orcamento unico para todo o segmento.
+  EBOOK_ACCESS: { maxRequests: 10, windowMs: 60_000 },
 } as const;
 
 // ---------------------------------------------------------------------------

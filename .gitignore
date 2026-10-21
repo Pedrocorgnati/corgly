@@ -53,3 +53,4 @@ next-env.d.ts
 # Load test results
 tests/load/results/*.json
 tests/load/results/*.html
+/storage/ebooks-private/
