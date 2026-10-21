@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "book_id": "brazilian-portuguese-for-english-speakers",
+  "title": "Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners",
+  "language": "en",
+  "format": {
+    "size": "14x21cm",
+    "margins_mm": {
+      "top": 18,
+      "bottom": 18,
+      "inner": 18,
+      "outer": 18
+    }
+  },
+  "font": {
+    "family": "EB Garamond"
+  },
+  "pages": [
+    {
+      "number": 1,
+      "type": "cover"
+    },
+    {
+      "number": 2,
+      "type": "text"
+    },
+    {
+      "number": 3,
+      "type": "text"
+    },
+    {
+      "number": 4,
+      "type": "chapter"
+    },
+    {
+      "number": 5,
+      "type": "chapter"
+    },
+    {
+      "number": 6,
+      "type": "chapter"
+    },
+    {
+      "number": 7,
+      "type": "chapter"
+    },
+    {
+      "number": 8,
+      "type": "chapter"
+    },
+    {
+      "number": 9,
+      "type": "chapter"
+    },
+    {
+      "number": 10,
+      "type": "chapter"
+    },
+    {
+      "number": 11,
+      "type": "chapter"
+    },
+    {
+      "number": 12,
+      "type": "chapter"
+    },
+    {
+      "number": 13,
+      "type": "chapter"
+    }
+  ]
+}

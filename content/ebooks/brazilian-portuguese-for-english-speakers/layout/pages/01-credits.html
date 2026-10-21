@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Credits and Notices</title>
+</head>
+<body>
+<style>
+/*
+ * ebook.css - page furniture for the ebook
+ * "Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners".
+ *
+ * Inlined into every page by layout/compose_pages.py and applied on top of the
+ * generator's book.css: the body typography (EB Garamond, 10pt, justify,
+ * hyphens) is inherited from there and is not redefined here.
+ * No @import and no other external resource.
+ *
+ * The @font-face rules below repeat the ones in book.css on purpose: the
+ * generator loads book.css without a WeasyPrint FontConfiguration, so its
+ * @font-face rules are ignored and the PDF falls back to a system serif.
+ * Rules inside the page's own <style> are honored. The urls resolve against
+ * the composed pages directory (layout/pages/) and point at the font files
+ * shipped with the generator; they are read, never copied.
+ */
+
+/* --- Fonts ---------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+
+/* --- Page numbers --------------------------------------------------------- */
+
+@page {
+  @bottom-center {
+    content: counter(page);
+    font-family: 'EB Garamond', serif;
+    font-size: 9pt;
+  }
+}
+
+/* Cover page: no page number. */
+@page ebook-cover {
+  @bottom-center {
+    content: none;
+  }
+}
+
+/* --- Cover ---------------------------------------------------------------- */
+
+.ebook-cover {
+  page: ebook-cover;
+  break-after: page;
+  text-align: center;
+}
+
+.ebook-cover img {
+  width: 100%;
+  max-height: 12cm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 6mm auto;
+}
+
+.ebook-cover .cover-title {
+  font-size: 22pt;
+  font-weight: bold;
+  line-height: 1.15;
+  text-align: center;
+  hyphens: none;
+  margin: 4mm 0 3mm 0;
+}
+
+.ebook-cover .cover-subtitle {
+  font-size: 13pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+  margin: 0;
+}
+
+/* --- Headings ------------------------------------------------------------- */
+
+/* Chapter, credits and contents headings always start a new page. */
+.ebook-page h1 {
+  break-before: page;
+  page-break-before: always;
+  hyphens: none;
+}
+
+/* --- Figures -------------------------------------------------------------- */
+
+figure {
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure img {
+  max-width: 100%;
+  max-height: 11cm;
+  width: auto;
+  height: auto;
+}
+
+figcaption {
+  font-size: 8.5pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+}
+
+/* --- Tables --------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 3mm 0;
+  page-break-inside: auto;
+}
+
+th,
+td {
+  border: 0.4pt solid #8a7a62;
+  padding: 1mm 1.5mm;
+  text-align: left;
+  vertical-align: top;
+  hyphens: auto;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* --- Lists ---------------------------------------------------------------- */
+
+ul,
+ol {
+  padding-left: 5mm;
+}
+
+li {
+  margin: 0.8mm 0;
+  text-align: left;
+}
+
+/* --- Inline code: body face, no ugly monospace ---------------------------- */
+
+code {
+  font-family: inherit;
+  font-style: italic;
+}
+
+/* --- Links ---------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Table of contents ---------------------------------------------------- */
+
+.ebook-contents ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ebook-contents li {
+  margin: 2mm 0;
+  text-align: left;
+  hyphens: none;
+}
+
+.ebook-contents a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ebook-contents a::after {
+  content: leader('.') target-counter(attr(href), page);
+}
+</style>
+<div lang="en" class="ebook-page ebook-credits">
+<h1>Credits and Notices</h1>
+<h2>How this book was made</h2>
+<p>This book was drafted with the help of artificial intelligence, and its illustrations are AI-generated in a didactic drawing style. The factual claims were tied to the research file kept with the manuscript, and no human review of the full text is declared here. No native-speaker check was performed on the Portuguese examples, respellings or transcriptions, so every example that is not tied to a cited source is the author's illustration and remains unconfirmed.</p>
+<p>The illustrations are didactic drawings. They do not depict real people, places or events.</p>
+<h2>Title</h2>
+<p>Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners (working title). The title is provisional and may change before release.</p>
+<h2>Variant</h2>
+<p>This book teaches Brazilian Portuguese. The Celpe-Bras exam is used only as a reference for the Brazilian variant [F7]. The book makes no promise about preparation for that exam or for any other.</p>
+<h2>Sources</h2>
+<p>The factual claims in the chapters point to numbered sources, written as [F1], [F2] and so on, which are listed in the research file kept with the manuscript. A claim without a number is the author's suggestion or the author's illustration, and the text says so where it matters.</p>
+<h2>What is not stated here</h2>
+<p>The author name, the publisher and the edition date are not stated in this file. They will be added when they are decided.</p>
+</div>
+</body>
+</html>

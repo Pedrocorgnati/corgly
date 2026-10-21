@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Chapter 1: Why Brazilian Portuguese Is Close and Far</title>
+</head>
+<body>
+<style>
+/*
+ * ebook.css - page furniture for the ebook
+ * "Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners".
+ *
+ * Inlined into every page by layout/compose_pages.py and applied on top of the
+ * generator's book.css: the body typography (EB Garamond, 10pt, justify,
+ * hyphens) is inherited from there and is not redefined here.
+ * No @import and no other external resource.
+ *
+ * The @font-face rules below repeat the ones in book.css on purpose: the
+ * generator loads book.css without a WeasyPrint FontConfiguration, so its
+ * @font-face rules are ignored and the PDF falls back to a system serif.
+ * Rules inside the page's own <style> are honored. The urls resolve against
+ * the composed pages directory (layout/pages/) and point at the font files
+ * shipped with the generator; they are read, never copied.
+ */
+
+/* --- Fonts ---------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+
+/* --- Page numbers --------------------------------------------------------- */
+
+@page {
+  @bottom-center {
+    content: counter(page);
+    font-family: 'EB Garamond', serif;
+    font-size: 9pt;
+  }
+}
+
+/* Cover page: no page number. */
+@page ebook-cover {
+  @bottom-center {
+    content: none;
+  }
+}
+
+/* --- Cover ---------------------------------------------------------------- */
+
+.ebook-cover {
+  page: ebook-cover;
+  break-after: page;
+  text-align: center;
+}
+
+.ebook-cover img {
+  width: 100%;
+  max-height: 12cm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 6mm auto;
+}
+
+.ebook-cover .cover-title {
+  font-size: 22pt;
+  font-weight: bold;
+  line-height: 1.15;
+  text-align: center;
+  hyphens: none;
+  margin: 4mm 0 3mm 0;
+}
+
+.ebook-cover .cover-subtitle {
+  font-size: 13pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+  margin: 0;
+}
+
+/* --- Headings ------------------------------------------------------------- */
+
+/* Chapter, credits and contents headings always start a new page. */
+.ebook-page h1 {
+  break-before: page;
+  page-break-before: always;
+  hyphens: none;
+}
+
+/* --- Figures -------------------------------------------------------------- */
+
+figure {
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure img {
+  max-width: 100%;
+  max-height: 11cm;
+  width: auto;
+  height: auto;
+}
+
+figcaption {
+  font-size: 8.5pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+}
+
+/* --- Tables --------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 3mm 0;
+  page-break-inside: auto;
+}
+
+th,
+td {
+  border: 0.4pt solid #8a7a62;
+  padding: 1mm 1.5mm;
+  text-align: left;
+  vertical-align: top;
+  hyphens: auto;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* --- Lists ---------------------------------------------------------------- */
+
+ul,
+ol {
+  padding-left: 5mm;
+}
+
+li {
+  margin: 0.8mm 0;
+  text-align: left;
+}
+
+/* --- Inline code: body face, no ugly monospace ---------------------------- */
+
+code {
+  font-family: inherit;
+  font-style: italic;
+}
+
+/* --- Links ---------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Table of contents ---------------------------------------------------- */
+
+.ebook-contents ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ebook-contents li {
+  margin: 2mm 0;
+  text-align: left;
+  hyphens: none;
+}
+
+.ebook-contents a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ebook-contents a::after {
+  content: leader('.') target-counter(attr(href), page);
+}
+</style>
+<div lang="en" class="ebook-page ebook-chapter">
+<h1 id="ch01" class="chapter-title">Chapter 1: Why Brazilian Portuguese Is Close and Far</h1>
+<p>If you are reading this, you have already touched Portuguese: an app streak, a class, a few phrases before a trip. That is the right starting point, and it is enough to use this book. It also means you already carry a mental map of the language, and parts of that map are wrong. Some things in Brazilian Portuguese will feel strangely close. Other things, which look easy on the page, will fight you for months. This chapter redraws the map so you spend your time where it pays.</p>
+<p>Here is the short version. Portuguese is close to English in the learned words you read, and far from English in the everyday words you speak and in the sounds you hear. English speakers usually invert that picture. They brace for grammar to be the mountain and treat pronunciation as a hill, then wonder why conversation keeps stalling on sounds while the grammar rules land quickly. Setting that straight is the whole point of this chapter.</p>
+<h2>Close to Spanish and Italian, far from English</h2>
+<p>There is a standard measure of how much of two languages' vocabulary looks alike: lexical similarity. The lexical similarity between Portuguese and English is about 0.20 [F9]. Between Portuguese and Spanish it is about 0.89 [F9]. Between Portuguese and Italian it is about 0.80 [F9].</p>
+<p>Pause on those numbers and feel what they say. Portuguese sits in the same neighbourhood as Spanish and Italian. English sits across the street. So the sentence "Portuguese must be easy because it is like Spanish" is true for a Spanish speaker and misleading for you. The word forms you share with Portuguese are few. The word forms Portuguese shares with Spanish are many.</p>
+<p>That is the "far" half of this chapter's title, and it is the honest half. Do not read it as bad news. Read it as a budget decision: you cannot rely on look-alikes the way a Spanish speaker can, so the words you need most have to be learned on purpose. Now for the "close" half, which is just as real.</p>
+<figure class="ebook-figure" id="img01"><img src="../../illustrations/img01-ch01-close-and-far-similarity-board.png" alt="Simple comparison board showing lexical similarity between Portuguese and English against Spanish and Italian, so the reader sees the gap between vocabulary and sound" /><figcaption>Simple comparison board showing lexical similarity between Portuguese and English against Spanish and Italian, so the reader sees the gap between vocabulary and sound</figcaption></figure><h2>Where your English genuinely helps: the French and Latin layers</h2>
+<p>About 28.30% of English vocabulary comes from French [F10], and about 28.24% comes from Latin [F10]. Portuguese grew out of Latin, so the learned layers of the two languages meet and overlap. Open a formal Portuguese text, an opinion piece, a work email, a museum label, and you will recognize far more words than the similarity figure led you to expect. That is the engine behind most of the cognates you will exploit in Chapter 2.</p>
+<p>Then comes the second figure, and it is the one that explains why speaking feels harder than reading. About 83% of the most frequent English words are native [F10]. The English words you use without thinking are the old, everyday core of the language, and that core is precisely the part with no twin waiting for you in Portuguese. The shared material lives in the learned layer, and the learned layer shows up more in writing than in chat at a bus stop. (The link between those figures and your experience of speaking is this book's practical reading of them, not a claim of the source.)</p>
+<p>So the same reader has two different experiences, and you should plan for both:</p>
+<ul>
+<li>Reading is your head start. Expect to understand more written Portuguese than you can produce. That gap is the shape of these two languages, not a sign that you are failing.</li>
+<li>Conversation is where you will feel the distance. The short, frequent words that hold a conversation together are the ones English helps with least, so they must be trained directly.</li>
+<li>Talk and chunks before lists. Because the everyday core does not arrive for free, learn it as it is actually used, in short phrases you can say out loud, instead of waiting for reading practice to hand it to you.</li>
+</ul>
+<p>This is also where the first strategy pillar of the book appears, and in this chapter it is motivation only: treat your English as a cognate engine with a false-friend brake. Many English words convert into Portuguese through regular patterns of spelling and suffixes, and sometimes the pattern lies to you and the look-alike means something else. Chapter 2 turns that idea into a daily routine. The promise here is modest and true: your vocabulary is worth more on paper than in your mouth at the beginning, and you can convert that paper advantage into spoken advantage with deliberate work.</p>
+<h2>Which Portuguese does this book teach?</h2>
+<p>Brazilian Portuguese: the variant certified by Celpe-Bras [F7]. The exam is mentioned here for exactly one reason, which is to name the variant this book teaches. To be explicit about what that does not mean: this book makes no promise about any exam. It does not prepare you for Celpe-Bras or for any other test, and passing an exam is not one of its goals. If you are studying for a specific exam, use the materials built for that exam and treat this book as a strategy guide on the side.</p>
+<p>The pronunciation reference of the book is broad Brazilian pronunciation. Where a regional difference changes what you actually hear, the book says so and marks it as regional. Otherwise one shared reference is enough for a false beginner who needs priorities more than maps of every city.</p>
+<h2>What this book covers</h2>
+<p>The book is organised around decisions, not around completeness. It gives you:</p>
+<ul>
+<li>honest priorities, so you know which work pays first and which work can wait;</li>
+<li>the sound contrasts that matter most for being understood, ranked by what each one buys you;</li>
+<li>the grammar traps that English sets, the places where your first language quietly sends you the wrong structure;</li>
+<li>everyday spoken Brazilian Portuguese, taught as normal use rather than as slang or error;</li>
+<li>politeness strategies and a decoder for indirect refusals, which are easy to misread;</li>
+<li>a side track in every chapter for readers who also speak Spanish;</li>
+<li>an error deck and a review plan at the end of the book, so mistakes get corrected instead of repeated.</li>
+</ul>
+<h2>What this book does not do</h2>
+<p>Three promises matter as much as the contents.</p>
+<p>First, there are no audio files and no QR codes in this book. What the book offers is transcription only: Portuguese written down, plus a respelling so you can approximate it. You will still need real Brazilian speech from somewhere else, and the appendix points to free open materials for exactly that.</p>
+<p>Second, there is no exam promise. Nothing in these pages is a guarantee about Celpe-Bras or any other certificate. The exam is cited only as the reference for the Brazilian variant [F7].</p>
+<p>Third, there are no numeric vocabulary targets. You will not be told to memorize a fixed number of words by a fixed date. This book treats vocabulary as a continuous gain: every useful word you add makes more Portuguese comprehensible, and the practical rule is to learn the frequent words you actually need before the exotic ones. Counting words is a poor substitute for using them.</p>
+<h2>How to read the respelling</h2>
+<p>This book never asks you to learn a phonetic alphabet in the main text. Instead, Portuguese words are followed by a simple respelling in English letters. The stressed syllable is written in CAPITALS, because stress is the thing that most often gives away a foreign accent and the thing you can copy immediately.</p>
+<p>obrigado = oh-bree-GAH-doo</p>
+<p>Read that as: stress on the third syllable, and every vowel said clean and short. Here is the key, with the author's illustrations, not sourced pronunciations.</p>
+<table>
+<thead>
+<tr>
+<th>Written form</th>
+<th>Sounds roughly like</th>
+<th>Illustration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a</td>
+<td>"ah" in father</td>
+<td>casa = KAH-zah</td>
+</tr>
+<tr>
+<td>e</td>
+<td>"eh" in bet</td>
+<td>mesa = MEH-zah</td>
+</tr>
+<tr>
+<td>i</td>
+<td>"ee" in see</td>
+<td>aqui = ah-KEE</td>
+</tr>
+<tr>
+<td>o</td>
+<td>"oh" in note, but pure, with no glide</td>
+<td>como = KOH-moo</td>
+</tr>
+<tr>
+<td>u</td>
+<td>"oo" in food</td>
+<td>tudo = TOO-doo</td>
+</tr>
+<tr>
+<td>final -o</td>
+<td>"oo"</td>
+<td>obrigado = oh-bree-GAH-doo</td>
+</tr>
+<tr>
+<td>final -e</td>
+<td>"ee" in most of Brazil</td>
+<td>importante = eem-pohr-TAHN-chee</td>
+</tr>
+<tr>
+<td>ch</td>
+<td>"sh" in shop</td>
+<td>chá = shah</td>
+</tr>
+<tr>
+<td>ç, and c before e or i</td>
+<td>"s" in sun</td>
+<td>você = voh-SEH</td>
+</tr>
+<tr>
+<td>j, and g before e or i</td>
+<td>the middle sound of "measure", written zh</td>
+<td>já = zhah</td>
+</tr>
+<tr>
+<td>lh</td>
+<td>close to the "ly" in million</td>
+<td>filho = FEE-lyoo</td>
+</tr>
+<tr>
+<td>nh</td>
+<td>close to the "ny" in canyon</td>
+<td>ninho = NEE-nyoo</td>
+</tr>
+<tr>
+<td>r at the start of a word, and rr</td>
+<td>close to a strong English "h"</td>
+<td>rua = HOO-ah</td>
+</tr>
+<tr>
+<td>ã, õ, and m or n after a vowel</td>
+<td>the vowel said through the nose</td>
+<td>mão = mowng, roughly</td>
+</tr>
+</tbody>
+</table>
+<p>Two habits make the key work for you. Read the respelling out loud every time you meet a new word, and say the vowels clean: Portuguese vowels do not glide the way English ones do, so "oh" is not the "oh" of "go". And treat the respelling as an approximation you will refine by ear, not as a destination.</p>
+<h2>The two labels you will see later: "changes meaning" and "accent only"</h2>
+<p>From Chapter 3 onward, every sound this book trains carries one of two labels.</p>
+<p>"Changes meaning" marks a contrast where getting it wrong can turn one word into another. If a sound difference can swap one word for another in the ears of your listener, that contrast belongs at the top of your list, because a mistake there costs meaning, not just style.</p>
+<p>"Accent only" marks a feature that makes you sound foreign but does not create another word. Those features are worth fixing eventually, and they come after the meaning contrasts in the order of work.</p>
+<p>The ranking matters because of the goal this book declares for pronunciation: to be understood without effort. That is a different goal from sounding native, and it is the honest one for an adult learner with limited study time. Chapter 4 shows how the two columns are built and how to train each one. For now, keep the labels in mind: whenever you read a sound description later, you will know whether it is a meaning problem or a style problem, and you will know which one to fix first. This is the preview of the intelligibility hierarchy, one of the pillars of the book's strategy.</p>
+<h2>If you speak Spanish</h2>
+<p>Your Spanish is a real asset and a real risk at the same time. In this overview chapter, three traps are worth naming up front.</p>
+<ol>
+<li>Closeness makes you assume the sounds match. Portuguese and Spanish are extremely close in vocabulary, with a lexical similarity of about 0.89 [F9], so the temptation is to pronounce Portuguese as Spanish with different words. Closeness on paper does not mean the sound systems line up, and this book treats that assumption as a risk to check, not as a given.</li>
+<li>Look-alike words drift. Words that look identical across the two languages do not always mean the same thing, and small differences in meaning or usage are exactly what you will miss. A tip that many learners find useful: treat every Spanish-looking Portuguese word as a candidate to check before you trust it. For illustration, Spanish "largo" (long) and Portuguese "largo" (wide) share a form but are not the same word in use.</li>
+<li>Soft b, d, g between vowels. English-Spanish bilinguals produce the voiced stops as Spanish-style approximants [F36], which can make Portuguese words sound softer and less defined than many Brazilian speakers expect.</li>
+</ol>
+<p>Also worth knowing as a plan: English-Spanish bilinguals depend on Spanish when learning Portuguese, whatever the order in which they acquired their languages [F62]. That dependence is not a defect to be ashamed of. It is simply the material you have to manage, and Chapter 8 is built for it.</p>
+<p>A practice suggestion for this chapter: the full-stop drill. In Portuguese, produce b, d and g as real stops, with a complete closure, especially between vowels. Say these author's illustrations slowly and deliberately, and make the consonant hard rather than soft:</p>
+<ul>
+<li>cada = KAH-dah</li>
+<li>lado = LAH-doo</li>
+<li>fogo = FOH-goo</li>
+</ul>
+<p>Say each word, then put it in a short phrase of your own, then say it again at conversational speed without letting the consonant soften. The drill is a suggestion, not a test, and it is worth repeating whenever you warm up.</p>
+<h2>Where to spend your time</h2>
+<p>If you only keep one map from this chapter, keep this one. Spend early time on the everyday words and phrases that conversation runs on, and on the sound contrasts that change meaning. Spend later time on the accent-only details. Use your English for reading and for the learned vocabulary, and stop trusting it blindly where words look similar. Grammar needs work, but it is not the mountain you were bracing for; the traps are specific, they are named in Chapter 5, and they are fixable.</p>
+<h2>Self-test</h2>
+<p>This section exists because retrieving what you just read is what makes it stick: a meta-analysis of the testing effect compares testing with restudy [F94]. Answer from memory first, then check.</p>
+<ol>
+<li>What is the lexical similarity between Portuguese and English, and how does it compare with the figures for Spanish and Italian?</li>
+<li>Which two major sources of English vocabulary explain why written Portuguese feels more familiar than expected?</li>
+<li>What share of the most frequent English words is native, and why does that matter for conversation?</li>
+<li>Why does this book mention Celpe-Bras at all?</li>
+<li>State the promise this book does not make about exams.</li>
+<li>Name two things this book does not provide.</li>
+<li>How do you read the CAPITAL letters in a respelling?</li>
+<li>What does the label "changes meaning" mark, and what does "accent only" mark?</li>
+<li>What is the declared goal for pronunciation in this book?</li>
+<li>In the Spanish box, what should you do with b, d and g between vowels in Portuguese?</li>
+</ol>
+<h2>Answer key</h2>
+<ol>
+<li>About 0.20 [F9], which is much lower than about 0.89 with Spanish [F9] and about 0.80 with Italian [F9]. Portuguese is a close relative of Spanish and Italian, not of English, in word forms.</li>
+<li>French and Latin: about 28.30% of English vocabulary comes from French [F10] and about 28.24% from Latin [F10], and Portuguese shares that learned layer.</li>
+<li>About 83% of the most frequent English words are native [F10], so the everyday words that carry a conversation are the ones English helps you with least.</li>
+<li>Only as the reference for the Brazilian variant, the variant certified by Celpe-Bras [F7].</li>
+<li>This book makes no promise about any exam. It does not prepare you for Celpe-Bras or any other test.</li>
+<li>Any two of these: no audio files, no QR codes, transcription only, no numeric vocabulary targets.</li>
+<li>The CAPITAL letters mark the stressed syllable, as in obrigado = oh-bree-GAH-doo.</li>
+<li>"Changes meaning" marks a contrast where a mistake can produce a different word. "Accent only" marks a feature that makes you sound foreign but does not create another word.</li>
+<li>To be understood without effort, not to sound native.</li>
+<li>Produce them as full stops with complete closure, rather than as Spanish-style approximants [F36].</li>
+</ol>
+<h2>Spaced review plan</h2>
+<p>As the author's suggestion, here is a simple calendar for this chapter. Read it once today, then come back to it on the following days:</p>
+<ul>
+<li>D+1 after reading</li>
+<li>D+3 after reading</li>
+<li>D+8 after reading</li>
+<li>D+27 after reading</li>
+</ul>
+<p>On each return, do not reread the whole chapter first. Run the self-test from memory, then reread only the parts you missed. These four review points are the author's adaptation of the interval idea in a spacing study [F90], which measured a single gap between two study sessions. That source did not test this calendar, and the four points are a suggestion, not a result reported by that study. Adjust the timing to your own week if you need to; the habit of returning and retrieving matters more than the exact day.</p>
+</div>
+</body>
+</html>

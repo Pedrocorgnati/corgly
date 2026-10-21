@@ -21,8 +21,8 @@ From this chapter onward, the book also uses broad IPA in square brackets, in Ch
 | a (stressed) | "ah" in father | pato = PAH-too |
 | a closed o, often written with the circumflex | "oh" in note, said pure and without glide | avô = ah-VOH |
 | an open o, often written with the acute accent | "aw" in law, said short and without glide | avó = ah-VAW |
-| a closed e | "ay" in grey, said without glide | sede (headquarters) = SAY-djee |
-| an open e | "eh" in bet | sede (thirst) = SEH-djee |
+| a closed e | "ay" in grey, said without glide | sede (thirst) = SAY-djee |
+| an open e | "eh" in bet | sede (headquarters) = SEH-djee |
 | final -o | "oo" in food | tudo = TOO-doo |
 | final -e | "ee" in see in most of Brazil | pode = PAW-djee |
 | a vowel followed by m or n, or written with ã or õ | the vowel said through the nose | mão = mowng, roughly |
@@ -35,7 +35,7 @@ Say "pin" and "spin" out loud in English and listen to the p. In "pin" there is 
 
 The technical measure is voice onset time, the gap between the moment the stop is released and the moment voicing begins. In a study that measured these stops, voice onset time was about 55 ms for p, about 70 ms for t and about 80 ms for k in English, against about 12 ms, about 18 ms and about 38 ms in Brazilian Portuguese [F24]. A stop with zero or negative voice onset time is identified as voiced by an English speaker [F24], and that is exactly the trap, because the Brazilian Portuguese stops sit so far down that scale. One caution about that study matters here: it follows Brazilians learning English, which is the reverse direction from you, so applying those figures to Portuguese word pairs is an inference rather than a result measured on English speakers learning Portuguese [F24]. The structural point is on firmer ground: English and Brazilian Portuguese use voice onset time in different ways [F26].
 
-This is a meaning contrast, because p versus b, t versus d and k versus g are real word pairs. Here are the author's illustrations, queued for native-speaker review:
+This is a meaning contrast, because p versus b, t versus d and k versus g are real word pairs. Here are the author's illustrations:
 
 - pato "duck" [ˈpatu] and bato "I hit" [ˈbatu]
 - tom "tone" [tõ] and dom "gift" [dõ]
@@ -55,13 +55,13 @@ The pairs are closed e [e] against open e [ɛ], and closed o [o] against open o 
 
 Speakers of American English have difficulty both hearing and producing these mid vowels, and learners tend to overcorrect [F18]. That last point deserves a warning sign. Once you know the contrast exists, you may start opening vowels that should stay closed and closing vowels that should open. So when you practise, work with pairs rather than with isolated words, and let the pair tell you which vowel is which.
 
-Here are the author's illustrations, again queued for native-speaker review:
+Here are the author's illustrations again:
 
 - avô [aˈvo] "grandfather" against avó [aˈvɔ] "grandmother"
 - pôde [ˈpodʒi] "managed to, could" against pode [ˈpɔdʒi] "can, is allowed"
-- sede [ˈsɛdʒi] "thirst" against sede [ˈsedʒi] "seat, headquarters"
+- sede [ˈsedʒi] "thirst" against sede [ˈsɛdʒi] "seat, headquarters"
 
-Say them with the respelling: ah-VOH against ah-VAW, POH-djee against PAW-djee, SEH-djee against SAY-djee. The spelling of the second pair differs by the accent mark only, and the spelling of the third pair does not differ at all, so the whole contrast lives in your mouth and your ear. That is why this one is marked "changes meaning": in these pairs the vowel is the only thing carrying the difference between two words.
+Say them with the respelling: ah-VOH against ah-VAW, POH-djee against PAW-djee, SAY-djee against SEH-djee. The spelling of the second pair differs by the accent mark only, and the spelling of the third pair does not differ at all, so the whole contrast lives in your mouth and your ear. That is why this one is marked "changes meaning": in these pairs the vowel is the only thing carrying the difference between two words.
 
 A useful habit while you listen: forget the English glide. A Portuguese closed o is not the "oh" of "go", it is a steady vowel with no movement at the end. The same holds for the closed e, which is not the moving vowel of "day". Pure and still, and the two qualities separate.
 
@@ -69,7 +69,7 @@ A useful habit while you listen: forget the English glide. A Portuguese closed o
 
 Brazilian Portuguese has five nasal vowels in the description this chapter relies on, and that description rests on a single speaker [F21]. Treat it as a description to learn from rather than a map of every Brazilian mouth. On top of the nasal vowels sit nasal diphthongs, the kind you meet in não and mão, where the glide is nasal too.
 
-The illustrations below are the author's own, queued for native-speaker review:
+The illustrations below are the author's own:
 
 - mão [mɐ̃w̃] "hand" against mau [maw] "bad"
 - lã [lɐ̃] "wool" against lá [la] "there"
@@ -135,10 +135,10 @@ Retrieving what you just read is what makes it stick: a meta-analysis of the tes
 ## Answer key
 
 1. The puff after p, t and k (aspiration, measured as voice onset time), the open and closed mid vowels (e and o), and the nasal vowels with the nasal diphthongs.
-2. The gap between the release of a stop and the start of voicing. English uses the longer values [F24].
-3. About 55 ms for p, 70 ms for t and 80 ms for k in English, against about 12 ms, 18 ms and 38 ms in Brazilian Portuguese [F24].
+2. The gap between the release of a stop and the start of voicing. English uses the longer values [F24], a finding from a study of Brazilians learning English, the reverse direction from this book's readers.
+3. About 55 ms for p, 70 ms for t and 80 ms for k in English, against about 12 ms, 18 ms and 38 ms in Brazilian Portuguese [F24], figures measured on Brazilians learning English, the reverse direction from this book's readers.
 4. That study follows Brazilians learning English, the reverse direction from this book's readers, so applying the figures to Portuguese pairs is an inference [F24].
-5. As voiced [F24].
+5. As voiced [F24], a finding from the same study of Brazilians learning English, the reverse direction from this book's readers.
 6. That English and Brazilian Portuguese use voice onset time in different ways [F26].
 7. Closed e [e] against open e [ɛ], and closed o [o] against open o [ɔ].
 8. Learners tend to overcorrect [F18]: opening vowels that should stay closed and closing vowels that should open.

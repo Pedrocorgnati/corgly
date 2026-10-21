@@ -10,7 +10,7 @@ English uses "be" for identity, for state, for location and for a good deal more
 
 An approach that treats the choice as a matter of probability in context, instead of a single rule, has been tested with American students [F58]. The practical version of that idea is the author's suggestion: learn ser and estar with the kind of sentence they appear in, and keep a small notebook of the sentences that surprised you, instead of hunting for a rule that will cover everything.
 
-Here are the author's illustrations, queued for native-speaker review, showing where the permanent and temporary shortcut breaks:
+Here are the author's illustrations, showing where the permanent and temporary shortcut breaks:
 
 - O aeroporto é longe do centro. "The airport is far from downtown." A fixed place takes ser, even though nothing about it is temporary in the way the rule means.
 - Estou no aeroporto agora. "I am at the airport now." A person's present position takes estar.
@@ -21,7 +21,7 @@ One more warning, offered by analogy only. In a study of English speakers learni
 
 English uses the present tense after "when" and "if" in many future sentences: "When I get home, I will call you." Portuguese uses the subjunctive future in that same spot, where English uses the present [F60]. The form is not exotic book language. It is the ordinary way to say what will happen when something else happens.
 
-Author's illustrations, queued for native-speaker review:
+Author's illustrations:
 
 - Quando eu chegar em casa, eu te ligo. "When I get home, I will call you."
 - Se der tempo, a gente se vê. "If there is time, we will see each other."
@@ -32,7 +32,7 @@ The habit to build is simple, and it is the author's suggestion: as soon as a fu
 
 The English present perfect is one of the transfers to watch in this book. Native English speakers transfer it into Portuguese at all levels [F71], which means it does not disappear as you advance.
 
-The author's illustration: "I've seen this movie" against "Já vi esse filme". English builds the sentence with "have" plus a past participle and points at a past event with present relevance. Portuguese here answers with a simple past, with já, "already", placed before the verb. That illustration is the author's own and is queued for native-speaker review.
+The author's illustration: "I've seen this movie" against "Já vi esse filme". English builds the sentence with "have" plus a past participle and points at a past event with present relevance. Portuguese here answers with a simple past, with já, "already", placed before the verb. That illustration is the author's own.
 
 As the author's suggestion, when you feel the English "I have already done it" rising, reach for já plus the simple past instead of building a perfect. Write the sentence down in the form you actually said, then in the Portuguese form, and let the pair sit in your error deck for later review.
 
@@ -42,13 +42,13 @@ English repeats the object. "I saw it", "I know her", "We need them". Portuguese
 
 The object pronoun itself is in motion. According to the abstract of a study based on a written corpus, the clitic o/a is in disuse in speech and persists in writing, with ele/ela or the null object in its place [F64]. So the grammar book's o/a forms are forms you will read more often than you will hear.
 
-Word order completes the picture. Initial proclisis is common in Brazilian Portuguese speech [F65], meaning the object pronoun can stand before the verb at the start of a sentence. Author's illustration, queued for native-speaker review: "Me ajuda aqui?" for "Can you help me here?", with the pronoun before the verb. In listening practice, expect that order.
+Word order completes the picture. Initial proclisis is common in Brazilian Portuguese speech [F65], meaning the object pronoun can stand before the verb at the start of a sentence. Author's illustration: "Me ajuda aqui?" for "Can you help me here?", with the pronoun before the verb. In listening practice, expect that order.
 
 ## Subject pronouns, "a gente" and regional "tu"
 
 Brazilian Portuguese shows loss of the referential null subject and filling of the pronominal subject, above all in the first and second persons [F15]. In practice, hearing "eu" and "você" more often than a textbook ending-only picture would lead you to expect is normal.
 
-Meanwhile the pronoun for "we" is shifting. A gente is replacing nós [F67] and competes with it in complement functions [F66]. Author's illustrations, queued for native-speaker review: "A gente vai amanhã." for "We are going tomorrow." and "Nós vamos amanhã." as the more conservative option. A gente is worth learning as a unit, and the verb that follows it takes the third-person singular shape.
+Meanwhile the pronoun for "we" is shifting. A gente is replacing nós [F67] and competes with it in complement functions [F66]. Author's illustrations: "A gente vai amanhã." for "We are going tomorrow." and "Nós vamos amanhã." as the more conservative option. A gente is worth learning as a unit, and the verb that follows it takes the third-person singular shape.
 
 Regional tu adds one more layer. The choice between tu and você varies, and tu can appear with a third-person verb form, as in "tu vai" [F68]. Treat that as a pattern you should recognize in speech, and as the author's suggestion, choose the pronoun habit of the region you are in rather than mixing them in one conversation.
 
@@ -56,13 +56,13 @@ Regional tu adds one more layer. The choice between tu and você varies, and tu 
 
 English gives you no warning here. Gender errors in learners mix transfer and overgeneralization, and English L1 appears among the groups studied [F69]. In Spanish L2 the error has been described as one of lexical assignment, not a syntactic deficit [F70]. As the author's reading, this suggests the learner who says the wrong article may simply have stored the word without its gender.
 
-If gender is a property of the stored word, the fix is storage. Learn every noun with its article, and drill the pair as one item. Author's illustrations, queued for native-speaker review: "o dia", "a noite", "o problema". When you add a new noun to your notebook, the entry is never just the noun. It is the noun with the article in front of it.
+If gender is a property of the stored word, the fix is storage. Learn every noun with its article, and drill the pair as one item. Author's illustrations: "o dia", "a noite", "o problema". When you add a new noun to your notebook, the entry is never just the noun. It is the noun with the article in front of it.
 
 ## Existential "ter": what "there is" becomes
 
 English opens existential sentences with an empty "there": "There is a bank near here." Existential ter predominates over haver in Brazilian Portuguese, and haver is favored in the past [F72].
 
-Author's illustrations, queued for native-speaker review:
+Author's illustrations:
 
 - Tem uma farmácia aqui perto. "There is a pharmacy near here."
 - Havia uma fila grande ontem. "There was a long line yesterday."
@@ -73,7 +73,7 @@ For everyday speech, ter is the form to reach for in the present, and haver is t
 
 Many Portuguese verbs come with their own preposition, and it is not always the one English would pick. As the author's suggestion, learn the verb with its preposition as a block rather than translating preposition by preposition. Prepositions of regência are documented as a source of English-Portuguese interference [F73]. The limitation matters here: the cited literature mostly covers Portuguese speakers learning English, and studies of English speakers learning Portuguese are lacking [F73]. What you can take is the warning, not a measured error profile for your own case.
 
-Author's illustrations, queued for native-speaker review: "gostar de música" for "to like music", "precisar de ajuda" for "to need help", and "morar em São Paulo" for "to live in São Paulo". When a new verb arrives in your notebook, write the preposition beside it the same day.
+Author's illustrations: "gostar de música" for "to like music", "precisar de ajuda" for "to need help", and "morar em São Paulo" for "to live in São Paulo". When a new verb arrives in your notebook, write the preposition beside it the same day.
 
 ### Suggestions for the traps this book cannot source
 

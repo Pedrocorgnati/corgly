@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Appendix: False Friends, Minimal Pairs and Free Resources</title>
+</head>
+<body>
+<style>
+/*
+ * ebook.css - page furniture for the ebook
+ * "Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners".
+ *
+ * Inlined into every page by layout/compose_pages.py and applied on top of the
+ * generator's book.css: the body typography (EB Garamond, 10pt, justify,
+ * hyphens) is inherited from there and is not redefined here.
+ * No @import and no other external resource.
+ *
+ * The @font-face rules below repeat the ones in book.css on purpose: the
+ * generator loads book.css without a WeasyPrint FontConfiguration, so its
+ * @font-face rules are ignored and the PDF falls back to a system serif.
+ * Rules inside the page's own <style> are honored. The urls resolve against
+ * the composed pages directory (layout/pages/) and point at the font files
+ * shipped with the generator; they are read, never copied.
+ */
+
+/* --- Fonts ---------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+
+/* --- Page numbers --------------------------------------------------------- */
+
+@page {
+  @bottom-center {
+    content: counter(page);
+    font-family: 'EB Garamond', serif;
+    font-size: 9pt;
+  }
+}
+
+/* Cover page: no page number. */
+@page ebook-cover {
+  @bottom-center {
+    content: none;
+  }
+}
+
+/* --- Cover ---------------------------------------------------------------- */
+
+.ebook-cover {
+  page: ebook-cover;
+  break-after: page;
+  text-align: center;
+}
+
+.ebook-cover img {
+  width: 100%;
+  max-height: 12cm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 6mm auto;
+}
+
+.ebook-cover .cover-title {
+  font-size: 22pt;
+  font-weight: bold;
+  line-height: 1.15;
+  text-align: center;
+  hyphens: none;
+  margin: 4mm 0 3mm 0;
+}
+
+.ebook-cover .cover-subtitle {
+  font-size: 13pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+  margin: 0;
+}
+
+/* --- Headings ------------------------------------------------------------- */
+
+/* Chapter, credits and contents headings always start a new page. */
+.ebook-page h1 {
+  break-before: page;
+  page-break-before: always;
+  hyphens: none;
+}
+
+/* --- Figures -------------------------------------------------------------- */
+
+figure {
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure img {
+  max-width: 100%;
+  max-height: 11cm;
+  width: auto;
+  height: auto;
+}
+
+figcaption {
+  font-size: 8.5pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+}
+
+/* --- Tables --------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 3mm 0;
+  page-break-inside: auto;
+}
+
+th,
+td {
+  border: 0.4pt solid #8a7a62;
+  padding: 1mm 1.5mm;
+  text-align: left;
+  vertical-align: top;
+  hyphens: auto;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* --- Lists ---------------------------------------------------------------- */
+
+ul,
+ol {
+  padding-left: 5mm;
+}
+
+li {
+  margin: 0.8mm 0;
+  text-align: left;
+}
+
+/* --- Inline code: body face, no ugly monospace ---------------------------- */
+
+code {
+  font-family: inherit;
+  font-style: italic;
+}
+
+/* --- Links ---------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Table of contents ---------------------------------------------------- */
+
+.ebook-contents ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ebook-contents li {
+  margin: 2mm 0;
+  text-align: left;
+  hyphens: none;
+}
+
+.ebook-contents a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ebook-contents a::after {
+  content: leader('.') target-counter(attr(href), page);
+}
+</style>
+<div lang="en" class="ebook-page ebook-chapter">
+<h1 id="appendix" class="chapter-title">Appendix: False Friends, Minimal Pairs and Free Resources</h1>
+<p>This appendix gathers three reference blocks for use alongside the chapters: a list of false friends, a set of minimal pairs for ear and mouth practice, and a short list of free resources. It is not a chapter, so it has no self-test and no review plan. Every example here is the author's illustration unless a source is cited, and none of it has been confirmed by a native speaker.</p>
+<h2>1. False friends</h2>
+<h3>The core list</h3>
+<p>These nine items form the core. Each one has a source for its meaning, and each one is a place where an English speaker is tempted to read a Portuguese word as its English look-alike.</p>
+<ul>
+<li>pretender means to intend, not "to pretend" [F39]</li>
+<li>puxar means to pull, not "to push" [F40]</li>
+<li>assistir means to watch or attend in everyday use, and to give assistance in medical and formal contexts, not "to assist" in the general sense [F41]</li>
+<li>livraria means bookstore, not "library" [F42]</li>
+<li>atualmente means at the present moment, not "actually" [F43]</li>
+<li>eventualmente means occasionally, not "eventually" [F44]</li>
+<li>realizar means to carry out or accomplish, and also to realize in the sense of becoming aware [F45]</li>
+<li>parentes means relatives, and "parents" is pais [F46]</li>
+<li>oficina and particular are covered by a dictionary-style source for their Brazilian senses, among them the private sense of particular [F12]</li>
+</ul>
+<p>Author's illustrations of the core in use:</p>
+<ul>
+<li>Pretendo viajar em dezembro. (I intend to travel in December.)</li>
+<li>Atualmente, eu trabalho em casa. (At the moment, I work from home.)</li>
+<li>Meus parentes moram em Minas. (My relatives live in Minas.)</li>
+</ul>
+<h3>The extended list</h3>
+<p>The source for this block is a list of 22 false cognates [F47]. Its summary supports the existence of the list and not each item one by one, so treat the eight items below as a reading list to check, not as eight proven claims. Look each one up in a Portuguese dictionary before you rely on it.</p>
+<ul>
+<li>jornal</li>
+<li>data</li>
+<li>taxa</li>
+<li>êxito</li>
+<li>resumir</li>
+<li>sensível</li>
+<li>aluno</li>
+<li>recordar</li>
+</ul>
+<p>As the author's suggestion, add one of these to your error deck only after it has tripped you at least once. A false friend that has never caused a mistake does not earn a card.</p>
+<h3>Candidates</h3>
+<p>The six words below are the author's suggestions. They carry no source claim, and they are pending dictionary review. Do not treat them as established false friends until you have checked them.</p>
+<ul>
+<li>esquisito</li>
+<li>educado</li>
+<li>costume</li>
+<li>compromisso</li>
+<li>fábrica</li>
+<li>colégio</li>
+</ul>
+<figure class="ebook-figure" id="img14"><img src="../../illustrations/img14-appendix-minimal-pairs-poster.png" alt="Minimal-pairs poster with broad IPA for the voice-onset-time, mid-vowel and nasal pairs, as a print-ready didactic sheet" /><figcaption>Minimal-pairs poster with broad IPA for the voice-onset-time, mid-vowel and nasal pairs, as a print-ready didactic sheet</figcaption></figure><h2>2. Minimal pairs</h2>
+<p>The pairs below are for practice of the contrasts in chapter 3. They are the author's illustrations, with broad transcriptions in square brackets. These forms were not confirmed by a native speaker, so use them as a drill sheet and check them against a recording when you can.</p>
+<h3>Voice onset time pairs</h3>
+<p>Say each pair slowly, then say the word in a short sentence of your own. The first word of each pair starts with the voiceless stop, and the second starts with the voiced one.</p>
+<ul>
+<li>pato [ˈpatu] against bato [ˈbatu]</li>
+<li>tom [ˈtõ] against dom [ˈdõ]</li>
+<li>cola [ˈkɔla] against gola [ˈgɔla]</li>
+</ul>
+<p>The study behind the voice onset time idea measured the reverse direction, Brazilians learning English [F24]. For that reason, this block is practice material and an inference for English speakers, not a finding about them.</p>
+<h3>Mid-vowel pairs</h3>
+<p>The mid vowels contrast closed against open. Check which is which before you say them.</p>
+<ul>
+<li>avô [aˈvo] (grandfather, closed vowel) against avó [aˈvɔ] (grandmother, open vowel)</li>
+<li>pôde [ˈpodʒi] (could, past) against pode [ˈpɔdʒi] (can, present)</li>
+<li>sede [ˈsedʒi] (thirst, closed vowel) against sede [ˈsɛdʒi] (headquarters, open vowel)</li>
+</ul>
+<p>The difficulty with Portuguese mid vowels for American English speakers is documented, together with overcorrection [F18]. Notice that the t and d sounds become affricates only before an "ee" sound. In pôde and pode the final e is that sound, so the d is palatalized, while a final o does not trigger it.</p>
+<h3>Nasal against oral pairs</h3>
+<ul>
+<li>mão [ˈmãw] (hand) against mau [ˈmaw] (bad)</li>
+<li>lã [ˈlã] (wool) against lá [ˈla] (there)</li>
+</ul>
+<p>Say the nasal member without closing your mouth on an m or an n at the end. The nasalization lives in the vowel itself.</p>
+<h2>3. Free resources</h2>
+<h3>Open course materials</h3>
+<p>The outline of this book lists four sets of open materials from the COERLL project at the University of Texas at Austin, released under Creative Commons licences: Língua da Gente, Conversa Brasileira, Portuguese Communication Exercises and ClicaBrasil. The source behind this block supports only the existence of open resources under Creative Commons and the retirement of Brazilpod [F88]. The four titles are named here because the outline lists them, not because that source proves each one. Check the current licence and availability of each before you plan a study week around it.</p>
+<h3>A reference grammar</h3>
+<p>For a reference grammar written in English and focused on Brazilian Portuguese, the book uses Modern Brazilian Portuguese Grammar, third edition, 2022 [F109]. It is a reference to dip into when a chapter points at a rule, not a text to read from start to finish.</p>
+<h3>Commercial audio courses</h3>
+<p>This book has no audio, and that is a real limit for a language learned by ear. Commercial audio courses are mentioned only as a contrast. One example is the Pimsleur course, which is built on lessons of about 30 minutes [F110]. Nothing here is a recommendation to buy, and nothing here is a comparison of results.</p>
+</div>
+</body>
+</html>

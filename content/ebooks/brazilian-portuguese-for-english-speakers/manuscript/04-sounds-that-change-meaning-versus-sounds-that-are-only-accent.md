@@ -14,7 +14,7 @@ Here is the ranking in one table. The left column is where your hours go first. 
 | --- | --- |
 | The tap [ɾ] against the strong r [h]: caro "expensive" against carro "car" [F17] [F25] [F20] | The s in coda voiced before a voiced sound: os dois, desde [F27] |
 | The three contrasts of Chapter 3: aspiration of p, t and k, open and closed mid vowels, nasal vowels | Vocalized l in coda: Brasil, sol [F20] |
-| | Palatalized t and d before [i], including final -e: cidade, tudo [F20] |
+| | Palatalized t and d before [i], including final -e: cidade, tarde [F20] |
 | | Stress placement and the rhythm shape [F28] |
 | | The English schwa creeping into pretonic Portuguese vowels (author's suggestion) |
 
@@ -30,7 +30,7 @@ As in Chapter 3, respelling is what you say to yourself and broad IPA in square 
 | rr, or r at the start of a syllable, or final r | the "h" of "house", in many Brazilian accents | carro = KAH-hoo [ˈkahu] |
 | l at the end of a syllable, or final l | the vowel of "food" said right after the main vowel | Brasil = bra-ZEE-oo [bɾaˈziw] |
 | t or d before an "ee" sound | "ch" in "church" for t, "j" in "job" for d | cidade = see-DAH-djee [siˈdadʒi] |
-| final -e | "ee" in "see" in most of Brazil | tudo = TOO-djee [ˈtudʒi] |
+| final -e | "ee" in "see" in most of Brazil | tarde = TAR-djee [ˈtaɾdʒi] |
 | coda s before a voiced consonant | the "z" of "zero" | os dois = ooz DOYS roughly [uz ˈdojs] |
 
 Keep both systems. The respelling carries you through a phrase at speed; the IPA keeps you honest about what your mouth is doing.
@@ -39,7 +39,7 @@ Keep both systems. The respelling carries you through a phrase at speed; the IPA
 
 Brazilian Portuguese has two main sounds written with the letter r [F20]. The first is the tap [ɾ], the quick tongue strike you hear in caro "expensive", in para "for", in três "three". The second is the strong r, written rr or written r where a syllable starts with it, as in carro "car", rua "street", and the final r of cantar "to sing". In many Brazilian accents the strong r is a glottal fricative [h], the "h" of "house".
 
-Both of these belong in the "changes meaning" column, because they can separate two words in the ear of your listener. The author's illustration for the pair is caro [ˈkaɾu] "expensive" against carro [ˈkahu] "car", queued for native-speaker review. Say them with the key: KAH-roo against KAH-hoo.
+Both of these belong in the "changes meaning" column, because they can separate two words in the ear of your listener. The author's illustration for the pair is caro [ˈkaɾu] "expensive" against carro [ˈkahu] "car". Say them with the key: KAH-roo against KAH-hoo.
 
 What English speakers actually do with these two sounds is documented. For the tap, a study of English speakers producing Brazilian Portuguese reports strategies that include approximants, an l-like quality, epenthesis, that is, adding a vowel, and a trill [F17]. The same body of work notes that the American English flap, the tapped t and d of "butter" and "ladder", is an allophone of t and d in that variety [F17], which is why it becomes a useful bridge for some readers and not for others.
 
@@ -53,7 +53,7 @@ When a syllable ends in s and the next sound is voiced, Brazilian Portuguese voi
 
 This is listed in the accent column, not in the meaning column, because failing to voice it does not create another word. It is still an accent marker, and a stubborn one. A study of English speakers living in Brazil reports that they do not make this assimilation even after more than 10 years in the country [F27]. If you want it, you will have to decide to train it, because exposure alone does not appear to install it.
 
-Author's illustrations for practice, queued for native-speaker review: os dois [uz ˈdojs], desde [ˈdezdʒi], and mesmo [ˈmezmʊ] "same". Read them with the key: ooz DOYS roughly, DEZ-djee, MEZ-moo.
+Author's illustrations for practice: os dois [uz ˈdojs], desde [ˈdezdʒi], and mesmo [ˈmezmʊ] "same". Read them with the key: ooz DOYS roughly, DEZ-djee, MEZ-moo.
 
 One regional note, marked as the author's observation and not as a sourced claim. In Rio de Janeiro and in some accents of the surrounding region, the coda s before a voiceless consonant comes out as a sh-like sound, so mesma can sound close to "meSHma" to an English ear. Wherever you live, learn the voicing pattern first. It is the one that travels.
 
@@ -61,9 +61,9 @@ One regional note, marked as the author's observation and not as a sourced claim
 
 Two more accent-only features come from the same general description of Brazilian Portuguese phonology, which also records final unstressed vowels, palatalization, epenthesis, the two r sounds and the vocalized l [F20].
 
-The vocalized l is the l after a vowel or at the end of a syllable, which in most of Brazil is not a full l at all: it turns into a vowel-like glide. Brasil is close to bra-ZEE-oo, sol is close to SOH-oo, and mal is close to MAH-oo. Author's illustrations, queued for native-speaker review. As an author's suggestion, with no figure and no source claim: in this book the coda l is listed in the accent-only column. It is not in the meaning column, so if your hours are tight, you fix the tap and the strong r before you polish this one.
+The vocalized l is the l after a vowel or at the end of a syllable, which in most of Brazil is not a full l at all: it turns into a vowel-like glide. Brasil is close to bra-ZEE-oo, sol is close to SOH-oo, and mal is close to MAH-oo. Author's illustrations. As an author's suggestion, with no figure and no source claim: in this book the coda l is listed in the accent-only column. It is not in the meaning column, so if your hours are tight, you fix the tap and the strong r before you polish this one.
 
-The palatalization is the t and d before an "ee" sound, which in most of Brazil come out as "ch" and "j". Final -e counts, because it is pronounced "ee" in most of the country, so cidade "city" is close to see-DAH-djee, tudo "everything" is close to TOO-djee, and noite "night" is close to NOY-tchee. Author's illustrations again, queued for native-speaker review. English speakers typically produce a clean t and d here and mark themselves instantly. This is accent-only work, but it is cheap work: the pattern is regular, and once your ear expects "ch" and "j" before "ee", production follows.
+The palatalization is the t and d before an "ee" sound, which in most of Brazil come out as "ch" and "j". Final -e counts, because it is pronounced "ee" in most of the country, so cidade "city" is close to see-DAH-djee, tarde "afternoon" is close to TAR-djee [ˈtaɾdʒi], and noite "night" is close to NOY-tchee. Author's illustrations again. Final -o does not trigger it: tudo "everything" ends in an "oo" sound, so it stays TOO-doo [ˈtudu], with a plain d. English speakers typically produce a clean t and d here and mark themselves instantly. This is accent-only work, but it is cheap work: the pattern is regular, and once your ear expects "ch" and "j" before "ee", production follows.
 
 ## Stress and rhythm
 

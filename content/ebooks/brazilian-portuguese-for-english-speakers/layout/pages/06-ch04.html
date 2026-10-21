@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Chapter 4: Sounds That Change Meaning Versus Sounds That Are Only Accent</title>
+</head>
+<body>
+<style>
+/*
+ * ebook.css - page furniture for the ebook
+ * "Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners".
+ *
+ * Inlined into every page by layout/compose_pages.py and applied on top of the
+ * generator's book.css: the body typography (EB Garamond, 10pt, justify,
+ * hyphens) is inherited from there and is not redefined here.
+ * No @import and no other external resource.
+ *
+ * The @font-face rules below repeat the ones in book.css on purpose: the
+ * generator loads book.css without a WeasyPrint FontConfiguration, so its
+ * @font-face rules are ignored and the PDF falls back to a system serif.
+ * Rules inside the page's own <style> are honored. The urls resolve against
+ * the composed pages directory (layout/pages/) and point at the font files
+ * shipped with the generator; they are read, never copied.
+ */
+
+/* --- Fonts ---------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+
+/* --- Page numbers --------------------------------------------------------- */
+
+@page {
+  @bottom-center {
+    content: counter(page);
+    font-family: 'EB Garamond', serif;
+    font-size: 9pt;
+  }
+}
+
+/* Cover page: no page number. */
+@page ebook-cover {
+  @bottom-center {
+    content: none;
+  }
+}
+
+/* --- Cover ---------------------------------------------------------------- */
+
+.ebook-cover {
+  page: ebook-cover;
+  break-after: page;
+  text-align: center;
+}
+
+.ebook-cover img {
+  width: 100%;
+  max-height: 12cm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 6mm auto;
+}
+
+.ebook-cover .cover-title {
+  font-size: 22pt;
+  font-weight: bold;
+  line-height: 1.15;
+  text-align: center;
+  hyphens: none;
+  margin: 4mm 0 3mm 0;
+}
+
+.ebook-cover .cover-subtitle {
+  font-size: 13pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+  margin: 0;
+}
+
+/* --- Headings ------------------------------------------------------------- */
+
+/* Chapter, credits and contents headings always start a new page. */
+.ebook-page h1 {
+  break-before: page;
+  page-break-before: always;
+  hyphens: none;
+}
+
+/* --- Figures -------------------------------------------------------------- */
+
+figure {
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure img {
+  max-width: 100%;
+  max-height: 11cm;
+  width: auto;
+  height: auto;
+}
+
+figcaption {
+  font-size: 8.5pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+}
+
+/* --- Tables --------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 3mm 0;
+  page-break-inside: auto;
+}
+
+th,
+td {
+  border: 0.4pt solid #8a7a62;
+  padding: 1mm 1.5mm;
+  text-align: left;
+  vertical-align: top;
+  hyphens: auto;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* --- Lists ---------------------------------------------------------------- */
+
+ul,
+ol {
+  padding-left: 5mm;
+}
+
+li {
+  margin: 0.8mm 0;
+  text-align: left;
+}
+
+/* --- Inline code: body face, no ugly monospace ---------------------------- */
+
+code {
+  font-family: inherit;
+  font-style: italic;
+}
+
+/* --- Links ---------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Table of contents ---------------------------------------------------- */
+
+.ebook-contents ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ebook-contents li {
+  margin: 2mm 0;
+  text-align: left;
+  hyphens: none;
+}
+
+.ebook-contents a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ebook-contents a::after {
+  content: leader('.') target-counter(attr(href), page);
+}
+</style>
+<div lang="en" class="ebook-page ebook-chapter">
+<h1 id="ch04" class="chapter-title">Chapter 4: Sounds That Change Meaning Versus Sounds That Are Only Accent</h1>
+<p>Chapter 3 gave you the contrasts that decide which word your listener has just heard. This chapter gives you the rest of the pronunciation work, and it gives it to you in order. Not every sound deserves the same hour of your week. Some sounds decide meaning. Other sounds decide only that your listener immediately knows you are not Brazilian. Both are worth fixing in time, but they pay differently, and a self-learner with limited hours needs the ranking.</p>
+<p>The declared goal of this book is intelligibility: being understood without effort. That is not the same goal as sounding local. Accent, comprehensibility and intelligibility are partially independent of one another [F29], and speech carrying a strong accent can still be highly intelligible [F30]. You can buy full intelligibility without buying a perfect accent. This chapter shows where to spend first.</p>
+<p>The sounds in view here are the ones an English speaker typically gets wrong in Brazilian Portuguese: the tap and the strong r, the s in coda, the vocalized l, the palatalized t and d, and the shape of stress and rhythm.</p>
+<h2>Changes meaning versus accent only</h2>
+<p>Here is the ranking in one table. The left column is where your hours go first. The right column is where they go once the left column is safe.</p>
+<table>
+<thead>
+<tr>
+<th>Changes meaning</th>
+<th>Accent only</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The tap [ɾ] against the strong r [h]: caro "expensive" against carro "car" [F17] [F25] [F20]</td>
+<td>The s in coda voiced before a voiced sound: os dois, desde [F27]</td>
+</tr>
+<tr>
+<td>The three contrasts of Chapter 3: aspiration of p, t and k, open and closed mid vowels, nasal vowels</td>
+<td>Vocalized l in coda: Brasil, sol [F20]</td>
+</tr>
+<tr>
+<td></td>
+<td>Palatalized t and d before [i], including final -e: cidade, tarde [F20]</td>
+</tr>
+<tr>
+<td></td>
+<td>Stress placement and the rhythm shape [F28]</td>
+</tr>
+<tr>
+<td></td>
+<td>The English schwa creeping into pretonic Portuguese vowels (author's suggestion)</td>
+</tr>
+</tbody>
+</table>
+<p>Two honest notes about the table. First, the right column is not optional forever. It is what turns "understood with effort" into "understood without effort", and accent, comprehensibility and intelligibility are only partially independent [F29]. Second, the classification is this book's teaching order, not a claim that any source ranked these features for you. The sources tell us what learners do; the ranking is the book's use of them.</p>
+<figure class="ebook-figure" id="img06"><img src="../../illustrations/img06-ch04-meaning-versus-accent-table.png" alt="Two-column didactic table drawing: &quot;changes meaning&quot; pairs (caro and carro, avô and avó, both author&#x27;s illustrations) versus &quot;accent only&quot; features (coda l, regional s in coda)" /><figcaption>Two-column didactic table drawing: &quot;changes meaning&quot; pairs (caro and carro, avô and avó, both author&#x27;s illustrations) versus &quot;accent only&quot; features (coda l, regional s in coda) The correct transcriptions are caro [ˈkaɾu] and Brasil [bɾaˈziw]. Where the drawing and the text differ, the text is correct.</figcaption></figure><h2>A short respelling key for this chapter</h2>
+<p>As in Chapter 3, respelling is what you say to yourself and broad IPA in square brackets is what a phonetician would write. All respelling forms here are the author's illustrations, not confirmed dictionary pronunciations.</p>
+<table>
+<thead>
+<tr>
+<th>Written form</th>
+<th>Sounds roughly like</th>
+<th>Illustration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a single r between vowels</td>
+<td>a very quick tap of the tongue tip, lighter than the "tt" of American "butter"</td>
+<td>caro = KAH-roo [ˈkaɾu]</td>
+</tr>
+<tr>
+<td>rr, or r at the start of a syllable, or final r</td>
+<td>the "h" of "house", in many Brazilian accents</td>
+<td>carro = KAH-hoo [ˈkahu]</td>
+</tr>
+<tr>
+<td>l at the end of a syllable, or final l</td>
+<td>the vowel of "food" said right after the main vowel</td>
+<td>Brasil = bra-ZEE-oo [bɾaˈziw]</td>
+</tr>
+<tr>
+<td>t or d before an "ee" sound</td>
+<td>"ch" in "church" for t, "j" in "job" for d</td>
+<td>cidade = see-DAH-djee [siˈdadʒi]</td>
+</tr>
+<tr>
+<td>final -e</td>
+<td>"ee" in "see" in most of Brazil</td>
+<td>tarde = TAR-djee [ˈtaɾdʒi]</td>
+</tr>
+<tr>
+<td>coda s before a voiced consonant</td>
+<td>the "z" of "zero"</td>
+<td>os dois = ooz DOYS roughly [uz ˈdojs]</td>
+</tr>
+</tbody>
+</table>
+<p>Keep both systems. The respelling carries you through a phrase at speed; the IPA keeps you honest about what your mouth is doing.</p>
+<figure class="ebook-figure" id="img07"><img src="../../illustrations/img07-ch04-tap-strong-r-s-voicing.png" alt="Articulation sketch series for the tap and the strong r, plus s voicing before voiced sounds and vocalized l in coda" /><figcaption>Articulation sketch series for the tap and the strong r, plus s voicing before voiced sounds and vocalized l in coda</figcaption></figure><h2>The tap and the strong r</h2>
+<p>Brazilian Portuguese has two main sounds written with the letter r [F20]. The first is the tap [ɾ], the quick tongue strike you hear in caro "expensive", in para "for", in três "three". The second is the strong r, written rr or written r where a syllable starts with it, as in carro "car", rua "street", and the final r of cantar "to sing". In many Brazilian accents the strong r is a glottal fricative [h], the "h" of "house".</p>
+<p>Both of these belong in the "changes meaning" column, because they can separate two words in the ear of your listener. The author's illustration for the pair is caro [ˈkaɾu] "expensive" against carro [ˈkahu] "car". Say them with the key: KAH-roo against KAH-hoo.</p>
+<p>What English speakers actually do with these two sounds is documented. For the tap, a study of English speakers producing Brazilian Portuguese reports strategies that include approximants, an l-like quality, epenthesis, that is, adding a vowel, and a trill [F17]. The same body of work notes that the American English flap, the tapped t and d of "butter" and "ladder", is an allophone of t and d in that variety [F17], which is why it becomes a useful bridge for some readers and not for others.</p>
+<p>For the strong r, a study of English speakers reports approximants, deletion, and a schwa diphthong in place of the target sound [F25]. That study also reports a deletion rate of 93%, and the exact scope matters: that figure describes the attempts of the English-speaking women who took part in that study, not Brazilian native speakers, and it is not a target or a forecast for you [F25]. It tells you how tempting it is to simply drop the sound. Deletion is not always wrong, though. In the author's observation, which is not sourced, native speakers of Brazilian Portuguese often delete the final r in verb forms in normal use, so a phrase like vou falar with a quiet or absent final r is not an error you need to chase.</p>
+<p>One author's suggestion here, with no figure and no source claim. If your English is American, your flap can be a bridge: say "better" and "ladder", feel the quick tap your tongue makes on the t and the d, and use that movement as your model for the Portuguese tap in caro and para. If your English is not American, skip this bridge entirely and use the key instead.</p>
+<h2>The s in coda: voicing before voiced sounds</h2>
+<p>When a syllable ends in s and the next sound is voiced, Brazilian Portuguese voices that s. The spelling does not change. The sound does: os dois "the two" and desde "since" carry a [z] in that position [F27].</p>
+<p>This is listed in the accent column, not in the meaning column, because failing to voice it does not create another word. It is still an accent marker, and a stubborn one. A study of English speakers living in Brazil reports that they do not make this assimilation even after more than 10 years in the country [F27]. If you want it, you will have to decide to train it, because exposure alone does not appear to install it.</p>
+<p>Author's illustrations for practice: os dois [uz ˈdojs], desde [ˈdezdʒi], and mesmo [ˈmezmʊ] "same". Read them with the key: ooz DOYS roughly, DEZ-djee, MEZ-moo.</p>
+<p>One regional note, marked as the author's observation and not as a sourced claim. In Rio de Janeiro and in some accents of the surrounding region, the coda s before a voiceless consonant comes out as a sh-like sound, so mesma can sound close to "meSHma" to an English ear. Wherever you live, learn the voicing pattern first. It is the one that travels.</p>
+<h2>Vocalized l and palatalized t and d</h2>
+<p>Two more accent-only features come from the same general description of Brazilian Portuguese phonology, which also records final unstressed vowels, palatalization, epenthesis, the two r sounds and the vocalized l [F20].</p>
+<p>The vocalized l is the l after a vowel or at the end of a syllable, which in most of Brazil is not a full l at all: it turns into a vowel-like glide. Brasil is close to bra-ZEE-oo, sol is close to SOH-oo, and mal is close to MAH-oo. Author's illustrations. As an author's suggestion, with no figure and no source claim: in this book the coda l is listed in the accent-only column. It is not in the meaning column, so if your hours are tight, you fix the tap and the strong r before you polish this one.</p>
+<p>The palatalization is the t and d before an "ee" sound, which in most of Brazil come out as "ch" and "j". Final -e counts, because it is pronounced "ee" in most of the country, so cidade "city" is close to see-DAH-djee, tarde "afternoon" is close to TAR-djee [ˈtaɾdʒi], and noite "night" is close to NOY-tchee. Author's illustrations again. Final -o does not trigger it: tudo "everything" ends in an "oo" sound, so it stays TOO-doo [ˈtudu], with a plain d. English speakers typically produce a clean t and d here and mark themselves instantly. This is accent-only work, but it is cheap work: the pattern is regular, and once your ear expects "ch" and "j" before "ee", production follows.</p>
+<h2>Stress and rhythm</h2>
+<p>One description of Brazilian Portuguese points to stress on the last two syllables and to a high degree of syllable timing, while the rhythm question itself remains debated [F28]. In plain terms: the debate about whether Brazilian Portuguese is syllable-timed is not settled, so this book does not teach you a rhythm rule. It teaches you where the stress of each word you learn sits.</p>
+<p>Stress sits in the accent column here, but as the author's observation, with no figure and no source claim, a misstressed word can be harder to recognize, so learn each new word with its stressed syllable marked in your own notes. That habit is the author's suggestion, without any figure and without a source claim.</p>
+<p>One more author's suggestion on this page, again with no figure and no source claim. Watch your pretonic vowels. English reduces unstressed vowels toward a neutral schwa, and importing that habit flattens Portuguese vowels that are still distinct. Say the pretonic vowel of caminhada clearly and briefly rather than neutral.</p>
+<h2>Training in three steps per sound</h2>
+<p>For each sound in this chapter, use the same three-step shape: controlled, semi-controlled, then free. This is the author's training design, not a program taken from a source, and it rests on one solid finding: pronunciation teaching pays off most on specific features and on controlled production [F32]. So you pick one sound, not six, and you work it in a tight loop before you improvise.</p>
+<p>Step one, controlled. Take three or four words from the key with the target sound and nothing else competing. Say them slowly, checking the respelling and the IPA. If the sound is the tap, say caro, para, três and hold the light tongue strike.</p>
+<p>Step two, semi-controlled. Put those words into short phrases where you supply the surrounding words. "Para mim", "três reais", "o carro é novo". The target sound is still predictable, but the phrase is yours.</p>
+<p>Step three, free. Say something you actually want to say, at conversational speed, with the target sound somewhere inside. This is where you find out whether the sound survives a real sentence. A short recording of yourself is enough.</p>
+<p>Before any of these production steps, do the listening step, and do it first. A meta-analysis of high variability phonetic training, the method where one contrast is repeated in several different voices, reports clear gains in perception, with effect sizes of g = 0.92 and g = 0.67 [F34]. When the same training is measured for production, the gains are smaller and are retained less well, reported as 10.5% and 4.5% in that meta-analysis [F33]. That is the same pattern as in Chapter 3: the ear improves reliably, the mouth needs repetition.</p>
+<p>The several voices have to come from real Brazilian speakers in whatever recordings you choose to use. This book gives you transcription and respelling only; there are no audio files and no QR codes here.</p>
+<p>For listening at lower levels, add shadowing. A study of shadowing reports that it helps listening at lower levels and that the benefit reaches a plateau [F35]. So shadow early in your study, and do not expect it to keep paying forever on its own.</p>
+<h2>UK/Australian English</h2>
+<p>If your English is British, Australian, New Zealand or South African English, you are non-rhotic: the r after a vowel is not a full consonant in your accent. Three notes for this chapter.</p>
+<p>First, no flap bridge. The "better" and "ladder" tap belongs to American English. As a non-rhotic speaker you do not have it, so skip that suggestion and use the respelling key and the IPA instead. Your job is to build the movement from scratch rather than to transfer it.</p>
+<p>Second, the coda r, as the author's observation. Your variety can produce an audible r in some connected positions, the linking r of "far away", and that is not the Brazilian tap. The Brazilian tap is one quick strike in the middle of a word such as caro. Do not treat your careful-speech r as the model for it.</p>
+<p>Third, the vowels, as the author's suggestion. Your "law" vowel can anchor the open o [ɔ] of Portuguese. Your "go" and "day" vowels glide, so when you produce the Portuguese closed o [o] and closed e [e], strip the movement out. In both varieties, keep the English schwa out of pretonic Portuguese vowels: Portuguese keeps those vowels distinct even when they are short.</p>
+<h2>If you speak Spanish</h2>
+<p>Spanish changes this chapter in a specific way: it gives you several of these sounds already, and it gives you one habit that works against you. Keep in view that English-Spanish bilinguals depend on Spanish when learning Portuguese, whatever the order in which they acquired their languages [F62], and that this dependence is material you manage rather than a defect.</p>
+<p>Three traps are relevant to the sounds of this chapter. The first is sourced; the other two are the author's observations, not sourced claims.</p>
+<ul>
+<li>Voiced stops between vowels come out as Spanish-style approximants. English-Spanish bilinguals produce voiced stops as Spanish-style approximants in early Brazilian Portuguese [F36], so b, d and g become soft and continuous where Portuguese wants a real closure.</li>
+<li>The tap may feel free, and the strong r may not. Spanish gives you its own tap and its own trill, so you can land on the tap quickly and then substitute a Spanish trill or a Spanish final r where Portuguese wants the glottal strong r. Check final r in verb forms against the key.</li>
+<li>Your coda s habits may not match the Portuguese pattern. Some Spanish varieties aspirate or drop coda s (author's observation). Whatever your habit is, the Portuguese pattern here is to voice the s before a voiced sound [F27], and to keep it otherwise.</li>
+</ul>
+<p>Practice suggestion: the full-stop drill. In Portuguese, produce b, d and g as real stops, with a complete closure and a clean release, especially between vowels. Say these author's illustrations slowly and keep the consonant hard rather than soft:</p>
+<ul>
+<li>cada = KAH-dah</li>
+<li>lado = LAH-doo</li>
+<li>fogo = FOH-goo</li>
+</ul>
+<p>Put each word into a short phrase of your own, then say the phrase at conversational speed without letting the consonant soften.</p>
+<p>One vocabulary warning that belongs only in this box. In informal Brazilian usage, "propina" means a bribe [F48]. That the Spanish word means a tip left for service is the author's observation, so the same word can land very badly in conversation. Chapter 8 builds a full track for readers who already speak Spanish; this box only covers the sounds.</p>
+<h2>Where to spend your time</h2>
+<p>If you keep one idea from this chapter, keep the ranking. The tap against the strong r changes meaning, so it outranks the accent-only features and it goes first. Then work the s voicing before voiced sounds, because exposure does not install it for English speakers [F27]. Then the vocalized l, the palatalized t and d, and the stress of each new word you learn.</p>
+<p>Use the three-step shape for each sound: controlled, semi-controlled, free, because pronunciation teaching pays on specific features and controlled production [F32]. Listen before you speak, since perception training is where the reliable gain is [F34] and production gains are smaller and less retained [F33]. Shadow for your listening at lower levels [F35]. The goal is not a perfect accent. The goal is speech that is understood without effort, since accent, comprehensibility and intelligibility are only partially independent [F29], and a strong accent can still be fully intelligible [F30].</p>
+<h2>Self-test</h2>
+<p>Retrieving what you just read is what makes it stick: a meta-analysis of the testing effect compares testing with restudy [F94]. Answer from memory first, then check.</p>
+<ol>
+<li>What is the declared goal of this chapter, and how does it differ from sounding local?</li>
+<li>What does the research say about accent, comprehensibility and intelligibility?</li>
+<li>Which sound in this chapter sits in the "changes meaning" column, and with which partner does it contrast?</li>
+<li>Which strategies do English speakers use for the tap, and what bridge does the chapter suggest to American speakers only?</li>
+<li>Which strategies do English speakers use for the strong r, and what deletion rate is reported, exactly for whom?</li>
+<li>What does the phonology description say about native deletion of the final r in verb forms?</li>
+<li>What happens with the coda s before a voiced sound in Brazilian Portuguese, and what is reported about English speakers in Brazil?</li>
+<li>Name the two accent-only consonant features taken from the phonology description, and the accent-only note about stress and rhythm.</li>
+<li>What does the evidence say about perception training, about production training, and about shadowing?</li>
+<li>In the Spanish box, what do English-Spanish bilinguals do with voiced stops, and what drill is given for b, d and g?</li>
+</ol>
+<h2>Answer key</h2>
+<ol>
+<li>Intelligibility, meaning being understood without effort. That is not the same as sounding local, because accent, comprehensibility and intelligibility are partially independent [F29].</li>
+<li>They are partially independent [F29], and speech with a strong accent can still be highly intelligible [F30].</li>
+<li>The tap [ɾ], contrasting with the strong r [h], as in caro against carro [F17] [F25] [F20].</li>
+<li>Approximants, an l-like quality, epenthesis and a trill [F17]. The suggested bridge for American speakers only is the flap of "better" and "ladder", an allophone of t and d in American English [F17].</li>
+<li>Approximants, deletion and a schwa diphthong [F25]. The 93% deletion figure describes the English-speaking women who took part in that study, not native speakers, and it is not a target for you [F25].</li>
+<li>That, in the author's observation (not sourced), native speakers often delete the final r in verb forms in normal use.</li>
+<li>The s is voiced before a voiced sound, as in os dois and desde [F27]. English speakers do not make this assimilation even after more than 10 years in Brazil [F27].</li>
+<li>The vocalized l in coda and the palatalization of t and d before [i], including final -e [F20]. The stress and rhythm note: one description points to stress on the last two syllables and to a high degree of syllable timing, with the rhythm question debated [F28].</li>
+<li>Perception training improves perception, with effect sizes of g = 0.92 and g = 0.67 [F34]; the production gain from the same training is smaller and retained less well, reported as 10.5% and 4.5% [F33]; shadowing helps listening at lower levels and reaches a plateau [F35].</li>
+<li>They produce voiced stops as Spanish-style approximants [F36]. The drill is to produce b, d and g as full stops with complete closure and clean release, using cada, lado and fogo. Spanish matters here because English-Spanish bilinguals depend on Spanish when learning Portuguese, whatever the acquisition order [F62].</li>
+</ol>
+<h2>Spaced review plan</h2>
+<p>As the author's suggestion, here is a simple calendar for this chapter. Read it once today, then come back on these days:</p>
+<ul>
+<li>D+1 after reading</li>
+<li>D+3 after reading</li>
+<li>D+8 after reading</li>
+<li>D+27 after reading</li>
+</ul>
+<p>On each return, run the self-test from memory before you reread anything, then reread only the parts you missed. These review points are the author's adaptation of the interval idea in a spacing study [F90], which measured a single gap between two study sessions. That source did not test this calendar, and the days above are a suggestion, not a result reported by that study. Adjust the timing to your own week if you need to; the habit of returning and retrieving matters more than the exact day.</p>
+</div>
+</body>
+</html>

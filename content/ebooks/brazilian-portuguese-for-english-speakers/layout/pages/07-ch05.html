@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Chapter 5: The Grammar Traps English Sets</title>
+</head>
+<body>
+<style>
+/*
+ * ebook.css - page furniture for the ebook
+ * "Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners".
+ *
+ * Inlined into every page by layout/compose_pages.py and applied on top of the
+ * generator's book.css: the body typography (EB Garamond, 10pt, justify,
+ * hyphens) is inherited from there and is not redefined here.
+ * No @import and no other external resource.
+ *
+ * The @font-face rules below repeat the ones in book.css on purpose: the
+ * generator loads book.css without a WeasyPrint FontConfiguration, so its
+ * @font-face rules are ignored and the PDF falls back to a system serif.
+ * Rules inside the page's own <style> are honored. The urls resolve against
+ * the composed pages directory (layout/pages/) and point at the font files
+ * shipped with the generator; they are read, never copied.
+ */
+
+/* --- Fonts ---------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+
+/* --- Page numbers --------------------------------------------------------- */
+
+@page {
+  @bottom-center {
+    content: counter(page);
+    font-family: 'EB Garamond', serif;
+    font-size: 9pt;
+  }
+}
+
+/* Cover page: no page number. */
+@page ebook-cover {
+  @bottom-center {
+    content: none;
+  }
+}
+
+/* --- Cover ---------------------------------------------------------------- */
+
+.ebook-cover {
+  page: ebook-cover;
+  break-after: page;
+  text-align: center;
+}
+
+.ebook-cover img {
+  width: 100%;
+  max-height: 12cm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 6mm auto;
+}
+
+.ebook-cover .cover-title {
+  font-size: 22pt;
+  font-weight: bold;
+  line-height: 1.15;
+  text-align: center;
+  hyphens: none;
+  margin: 4mm 0 3mm 0;
+}
+
+.ebook-cover .cover-subtitle {
+  font-size: 13pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+  margin: 0;
+}
+
+/* --- Headings ------------------------------------------------------------- */
+
+/* Chapter, credits and contents headings always start a new page. */
+.ebook-page h1 {
+  break-before: page;
+  page-break-before: always;
+  hyphens: none;
+}
+
+/* --- Figures -------------------------------------------------------------- */
+
+figure {
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure img {
+  max-width: 100%;
+  max-height: 11cm;
+  width: auto;
+  height: auto;
+}
+
+figcaption {
+  font-size: 8.5pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+}
+
+/* --- Tables --------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 3mm 0;
+  page-break-inside: auto;
+}
+
+th,
+td {
+  border: 0.4pt solid #8a7a62;
+  padding: 1mm 1.5mm;
+  text-align: left;
+  vertical-align: top;
+  hyphens: auto;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* --- Lists ---------------------------------------------------------------- */
+
+ul,
+ol {
+  padding-left: 5mm;
+}
+
+li {
+  margin: 0.8mm 0;
+  text-align: left;
+}
+
+/* --- Inline code: body face, no ugly monospace ---------------------------- */
+
+code {
+  font-family: inherit;
+  font-style: italic;
+}
+
+/* --- Links ---------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Table of contents ---------------------------------------------------- */
+
+.ebook-contents ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ebook-contents li {
+  margin: 2mm 0;
+  text-align: left;
+  hyphens: none;
+}
+
+.ebook-contents a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ebook-contents a::after {
+  content: leader('.') target-counter(attr(href), page);
+}
+</style>
+<div lang="en" class="ebook-page ebook-chapter">
+<h1 id="ch05" class="chapter-title">Chapter 5: The Grammar Traps English Sets</h1>
+<p>Your English has already made a set of decisions for you, and every one of them becomes a trap in Portuguese. English has one copula where Portuguese has two. It lets the present tense carry future reference. It offers a present perfect that Portuguese usually answers with a simple past. It wants its objects spelled out. It gives you no grammatical gender on the nouns you use every day, and it hands you its own prepositions wherever you go.</p>
+<p>The objective of this chapter is to fix the contrasts that English creates, the copula, the subjunctive future, the present perfect and object position, and then the noun-level traps, gender and regência. This is a contrastive chapter rather than a full grammar. For each point you get the decision that English pushes you to make wrongly and the shape of the Portuguese answer.</p>
+<h2>Ser and estar: drop the permanent and temporary rule</h2>
+<p>English uses "be" for identity, for state, for location and for a good deal more. Portuguese splits that work between ser and estar. The popular shortcut says that ser is for what is permanent and estar for what is temporary. That rule fails, and it fails on locative sentences [F57]. The same source notes that ser and estar are hard for speakers of languages with a single copula in the first place [F57], so the difficulty is not a sign that you are doing something unusual.</p>
+<p>An approach that treats the choice as a matter of probability in context, instead of a single rule, has been tested with American students [F58]. The practical version of that idea is the author's suggestion: learn ser and estar with the kind of sentence they appear in, and keep a small notebook of the sentences that surprised you, instead of hunting for a rule that will cover everything.</p>
+<p>Here are the author's illustrations, showing where the permanent and temporary shortcut breaks:</p>
+<ul>
+<li>O aeroporto é longe do centro. "The airport is far from downtown." A fixed place takes ser, even though nothing about it is temporary in the way the rule means.</li>
+<li>Estou no aeroporto agora. "I am at the airport now." A person's present position takes estar.</li>
+</ul>
+<p>One more warning, offered by analogy only. In a study of English speakers learning Spanish as a second language, ser is overgeneralized and estar omitted [F59]. That result comes from Spanish L2, so treat it as an analogy for what English speakers may do in a second Romance language, and not as evidence about English speakers learning Portuguese.</p>
+<figure class="ebook-figure" id="img08"><img src="../../illustrations/img08-ch05-ser-estar-decision-sketch.png" alt="Decision sketch for ser and estar with locative sentence boxes, showing why the permanent versus temporary rule fails" /><figcaption>Decision sketch for ser and estar with locative sentence boxes, showing why the permanent versus temporary rule fails</figcaption></figure><h2>The subjunctive future where English says the present</h2>
+<p>English uses the present tense after "when" and "if" in many future sentences: "When I get home, I will call you." Portuguese uses the subjunctive future in that same spot, where English uses the present [F60]. The form is not exotic book language. It is the ordinary way to say what will happen when something else happens.</p>
+<p>Author's illustrations:</p>
+<ul>
+<li>Quando eu chegar em casa, eu te ligo. "When I get home, I will call you."</li>
+<li>Se der tempo, a gente se vê. "If there is time, we will see each other."</li>
+</ul>
+<p>The habit to build is simple, and it is the author's suggestion: as soon as a future sentence opens with quando or se, check that the verb that follows is not the present indicative. Be patient with this area in general. Mood is difficult for second-language learners [F61], so this is a spot where repeated retrieval practice earns more than reading the rule again.</p>
+<figure class="ebook-figure" id="img09"><img src="../../illustrations/img09-ch05-subjunctive-future-timeline.png" alt="Timeline drawing for the subjunctive future and the present-perfect trap, with the English trap sentence crossed out" /><figcaption>Timeline drawing for the subjunctive future and the present-perfect trap, with the English trap sentence crossed out</figcaption></figure><h2>The present perfect you keep translating</h2>
+<p>The English present perfect is one of the transfers to watch in this book. Native English speakers transfer it into Portuguese at all levels [F71], which means it does not disappear as you advance.</p>
+<p>The author's illustration: "I've seen this movie" against "Já vi esse filme". English builds the sentence with "have" plus a past participle and points at a past event with present relevance. Portuguese here answers with a simple past, with já, "already", placed before the verb. That illustration is the author's own.</p>
+<p>As the author's suggestion, when you feel the English "I have already done it" rising, reach for já plus the simple past instead of building a perfect. Write the sentence down in the form you actually said, then in the Portuguese form, and let the pair sit in your error deck for later review.</p>
+<h2>Null objects, clitics and proclisis: where the object goes</h2>
+<p>English repeats the object. "I saw it", "I know her", "We need them". Portuguese can leave the object out, and the research on English-speaking learners reports both directions: transfer of the expressed object and overgeneralization of the omitted one [F63]. The trap is real both ways, so the goal is not to delete every object but to know when Portuguese wants one.</p>
+<p>The object pronoun itself is in motion. According to the abstract of a study based on a written corpus, the clitic o/a is in disuse in speech and persists in writing, with ele/ela or the null object in its place [F64]. So the grammar book's o/a forms are forms you will read more often than you will hear.</p>
+<p>Word order completes the picture. Initial proclisis is common in Brazilian Portuguese speech [F65], meaning the object pronoun can stand before the verb at the start of a sentence. Author's illustration: "Me ajuda aqui?" for "Can you help me here?", with the pronoun before the verb. In listening practice, expect that order.</p>
+<h2>Subject pronouns, "a gente" and regional "tu"</h2>
+<p>Brazilian Portuguese shows loss of the referential null subject and filling of the pronominal subject, above all in the first and second persons [F15]. In practice, hearing "eu" and "você" more often than a textbook ending-only picture would lead you to expect is normal.</p>
+<p>Meanwhile the pronoun for "we" is shifting. A gente is replacing nós [F67] and competes with it in complement functions [F66]. Author's illustrations: "A gente vai amanhã." for "We are going tomorrow." and "Nós vamos amanhã." as the more conservative option. A gente is worth learning as a unit, and the verb that follows it takes the third-person singular shape.</p>
+<p>Regional tu adds one more layer. The choice between tu and você varies, and tu can appear with a third-person verb form, as in "tu vai" [F68]. Treat that as a pattern you should recognize in speech, and as the author's suggestion, choose the pronoun habit of the region you are in rather than mixing them in one conversation.</p>
+<h2>Gender: the article is part of the noun</h2>
+<p>English gives you no warning here. Gender errors in learners mix transfer and overgeneralization, and English L1 appears among the groups studied [F69]. In Spanish L2 the error has been described as one of lexical assignment, not a syntactic deficit [F70]. As the author's reading, this suggests the learner who says the wrong article may simply have stored the word without its gender.</p>
+<p>If gender is a property of the stored word, the fix is storage. Learn every noun with its article, and drill the pair as one item. Author's illustrations: "o dia", "a noite", "o problema". When you add a new noun to your notebook, the entry is never just the noun. It is the noun with the article in front of it.</p>
+<h2>Existential "ter": what "there is" becomes</h2>
+<p>English opens existential sentences with an empty "there": "There is a bank near here." Existential ter predominates over haver in Brazilian Portuguese, and haver is favored in the past [F72].</p>
+<p>Author's illustrations:</p>
+<ul>
+<li>Tem uma farmácia aqui perto. "There is a pharmacy near here."</li>
+<li>Havia uma fila grande ontem. "There was a long line yesterday."</li>
+</ul>
+<p>For everyday speech, ter is the form to reach for in the present, and haver is the form to recognize in the past [F72].</p>
+<h2>Regência: the preposition that belongs to the verb</h2>
+<p>Many Portuguese verbs come with their own preposition, and it is not always the one English would pick. As the author's suggestion, learn the verb with its preposition as a block rather than translating preposition by preposition. Prepositions of regência are documented as a source of English-Portuguese interference [F73]. The limitation matters here: the cited literature mostly covers Portuguese speakers learning English, and studies of English speakers learning Portuguese are lacking [F73]. What you can take is the warning, not a measured error profile for your own case.</p>
+<p>Author's illustrations: "gostar de música" for "to like music", "precisar de ajuda" for "to need help", and "morar em São Paulo" for "to live in São Paulo". When a new verb arrives in your notebook, write the preposition beside it the same day.</p>
+<h3>Suggestions for the traps this book cannot source</h3>
+<p>What follows are the author's suggestions. They carry no source claim and no figures. Each one is a habit that many learners find useful, not a research result.</p>
+<ul>
+<li>Prepositions fuse with articles. Learn the contractions as whole forms: em + o becomes no, em + a becomes na, de + o becomes do, de + a becomes da. Read "no banco" and "da escola" as single units.</li>
+<li>The possessive often wears an article. Say the phrase with the article in front, as in "o meu carro" or "a minha casa", and treat article plus possessive as one block.</li>
+<li>Double negation is the norm, not a mistake. A sentence like "Não vi nada." uses negation twice, and a final "não" can reinforce a reply, as in "Não sei não." Learn the pattern instead of editing one negative out.</li>
+<li>Use ficar for where things are located in everyday speech. The question "Onde você fica?" and the answer "A clínica fica perto da praça." are the shapes to keep in mind.</li>
+</ul>
+<h2>Where to spend your time</h2>
+<p>Grammar here is a set of decisions, not a set of tables. Work through the contrasts in the order of this chapter, keep every example you write in your own error deck, and let the articles, the prepositions and the pronouns travel with the words they belong to.</p>
+<h2>If you speak Spanish</h2>
+<p>Spanish is both support and trap. English-Spanish bilinguals depend on Spanish when learning Portuguese, whatever the order in which they acquired their languages [F62]. That dependence is not a defect. It is material to manage, and the grammar traps below are places where it can mislead you.</p>
+<p>The three traps most relevant to this chapter are the author's suggestions, not sourced claims.</p>
+<ul>
+<li>Do not skip the ser and estar decision because Spanish has both verbs. The two languages may distribute them differently at the edges, so treat each choice as a Portuguese decision rather than a translation of your Spanish habit.</li>
+<li>Do not assume your Spanish mood habits match Portuguese. Portuguese uses the subjunctive future where English uses the present [F60], and the triggers deserve a deliberate check every time you meet quando or se.</li>
+<li>Do not trust spelling to carry gender. A noun that looks identical in both languages may take a different article, so learn each noun with its own article and let the pair settle as one item.</li>
+</ul>
+<p>Now the sound drill, because grammar and sound meet when you speak. English-Spanish bilinguals produce voiced stops as Spanish-style approximants [F36], so b, d and g can come out soft and continuous instead of closed. In Portuguese, produce them as real stops, with a complete closure and a clean release, especially between vowels. Say these author's illustrations slowly and keep the consonant hard:</p>
+<ul>
+<li>cada = KAH-dah</li>
+<li>lado = LAH-doo</li>
+<li>fogo = FOH-goo</li>
+</ul>
+<p>Put each word into a short phrase of your own, then say it again at conversational speed without letting the consonant soften. The dependence described above [F62] is the reason this drill is not optional polish.</p>
+<h2>Self-test</h2>
+<p>Retrieving what you just read is what makes it stick: a meta-analysis of the testing effect compares testing with restudy [F94]. Answer from memory first, then check the key.</p>
+<ol>
+<li>Why does the permanent versus temporary shortcut fail for ser and estar, and in which kind of sentence does it fail?</li>
+<li>What has been tested with American students as an alternative to a single rule for ser and estar?</li>
+<li>In the study of English speakers learning Spanish as a second language, what happened with ser and estar, and how should that result be used here?</li>
+<li>What does Portuguese use where English uses the present after "when", and what does English do instead?</li>
+<li>What do native English speakers do with the present perfect in Portuguese, and at which levels?</li>
+<li>Which author's illustration shows the present perfect trap, and what are its two sides?</li>
+<li>Which two directions of error are reported for objects, and what is the status of the clitic o/a according to the abstract of the written-corpus study?</li>
+<li>What is common at the start of sentences in Brazilian speech regarding object pronouns, and what is happening to subject pronouns?</li>
+<li>Is the gender error described for Spanish L2 a problem of syntax or of lexical assignment, and what practical habit follows?</li>
+<li>What does Brazilian Portuguese prefer in existential sentences, and what limitation travels with the source on regência?</li>
+</ol>
+<h2>Answer key</h2>
+<p>Checking against the text is part of the work, not a failure [F94].</p>
+<ol>
+<li>The rule fails on locative sentences, where a fixed place can take ser and a person's current position takes estar [F57].</li>
+<li>An approach that treats the choice as probability in context rather than as one rule [F58].</li>
+<li>Ser was overgeneralized and estar omitted [F59]. Use it only as an analogy from Spanish L2, not as a result about English speakers learning Portuguese.</li>
+<li>The subjunctive future, where English uses the present [F60].</li>
+<li>They transfer the present perfect at all levels [F71].</li>
+<li>"I've seen this movie" against "Já vi esse filme": English builds a perfect, Portuguese here answers with a simple past with já. It is the author's own example.</li>
+<li>Transfer of the expressed object and overgeneralization of the null object [F63]. The clitic o/a is in disuse in speech and persists in writing, with ele/ela or the null object in its place, according to the abstract of that study [F64].</li>
+<li>Initial proclisis is common [F65]. Referential null subjects are being lost and pronominal subjects filled in, especially in the first and second persons [F15], while a gente replaces nós [F67] and competes with it in complement functions [F66], and tu can take a third-person verb form regionally [F68].</li>
+<li>It is described as lexical assignment, not a syntactic deficit [F70], and gender errors mix transfer and overgeneralization with English L1 among the groups [F69]. The habit is to learn each noun with its article.</li>
+<li>Existential ter predominates over haver, with haver favored in the past [F72]. On regência, the cited literature mostly covers Portuguese speakers learning English, and studies of English speakers are lacking [F73].</li>
+</ol>
+<h2>Spaced review plan</h2>
+<p>As the author's suggestion, here is a simple calendar for this chapter. Read it once today, then come back on these days:</p>
+<ul>
+<li>D+1 after reading</li>
+<li>D+3 after reading</li>
+<li>D+8 after reading</li>
+<li>D+27 after reading</li>
+</ul>
+<p>On each return, run the self-test from memory before you reread anything, then reread only the parts you missed. These review points are the author's adaptation of the interval idea in a spacing study [F90], which measured a single gap between two study sessions. That source did not test this calendar, and the points above are a suggestion, not a result reported by that study. Adjust the timing to your own week if you need to; the habit of returning and retrieving matters more than the exact day.</p>
+</div>
+</body>
+</html>

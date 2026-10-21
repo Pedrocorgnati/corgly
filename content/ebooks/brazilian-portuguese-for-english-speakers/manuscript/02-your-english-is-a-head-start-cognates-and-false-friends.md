@@ -6,7 +6,7 @@ Chapter 1 gave you a map and a warning: the learned layers of English and Portug
 
 A large share of the Portuguese words you meet can be guessed from their English cousins, because both languages carry a learned vocabulary built from Latin and reinforced by French. The guess runs through suffixes, the endings of words. Those correspondences are tendencies, not rules [F11] [F12]. Treat each one as a strong guess that you verify, never as a law the language must obey.
 
-One note before the table. Every example below is an author's illustration written for this book, not a sourced quotation, and the whole list is queued for native-speaker review. Say each word out loud as you convert it.
+One note before the table. Every example below is an author's illustration written for this book, not a sourced quotation. Say each word out loud as you convert it.
 
 | English ending | Portuguese ending | Author's illustrations |
 | --- | --- | --- |

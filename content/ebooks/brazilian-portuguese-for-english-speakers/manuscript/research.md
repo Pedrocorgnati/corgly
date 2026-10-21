@@ -559,13 +559,13 @@ Every example below is the author's own illustration (no source), to be confirme
 | 2 | Cognate and false-friend table rows; extended list (jornal, data, taxa, êxito, resumir, sensível, aluno, recordar); candidates esquisito, educado, costume, compromisso, fábrica, colégio; pretender and assistir phrases | pending dictionary review; no source claim |
 | 2 | Greeting and discourse chunks: Tudo bem?, Pois é, Tanto faz, Dar uma olhada | TOO-doo beng; poyz-EH; TAHN-too fahz; dahr OO-mah oh-LYAH-dah (author's respelling and glosses) |
 | 3 | pato/bato, tom/dom, cola/gola | aspiration and voicing pairs, respelling only |
-| 3 | avô/avó, pôde/pode, sede/sede | mid-vowel pairs |
+| 3 | avô/avó, pôde/pode, sede/sede | mid-vowel pairs; sede "thirst" [ˈsedʒi] has the closed e and sede "headquarters" [ˈsɛdʒi] the open e (meanings were swapped before item 012) |
 | 3 | mão/mau, lã/lá, não/bem/bom | nasal vowel pairs |
 | 3 | respelling table, including final -e (pode = PAW-djee) | author's respelling |
 | 4 | caro [ˈkaɾu] / carro [ˈkahu]; para, três | KAH-roo / KAH-hoo |
 | 4 | os dois [uz ˈdojs], desde [ˈdezdʒi], mesmo [ˈmezmʊ] | ooz DOYS roughly, DEZ-djee, MEZ-moo |
 | 4 | Brasil [bɾaˈziw], sol, mal (vocalized l) | bra-ZEE-oo, SOH-oo, MAH-oo |
-| 4 | cidade [siˈdadʒi], tudo [ˈtudʒi], noite (palatalization) | see-DAH-djee, TOO-djee, NOY-tchee |
+| 4 | cidade [siˈdadʒi], tarde [ˈtaɾdʒi], noite (palatalization); tudo [ˈtudu] as the contrast with final -o, no palatalization | see-DAH-djee, TAR-djee, NOY-tchee; tudo = TOO-doo |
 | 4 | caminhada (pretonic vowel); regional note on coda s in Rio | author's observation |
 | 5 | O aeroporto é longe do centro / Estou no aeroporto agora | ser vs estar illustration |
 | 5 | Quando eu chegar em casa, eu te ligo / Se der tempo, a gente se vê | subjunctive future |
@@ -576,3 +576,14 @@ Every example below is the author's own illustration (no source), to be confirme
 | 5 | Tem uma farmácia aqui perto / Havia uma fila grande ontem | existential ter and haver |
 | 5 | gostar de música, precisar de ajuda, morar em São Paulo | regência |
 | 5 | no banco, da escola; o meu carro, a minha casa; Não vi nada, Não sei não; Onde você fica?, A clínica fica perto da praça | author's suggestions (contractions, possessive, double negation, ficar) |
+| 6 | tô, tá, pra, né, cadê, vamo, a gente, e aí, então, tipo, sei lá, olha (respellings and glosses) and the sample sentences (Eu tô em casa hoje; Cadê a chave?; Vamo embora?) | author's respelling and glosses; the sources support the phenomena, not the sentences |
+| 6 | Me empresta dez reais?; Eu vi ele.; É caro, né?; Foi tipo uma surpresa; map of "you" and weekly routine | author's illustrations and suggestions |
+| 7 | Poderia me ajudar?, Gostaria de um café., Pode me ajudar?, Consegue me responder hoje? | author's illustrations of request forms |
+| 7 | Two refusal dialogues, Sem problema se não der, Passo sim mais tarde | refusal formulas follow the cited source; the dialogue wording is the author's |
+| 7 | cafezinho, rapidinho, minutinho, Fica à vontade; scenarios A, B and C | author's illustrations; the respelling "djee oong" is the author's |
+| 8 | Sound drill, mid-vowel pairs and the check routine for suspicious words | author's illustrations; propina meaning supported by [F48] only for the meaning |
+| 9 | Cards: Já vi esse filme, Moro aqui há anos; pato/bato, tom/dom, avô/avó; Atualmente, eu moro em Recife. | author's illustrations of cards |
+| 9 | depender de, esperar, sonhar com; Pode me corrigir quando eu errar o 'ter' e o 'haver'? | author's illustrations of regência cards and of a correction request |
+| Appendix | Core false-friend examples (Pretendo viajar em dezembro; Atualmente, eu trabalho em casa; Meus parentes moram em Minas) | author's illustrations; meanings from [F39] to [F46] and [F12] |
+| Appendix | Extended list (jornal, data, taxa, êxito, resumir, sensível, aluno, recordar) and candidates (esquisito, educado, costume, compromisso, fábrica, colégio) | pending dictionary review; no per-item source claim |
+| Appendix | Minimal pairs with broad transcription: pato/bato, tom/dom, cola/gola, avô/avó, pôde/pode, sede/sede, mão/mau, lã/lá | author's illustrations; transcriptions unconfirmed |

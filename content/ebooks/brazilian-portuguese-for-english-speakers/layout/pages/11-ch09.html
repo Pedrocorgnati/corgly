@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Chapter 9: Your Error Deck: Reviewing the English Speaker&#x27;s Typical Mistakes</title>
+</head>
+<body>
+<style>
+/*
+ * ebook.css - page furniture for the ebook
+ * "Brazilian Portuguese for English Speakers: A Strategy Guide for False Beginners".
+ *
+ * Inlined into every page by layout/compose_pages.py and applied on top of the
+ * generator's book.css: the body typography (EB Garamond, 10pt, justify,
+ * hyphens) is inherited from there and is not redefined here.
+ * No @import and no other external resource.
+ *
+ * The @font-face rules below repeat the ones in book.css on purpose: the
+ * generator loads book.css without a WeasyPrint FontConfiguration, so its
+ * @font-face rules are ignored and the PDF falls back to a system serif.
+ * Rules inside the page's own <style> are honored. The urls resolve against
+ * the composed pages directory (layout/pages/) and point at the font files
+ * shipped with the generator; they are read, never copied.
+ */
+
+/* --- Fonts ---------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../../../../../../../ai-forge/tools/legacy-books-pdf-generator/fonts/eb-garamond/EBGaramond-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+
+/* --- Page numbers --------------------------------------------------------- */
+
+@page {
+  @bottom-center {
+    content: counter(page);
+    font-family: 'EB Garamond', serif;
+    font-size: 9pt;
+  }
+}
+
+/* Cover page: no page number. */
+@page ebook-cover {
+  @bottom-center {
+    content: none;
+  }
+}
+
+/* --- Cover ---------------------------------------------------------------- */
+
+.ebook-cover {
+  page: ebook-cover;
+  break-after: page;
+  text-align: center;
+}
+
+.ebook-cover img {
+  width: 100%;
+  max-height: 12cm;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 6mm auto;
+}
+
+.ebook-cover .cover-title {
+  font-size: 22pt;
+  font-weight: bold;
+  line-height: 1.15;
+  text-align: center;
+  hyphens: none;
+  margin: 4mm 0 3mm 0;
+}
+
+.ebook-cover .cover-subtitle {
+  font-size: 13pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+  margin: 0;
+}
+
+/* --- Headings ------------------------------------------------------------- */
+
+/* Chapter, credits and contents headings always start a new page. */
+.ebook-page h1 {
+  break-before: page;
+  page-break-before: always;
+  hyphens: none;
+}
+
+/* --- Figures -------------------------------------------------------------- */
+
+figure {
+  max-width: 100%;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+figure img {
+  max-width: 100%;
+  max-height: 11cm;
+  width: auto;
+  height: auto;
+}
+
+figcaption {
+  font-size: 8.5pt;
+  font-style: italic;
+  text-align: center;
+  hyphens: none;
+}
+
+/* --- Tables --------------------------------------------------------------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 3mm 0;
+  page-break-inside: auto;
+}
+
+th,
+td {
+  border: 0.4pt solid #8a7a62;
+  padding: 1mm 1.5mm;
+  text-align: left;
+  vertical-align: top;
+  hyphens: auto;
+}
+
+th {
+  font-weight: bold;
+}
+
+/* --- Lists ---------------------------------------------------------------- */
+
+ul,
+ol {
+  padding-left: 5mm;
+}
+
+li {
+  margin: 0.8mm 0;
+  text-align: left;
+}
+
+/* --- Inline code: body face, no ugly monospace ---------------------------- */
+
+code {
+  font-family: inherit;
+  font-style: italic;
+}
+
+/* --- Links ---------------------------------------------------------------- */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* --- Table of contents ---------------------------------------------------- */
+
+.ebook-contents ol {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ebook-contents li {
+  margin: 2mm 0;
+  text-align: left;
+  hyphens: none;
+}
+
+.ebook-contents a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ebook-contents a::after {
+  content: leader('.') target-counter(attr(href), page);
+}
+</style>
+<div lang="en" class="ebook-page ebook-chapter">
+<h1 id="ch09" class="chapter-title">Chapter 9: Your Error Deck: Reviewing the English Speaker's Typical Mistakes</h1>
+<p>A book can show you a trap once. It cannot make you stop falling into it. That second job belongs to practice, and practice goes wrong in a predictable way: the learner rereads the chapters, feels familiar with them, and mistakes the feeling for skill. A week later the same mistakes come out of the same mouth.</p>
+<p>The objective of this chapter is to turn the traps of the earlier chapters into a small review deck, with a rule for ordering the cards and a routine for getting corrected. The English-speaker difficulty is double. The first part is persistent errors, the kind that can settle in an adult learner's interlanguage and stay [F50]. The second part is a review habit built on rereading instead of recall.</p>
+<p>This chapter keeps the theory short on purpose. It states the rules the deck follows, names the evidence for each rule in one sentence, and spends the rest of its length on what goes in the deck and how to use it. Every card example below is the author's illustration, and every practical suggestion is the author's suggestion unless a source is cited.</p>
+<h2>The deck rules, without the theory</h2>
+<p>Three rules shape the deck. Each one has a source, and each one is applied here in the narrowest way the source allows.</p>
+<p>The first rule is to test yourself and then check, instead of rereading. Research comparing self-testing with restudy favors testing, and it favors testing with feedback most [F94]. A card is therefore a question with an answer on the back, and you answer from memory before you turn it over.</p>
+<p>The second rule is to space the reviews. Spacing helps retention [F90]. The calendar at the end of each chapter in this book is the author's adaptation of that idea, and the deck uses the same days as its default rhythm: return to a card after one day, then three, then eight, then twenty-seven, and move it further out only when you answer it correctly without hesitation.</p>
+<p>The third rule is the one most learners get wrong, and it needs care. Interleaving, which means mixing different kinds of items in one session, helps in similar categories but hurts in plain word lists [F97]. The practical consequence is a restriction: this deck interleaves only the pairs that an English speaker confuses with each other. Do not shuffle your whole vocabulary into one pile. Shuffle a card about the open and closed vowels in avô and avó with a card about a nearby vowel contrast, because the point is to practice telling similar things apart.</p>
+<h3>Why the deck stays small</h3>
+<p>There is a reason the deck is small and repeated. Persistent errors can fossilize in the interlanguage of an adult learner [F50]. A long deck full of everything you might get wrong spreads your attention thin and lets the real habits survive. A short deck of the errors you actually make, reviewed again and again, attacks the habits directly. As the author's suggestion, cap the deck at a number you can review in ten minutes, and remove a card only after several correct answers on spaced days.</p>
+<figure class="ebook-figure" id="img13"><img src="../../illustrations/img13-ch09-error-deck-interleaving.png" alt="Error-deck illustration: interleaved cards of the confusable pairs with a simple spaced-review calendar drawing" /><figcaption>Error-deck illustration: interleaved cards of the confusable pairs with a simple spaced-review calendar drawing</figcaption></figure><h2>What goes into the deck, and nothing else</h2>
+<p>The deck has four families of cards. Nothing else goes in. If an item is not one of these four, it belongs in your notes or your reading, not in the deck.</p>
+<h3>Family 1: the transferred present perfect</h3>
+<p>The first family is the present perfect. Research on English native speakers learning Portuguese documents transfer of the present perfect at all levels [F71]. The error is to build a Portuguese sentence on the English pattern of "have" plus a past participle, when Portuguese wants a different tense for the same idea.</p>
+<p>Author's illustrations of cards:</p>
+<ul>
+<li>Front: "I've seen this movie." Back: Já vi esse filme. (zhah VEE ES-see FEEL-mee)</li>
+<li>Front: "I've lived here for years." Back: Moro aqui há anos. (MAW-roo ah-KEE ah AH-nooz)</li>
+</ul>
+<p>Write the card in both directions only if you make the error in both. Most readers need the English-to-Portuguese direction, since that is where the transfer happens.</p>
+<h3>Family 2: voice onset time and mid-vowel pairs</h3>
+<p>The second family is sound. It has two parts, and the sources differ in how directly they apply to you.</p>
+<p>The mid-vowel part is well matched. A study of native speakers of American English documents difficulty in the perception and production of Portuguese mid vowels, together with overcorrection [F18]. Cards for this part pair a word with the closed vowel against a word with the open one, in the style of avô and avó, or pôde and pode, and ask you to say which is which before you turn the card.</p>
+<p>The voice onset time part needs a warning. The study behind it measured the stop sounds of Brazilians learning English, a study of Brazilians learning English, the reverse direction from this audience [F24]. For that reason the voice onset time cards are an inference for you and not a finding about you: the author's inference is that the contrast English speakers rely on, aspiration, may show up in the other direction as well. Treat the cards as practice material, not as a diagnosis.</p>
+<p>Author's illustrations of cards for this family:</p>
+<ul>
+<li>pato against bato: say which has the voiced stop (PAH-too against BAH-too)</li>
+<li>tom against dom: say which has the voiced stop (TOHM against DOHM)</li>
+<li>avô against avó: say which has the closed vowel (ah-VOH against ah-VAW)</li>
+</ul>
+<p>Remember what the cards are for. You are training your ear and mouth on pairs where an English speaker is likely to blur the difference. They are not a promise that any particular pair is hard for you.</p>
+<h3>Family 3: the core false friends</h3>
+<p>The third family is the small core of false friends. The cards carry the Portuguese word on the front and ask for the meaning, then the English word that tempts you on the back. The core items are atualmente, pretender and parentes.</p>
+<ul>
+<li>atualmente means at the present moment, not "actually" [F43]</li>
+<li>pretender means to intend, not "to pretend" [F39]</li>
+<li>parentes means relatives, and "parents" is pais [F46]</li>
+</ul>
+<p>Author's illustration of a card: Front: "Atualmente, eu moro em Recife." Back: "At the moment, I live in Recife." The point of the card is the first word. Keep the extended list from the appendix out of the deck until you have made a mistake with a particular item. A false friend that has never tripped you does not earn a card.</p>
+<h3>Family 4: copied regência</h3>
+<p>The fourth family is the preposition that belongs to a verb. The preposition that goes with a verb in Portuguese is a source of interference from English, although the literature mostly studies the reverse direction and there is a lack of studies on English speakers [F73]. Say that plainly to yourself when you build these cards: they come from the book's contrast with English and from your own mistakes, and the cited source supports only the existence of the interference.</p>
+<p>Author's illustrations of cards:</p>
+<ul>
+<li>Front: "to depend on". Back: depender de</li>
+<li>Front: "to wait for". Back: esperar, with no preposition</li>
+<li>Front: "to dream about". Back: sonhar com</li>
+</ul>
+<p>The author's suggestion is to add a regência card only after you have written or said the wrong preposition at least once. The deck is a record of your errors, not a list of everything the language has.</p>
+<h2>The correction routine</h2>
+<p>A deck of cards fixes errors you can notice. Many errors you cannot notice, because they sound right to you. That is why the routine has a second half, and the second half needs another person.</p>
+<p>Ask a tutor or a conversation partner to correct the same errors that are in your deck. Corrective oral feedback has significant and lasting effects, according to a meta-analysis of classroom studies [F102]. A second meta-analysis reports an average effect of corrective feedback and finds that the implicit kind lasts longer [F104]. The practical reading, as the author's suggestion, is to prefer the gentle correction that a partner does by saying the sentence back correctly, and to ask your partner to do that for your listed errors specifically.</p>
+<p>One more finding helps with the awkward part. According to the abstract of a study of oral corrective feedback in second language classrooms, learners tend to want more correction than teachers think they should give [F103]. Only the abstract was used for this book, so read it as a prompt and not as a measurement. The conclusion is simple: you may have to ask for correction more directly than feels comfortable. Say it in words your partner can act on, and in Portuguese when you can.</p>
+<p>Author's illustration of a request: "Pode me corrigir quando eu errar o 'ter' e o 'haver'?" ("Can you correct me when I get 'ter' and 'haver' wrong?"). Keep the request short and name the errors. A vague request gets a vague correction.</p>
+<h3>A weekly shape for the deck</h3>
+<p>Put the pieces together in one routine, again as the author's suggestion.</p>
+<ul>
+<li>Daily: ten minutes with the cards due today, answering from memory before looking.</li>
+<li>Twice a week: one conversation session where your partner knows your four families and corrects those errors.</li>
+<li>Weekly: add any new error from the session as a card, remove cards you have answered correctly on several spaced days, and check that the interleaved pairs are still mixing only similar items.</li>
+<li>Monthly: look at the whole deck once and ask whether it is still small.</li>
+</ul>
+<p>The routine asks for little time and a lot of honesty. The cards reflect your mistakes, not the mistakes of an imaginary learner.</p>
+<h2>Where to spend your time</h2>
+<p>Spend most of your time on the cards you answer wrongly, not on the ones you answer easily. A correct answer on a spaced day moves the card further out, and a wrong answer brings it back. Next, spend time on getting corrected by a person, because the deck cannot catch what you cannot hear in yourself. Last, resist the urge to grow the deck. The persistent errors fossilize when they are left alone [F50], and a small deck repeated often is how you stop leaving them alone.</p>
+<h2>If you speak Spanish</h2>
+<p>Spanish is both support and trap, and error review is where the trap hides, because Spanish-shaped mistakes feel correct. English-Spanish bilinguals depend on Spanish when learning Portuguese, whatever the order in which they acquired their languages [F62]. That dependence means your deck should carry errors that an English-only learner would not make.</p>
+<p>The three traps most relevant to this chapter are the author's suggestions, not sourced claims.</p>
+<ul>
+<li>Do not build the deck only from the English side. Add the cards where your Spanish answers first, and mark them so you can see which family they came from.</li>
+<li>Do not let a correct-looking Spanish answer count as a correct answer. When a card has a Spanish twin, check the Brazilian form before you turn it over.</li>
+<li>Do not stop reviewing the sound cards because the sounds feel familiar. Familiarity is exactly how the approximant habit survives.</li>
+</ul>
+<p>Now the sound drill, because the deck needs a card for it. English-Spanish bilinguals produce voiced stops as Spanish-style approximants [F36], so b, d and g can come out soft and continuous instead of closed. In Portuguese, produce them as real stops, with a complete closure and a clean release. Say these author's illustrations slowly and keep the consonant hard:</p>
+<ul>
+<li>cada = KAH-dah</li>
+<li>lado = LAH-doo</li>
+<li>fogo = FOH-goo</li>
+</ul>
+<p>Put each word into a short phrase of your own, then say it again at conversational speed without letting the consonant soften. The dependence described above [F62] is the reason this drill is not optional polish.</p>
+<h2>Self-test</h2>
+<p>Retrieving what you just read is what makes it stick: research comparing self-testing with rereading favors testing [F94]. Answer from memory first, then check the key.</p>
+<ol>
+<li>Why is a card a question with an answer on the back instead of a page to reread?</li>
+<li>What does the chapter say about interleaving, and which items does the deck interleave?</li>
+<li>Why does the deck stay small, and what is the documented risk behind that choice?</li>
+<li>What does the present perfect card family target, and what does the research document?</li>
+<li>Which research is the mid-vowel card family based on, and what does it document?</li>
+<li>Why are the voice onset time cards an inference for this audience?</li>
+<li>Which three false friends form the core of the deck, and what does each one mean?</li>
+<li>What does the source say about prepositions of regência, and what limits that source?</li>
+<li>What two findings about corrective feedback support the correction routine, and what does the abstract of a third study add?</li>
+<li>What does the author suggest as a rule for adding a regência card?</li>
+</ol>
+<h2>Answer key</h2>
+<p>Checking against the text is part of the work, not a failure [F94].</p>
+<ol>
+<li>Because self-testing with feedback beats restudy [F94]. You answer from memory first, then turn the card.</li>
+<li>Interleaving helps in similar categories but hurts in plain word lists [F97]. The deck interleaves only pairs that an English speaker confuses.</li>
+<li>Persistent errors can fossilize in adult interlanguage [F50]. A small deck repeated often attacks the habits directly.</li>
+<li>It targets the habit of building the Portuguese sentence on the English present perfect. The research documents transfer of the present perfect at all levels [F71].</li>
+<li>A study of native speakers of American English, which documents difficulty in perception and production of Portuguese mid vowels and overcorrection [F18].</li>
+<li>Because the voice onset time study measured Brazilians learning English, the reverse direction from this audience [F24], so applying it to you is the author's inference.</li>
+<li>Atualmente means at the present moment [F43], pretender means to intend [F39], and parentes means relatives [F46].</li>
+<li>Prepositions of regência are a source of interference between English and Portuguese, but the literature mostly studies the reverse direction and lacks studies on English speakers [F73].</li>
+<li>Corrective oral feedback has significant and lasting effects [F102], and the average effect of corrective feedback is reported with the implicit kind lasting longer [F104]. The abstract of a third study says learners tend to want more correction than teachers think they should give [F103].</li>
+<li>Add the card only after you have written or said the wrong preposition at least once. This is the author's suggestion.</li>
+</ol>
+<h2>Spaced review plan</h2>
+<p>As the author's suggestion, here is a simple calendar for this chapter. Read it once today, then come back on these days:</p>
+<ul>
+<li>D+1 after reading</li>
+<li>D+3 after reading</li>
+<li>D+8 after reading</li>
+<li>D+27 after reading</li>
+</ul>
+<p>On each return, run the self-test from memory before you reread anything, then reread only the parts you missed. These review points are the author's adaptation of the interval idea in a spacing study [F90], which measured a single gap between two study sessions. That source did not test this calendar, and the points above are a suggestion, not a result reported by that study. Adjust the timing to your own week if you need to; the habit of returning and retrieving matters more than the exact day.</p>
+</div>
+</body>
+</html>

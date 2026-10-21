@@ -1,0 +1,152 @@
+[
+  {
+    "id": "IMG00",
+    "file": "img00-cover-strategy-guide-false-beginner.png",
+    "prompt": "Portrait composition, 2:3, for a book cover illustration. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: an open notebook seen slightly from above, centered in the lower two thirds of the image, with a pencil lying beside it. On the left page three English words are written by hand, and on the right page three Portuguese words; three curved hand-drawn arrows cross the spine, each one linking an English word to its Portuguese match: \"information\" to \"informação\", \"organize\" to \"organizar\", \"message\" to \"mensagem\". The upper third of the image is plain off-white background with nothing drawn on it, kept empty for typography added later. The image contains no book title and no author name. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"information\", \"organize\", \"message\", \"informação\", \"organizar\", \"mensagem\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1024x1536",
+    "sha256": "987a100bb683edf0b99193e7427e6cd206339e89b21b755d006054df7dea065b",
+    "codex_session": "01a15c54-ea76-7ba3-bbe9-f45b00671247"
+  },
+  {
+    "id": "IMG01",
+    "file": "img01-ch01-close-and-far-similarity-board.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a simple hand-drawn comparison board, like a teacher's chalk-free whiteboard sketch, showing lexical similarity with Portuguese. A small heading at the top reads \"similarity with Portuguese\". Below it, three horizontal bars drawn by hand, each with its language name on the left and its number on the right: a long bar \"Spanish\" with \"0.89\", a slightly shorter bar \"Italian\" with \"0.80\", and a clearly short bar \"English\" with \"0.20\". Bar lengths must be proportional to the numbers, so the gap between English and the other two languages is obvious at a glance. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"similarity with Portuguese\", \"Spanish\", \"0.89\", \"Italian\", \"0.80\", \"English\", \"0.20\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "25ae3af68d50ec203d188428962971eb1310e7ae0e19a92fd938053d2a955d2a",
+    "codex_session": "01a15c55-aa37-79c3-8a6a-96b0147970af"
+  },
+  {
+    "id": "IMG02",
+    "file": "img02-ch02-suffix-patterns-machine.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a friendly hand-drawn suffix machine, a boxy contraption with a few gears and a hopper, seen from the front. On the left, three English word cards go into the machine on a short conveyor: \"information\", \"organize\", \"pharmacy\". On the right, three Portuguese word cards come out, in the same order: \"informação\", \"organizar\", \"farmácia\". Above the machine stands a yellow triangular-free warning sign on a post, a rectangular sign with a hand-drawn exclamation mark, showing the exception word \"diferença\" with the small label \"exception\". Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"information\", \"organize\", \"pharmacy\", \"informação\", \"organizar\", \"farmácia\", \"diferença\", \"exception\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "54d9504e094386404837e3450cba1bcf72bb10de259e426fc044e8bcbcf8178d",
+    "codex_session": "01a15c56-75dc-7c40-935b-18fadf828d16"
+  },
+  {
+    "id": "IMG03",
+    "file": "img03-ch02-false-friends-trap-cards.png",
+    "prompt": "Square composition, 1:1. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: three hand-drawn playing-card-like trap cards laid side by side on a plain surface, each with a small spring-trap doodle in one corner. Each card shows a Portuguese word at the top, below it the tempting wrong English meaning crossed out with a bold red X line, and below that the correct English meaning: card 1: \"atualmente\", crossed-out \"actually\", correct \"currently\"; card 2: \"pretender\", crossed-out \"to pretend\", correct \"to intend\"; card 3: \"parentes\", crossed-out \"parents\", correct \"relatives\". Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"atualmente\", \"actually\", \"currently\", \"pretender\", \"to pretend\", \"to intend\", \"parentes\", \"parents\", \"relatives\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1254x1254",
+    "sha256": "e190dd39b72f1449943aeb14204b69ae75f6768149f2a9965092d10f41b649f7",
+    "codex_session": "01a15c57-2dcc-7523-8234-e484525e900d"
+  },
+  {
+    "id": "IMG04",
+    "file": "img04-ch03-aspiration-paper-test.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: two side-by-side schematic side-view cross-section sketches of a generic stylized mouth and lips, each with a thin strip of paper hanging in front of the lips. Left panel, labelled \"English: pin\": small puff lines leave the lips after the p and the paper strip is clearly blown and bent away, with the label \"puff\". Right panel, labelled \"Portuguese: pato\" with the broad transcription \"[ˈpatu]\" underneath: the paper strip hangs straight and still, with the label \"no puff\". The cross-sections are simple diagrams with visible outlines, not anatomy illustrations. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"English: pin\", \"puff\", \"Portuguese: pato\", \"[ˈpatu]\", \"no puff\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "10f856be6bf456651a89b66fd10c7b5ef957c36594777644490cd6b784c7d4ba",
+    "codex_session": "01a15c59-0291-78b1-aba6-4a46e6453a64"
+  },
+  {
+    "id": "IMG05",
+    "file": "img05-ch03-mid-and-nasal-vowel-chart.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a hand-drawn vowel chart split into two labelled zones. Left zone, headed \"closed / open\": two minimal pairs, each pair joined by a double arrow: \"avô [aˈvo]\" against \"avó [aˈvɔ]\", and \"pôde [ˈpodʒi]\" against \"pode [ˈpɔdʒi]\". Right zone, headed \"nasal / oral\": two minimal pairs, each joined by a double arrow, with a small tilde-shaped doodle near the nasal word: \"mão [mɐ̃w̃]\" against \"mau [maw]\", and \"lã [lɐ̃]\" against \"lá [la]\". Transcriptions sit in square brackets exactly as written, using the special phonetic characters shown. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"closed / open\", \"avô [aˈvo]\", \"avó [aˈvɔ]\", \"pôde [ˈpodʒi]\", \"pode [ˈpɔdʒi]\", \"nasal / oral\", \"mão [mɐ̃w̃]\", \"mau [maw]\", \"lã [lɐ̃]\", \"lá [la]\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "e3f7fa53b534993b86d19ff98c66e8f38e38abbb3016b6d2d99aec8bd8a84e40",
+    "codex_session": "01a15c5a-581b-7920-89f7-7b140782c678"
+  },
+  {
+    "id": "IMG06",
+    "file": "img06-ch04-meaning-versus-accent-table.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a hand-drawn two-column didactic table on a sheet of paper, with a ruled header row. Left column header \"changes meaning\", containing two pairs: \"caro [ˈkaɾu]\" against \"carro [ˈkahu]\", and \"avô [aˈvo]\" against \"avó [aˈvɔ]\". Right column header \"accent only\", containing two features: \"coda l: Brasil [bɾaˈziw]\" and \"coda s: os dois [uz ˈdojs]\". A small star doodle marks the left column as the priority. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"changes meaning\", \"caro [ˈkaɾu]\", \"carro [ˈkahu]\", \"avô [aˈvo]\", \"avó [aˈvɔ]\", \"accent only\", \"coda l: Brasil [bɾaˈziw]\", \"coda s: os dois [uz ˈdojs]\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.\n\nCRITICAL: copy every IPA symbol exactly. Use the plain letter a (not ɑ). In avó the vowel is the open-o symbol ɔ (a reversed c), never ɜ. In Brasil the second letter is the tap symbol ɾ (an r without the top hook), so it reads [bɾaˈziw]. The stress mark ˈ is a short vertical tick placed before the stressed syllable.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "07001cf31ac848bf3bf7fc55d89dce5d5598fa5efacc1ef6df7c268572a3d221",
+    "codex_session": "01a15c6c-963f-7693-9e3e-fb949448d7e0"
+  },
+  {
+    "id": "IMG07",
+    "file": "img07-ch04-tap-strong-r-s-voicing.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a series of four small hand-drawn articulation sketches in a 2 by 2 grid, each a simple side-view diagram of a generic mouth with a tongue line, each with a label. Panel 1 \"tap [ɾ]\" with the word \"caro [ˈkaɾu]\": the tongue tip touches the ridge behind the teeth once, shown with one short arc. Panel 2 \"strong r [h]\" with the word \"carro [ˈkahu]\": an airflow line from the throat, tongue relaxed. Panel 3 \"s voicing\" with the word \"desde [ˈdezdʒi]\": a small vibrating wave mark at the throat. Panel 4 \"vocalized l\" with the word \"Brasil [bɾaˈziw]\": the tongue tip stays down and the lips round slightly. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"tap [ɾ]\", \"caro [ˈkaɾu]\", \"strong r [h]\", \"carro [ˈkahu]\", \"s voicing\", \"desde [ˈdezdʒi]\", \"vocalized l\", \"Brasil [bɾaˈziw]\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "f66af0f0ef6084efae59ef442fd37f4cbf52ac5f9d4615e5789d12c429d41e81",
+    "codex_session": "01a15c5d-7cbb-7903-b7a3-e0c5e19c1c58"
+  },
+  {
+    "id": "IMG08",
+    "file": "img08-ch05-ser-estar-decision-sketch.png",
+    "prompt": "Square composition, 1:1. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a hand-drawn decision sketch. At the top, a sticky note with the shortcut \"permanent / temporary\" crossed out with a bold red X. Below it, two sentence boxes connected to two simple doodles: on the left, a small airport building doodle far from a few city buildings, with the box \"O aeroporto é longe do centro.\" and a tag \"ser\"; on the right, a generic stylized traveller figure with a suitcase standing at that airport, with the box \"Estou no aeroporto agora.\" and a tag \"estar\". Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"permanent / temporary\", \"O aeroporto é longe do centro.\", \"ser\", \"Estou no aeroporto agora.\", \"estar\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1254x1254",
+    "sha256": "699bdbc454492149da28ed7f109e7ee50d9528d14e0d84bf6cebf86c9e6f1d06",
+    "codex_session": "01a15c5e-cbe6-7531-be13-f35135c164e2"
+  },
+  {
+    "id": "IMG09",
+    "file": "img09-ch05-subjunctive-future-timeline.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a hand-drawn horizontal timeline arrow with a dot marked \"now\" near the left and a later dot marked \"later\" on the right. Above the timeline, a speech bubble pointing at the later dot reads \"Quando eu chegar em casa, eu te ligo.\" with the word \"chegar\" underlined. Below the timeline, a separate small box shows the present-perfect trap: the English sentence \"I've seen this movie\" crossed out with a bold red X as a model, and an arrow from it to the Portuguese answer \"Já vi esse filme\" with a check mark. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"now\", \"later\", \"Quando eu chegar em casa, eu te ligo.\", \"I've seen this movie\", \"Já vi esse filme\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "5a05ec6ec75e4c7ad36a545150f377ed07cfdf6f4d8be4ab0e20dfbf8901f110",
+    "codex_session": "01a15c60-a0c5-7461-ad20-ed925411e53b"
+  },
+  {
+    "id": "IMG10",
+    "file": "img10-ch06-spoken-register-rewrite-board.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a hand-drawn rewrite board divided into two columns. Left column header \"book\", right column header \"spoken\". Left column, two lines of dialogue: \"Olá, onde está o João?\" and \"Ele está lá fora. Vamos esperar?\". Right column, the same dialogue as spoken: \"Oi, cadê o João?\" and \"Ele tá lá fora. Vamo esperar?\", with the reduced forms \"cadê\", \"tá\" and \"Vamo\" highlighted with a yellow marker stroke. Small arrows go from each book line to its spoken line. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"book\", \"spoken\", \"Olá, onde está o João?\", \"Ele está lá fora. Vamos esperar?\", \"Oi, cadê o João?\", \"Ele tá lá fora. Vamo esperar?\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "fbe1b6cc7e944c0709af53504c68d818ad47dd2b116cda924fe2ea3924669694",
+    "codex_session": "01a15c62-96cf-7e20-9064-5a0364567354"
+  },
+  {
+    "id": "IMG11",
+    "file": "img11-ch07-politeness-refusal-three-versions.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a three-panel comic strip in simple hand-drawn style, panels side by side, each headed by a label: \"direct\", \"polite\", \"Brazilian\". In each panel two generic stylized figures with simple dot eyes talk; the left figure asks, the right figure refuses. Panel \"direct\": request bubble \"Você me ajuda com esse relatório agora?\", reply bubble \"Não posso hoje.\". Panel \"polite\": request bubble \"Poderia me ajudar com esse relatório?\", reply bubble \"Gostaria muito, mas hoje não vai dar.\". Panel \"Brazilian\": request bubble \"Poderia me dar uma mão com esse relatório quando der?\", reply bubble \"Vou ver se dá e te aviso, tá?\". Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"direct\", \"polite\", \"Brazilian\", \"Você me ajuda com esse relatório agora?\", \"Não posso hoje.\", \"Poderia me ajudar com esse relatório?\", \"Gostaria muito, mas hoje não vai dar.\", \"Poderia me dar uma mão com esse relatório quando der?\", \"Vou ver se dá e te aviso, tá?\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "379edccf9e7bc12c6b902db3d729ceace613b8018e1ad95b1739f0e8c2fe0acc",
+    "codex_session": "01a15c63-7ef5-7452-81e6-755554a75be4"
+  },
+  {
+    "id": "IMG12",
+    "file": "img12-ch08-spanish-stop-drill-card.png",
+    "prompt": "Square composition, 1:1. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a single hand-drawn drill card, like an index card, with a header \"full stop b, d, g\". On the card three drill words, one per line, each with its respelling: \"cada = KAH-dah\", \"lado = LAH-doo\", \"fogo = FOH-goo\", each next to a small closed-lips doodle showing a complete closure. At the bottom of the card, a small tag \"Spanish approximant\" crossed out with a bold red X, next to a soft wavy line doodle. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"full stop b, d, g\", \"cada = KAH-dah\", \"lado = LAH-doo\", \"fogo = FOH-goo\", \"Spanish approximant\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1254x1254",
+    "sha256": "3fa3d50f0e1309634d4200c852b3b5ce122714fdf38ba105c71f15db80188e3a",
+    "codex_session": "01a15c68-b758-7d80-91b8-38f09d9ccaab"
+  },
+  {
+    "id": "IMG13",
+    "file": "img13-ch09-error-deck-interleaving.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: on the left, a small hand-drawn deck of flashcards fanned out and interleaved, the visible cards reading \"pato / bato\", \"avô / avó\", \"atualmente\" and \"depender de\". On the right, a simple hand-drawn calendar page with four days circled and labelled \"D+1\", \"D+3\", \"D+8\" and \"D+27\". A curved arrow goes from the deck to the calendar. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"pato / bato\", \"avô / avó\", \"atualmente\", \"depender de\", \"D+1\", \"D+3\", \"D+8\", \"D+27\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "d1d20a0da6ed9037f8a8582fc9eaf248c6a95c3b102d832a38e667c35d9cc6ce",
+    "codex_session": "01a15c65-53d5-76b3-8ca0-c920c86b8ed0"
+  },
+  {
+    "id": "IMG14",
+    "file": "img14-appendix-minimal-pairs-poster.png",
+    "prompt": "Landscape composition, 3:2. Flat didactic illustration, clearly hand-drawn look, dark outlines on a light off-white background, limited flat colors, no photorealism, no photographic textures, no real person likeness, no real logos or brands, one idea per image, large readable labels. Subject: a print-ready hand-drawn minimal-pairs poster on a sheet with three framed sections side by side. Section \"voice onset time\": \"pato [ˈpatu] / bato [ˈbatu]\", \"tom [ˈtõ] / dom [ˈdõ]\", \"cola [ˈkɔla] / gola [ˈgɔla]\". Section \"mid vowels\": \"avô [aˈvo] / avó [aˈvɔ]\", \"pôde [ˈpodʒi] / pode [ˈpɔdʒi]\". Section \"nasal / oral\": \"mão [ˈmãw] / mau [ˈmaw]\", \"lã [ˈlã] / lá [ˈla]\". Each pair is on its own line, large and evenly spaced, transcriptions in square brackets exactly as written. Render exactly these text labels, spelled letter by letter exactly as given, and no other text anywhere in the image: \"voice onset time\", \"pato [ˈpatu] / bato [ˈbatu]\", \"tom [ˈtõ] / dom [ˈdõ]\", \"cola [ˈkɔla] / gola [ˈgɔla]\", \"mid vowels\", \"avô [aˈvo] / avó [aˈvɔ]\", \"pôde [ˈpodʒi] / pode [ˈpɔdʒi]\", \"nasal / oral\", \"mão [ˈmãw] / mau [ˈmaw]\", \"lã [ˈlã] / lá [ˈla]\". No title, no author name, no captions beyond these labels, no people other than simple generic stylized figures when described, no flags, no logos.\n\nCRITICAL: this is a text-only poster. Draw NO pictures, icons, pictograms, objects or figures of any kind next to the words. Only the three framed sections with their headers and the word pairs with transcriptions, plus at most simple decorative frame lines. Copy every IPA symbol exactly; the stress mark ˈ is a short vertical tick before the stressed syllable.",
+    "generated_at": "2026-10-21T03:23:49Z",
+    "model": "codex-imagegen-nativo",
+    "size": "1536x1024",
+    "sha256": "f60234b7957c19ea5b5ddc6edb92b7bd1eff86b945cc4fb8cf802e7e06fe9fcc",
+    "codex_session": "01a15c6d-e04a-7933-afaa-12bb84b75ee7"
+  }
+]
