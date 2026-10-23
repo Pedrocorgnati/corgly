@@ -607,3 +607,33 @@ describe('proxy: pagina de venda de ebook com slug fora do catalogo', () => {
     expect(res.headers.get('x-middleware-next')).toBe('1');
   });
 });
+
+describe('proxy: CSP com nonce por requisicao nas paginas', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const nonceOf = (csp: string | null) => /'nonce-([^']+)'/.exec(csp ?? '')?.[1];
+
+  it('pagina recebe script-src com nonce e strict-dynamic, sem unsafe-inline', async () => {
+    const res = await proxy(req('/ebooks'));
+    const csp = res.headers.get('Content-Security-Policy');
+    expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
+    expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    expect(csp).toContain("frame-ancestors 'none'");
+  });
+
+  it('repassa o mesmo nonce na requisicao (x-nonce e content-security-policy)', async () => {
+    const res = await proxy(req('/'));
+    const nonce = nonceOf(res.headers.get('Content-Security-Policy'));
+    expect(nonce).toBeTruthy();
+    expect(forwarded(res, 'x-nonce')).toBe(nonce);
+    expect(nonceOf(forwarded(res, 'content-security-policy'))).toBe(nonce);
+  });
+
+  it('gera nonce novo a cada requisicao', async () => {
+    const a = nonceOf((await proxy(req('/'))).headers.get('Content-Security-Policy'));
+    const b = nonceOf((await proxy(req('/'))).headers.get('Content-Security-Policy'));
+    expect(a).not.toBe(b);
+  });
+});

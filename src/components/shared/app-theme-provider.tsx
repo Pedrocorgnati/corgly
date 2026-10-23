@@ -45,19 +45,27 @@ function isAuthenticatedArea(pathname: string): boolean {
   );
 }
 
-export function AppThemeProvider({ children }: { children: React.ReactNode }) {
+// `nonce`: o next-themes injeta um script inline que aplica o tema antes da
+// hydration; sem o nonce do CSP (src/lib/security/csp.ts) ele seria bloqueado.
+export function AppThemeProvider({
+  children,
+  nonce,
+}: {
+  children: React.ReactNode;
+  nonce?: string;
+}) {
   const pathname = usePathname() ?? '/';
 
   if (isAuthenticatedArea(pathname)) {
     return (
-      <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+      <NextThemesProvider attribute="class" defaultTheme="system" enableSystem nonce={nonce}>
         {children}
       </NextThemesProvider>
     );
   }
 
   return (
-    <NextThemesProvider attribute="class" forcedTheme="light" enableSystem={false}>
+    <NextThemesProvider attribute="class" forcedTheme="light" enableSystem={false} nonce={nonce}>
       {children}
     </NextThemesProvider>
   );

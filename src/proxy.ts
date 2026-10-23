@@ -5,6 +5,7 @@ import { isAdminMfaBypassed } from '@/lib/auth/mfa-bypass';
 import { checkRateLimit, RATE_LIMITS, type RateLimitConfig } from '@/lib/rate-limit';
 import { UserRole } from '@/lib/constants/enums';
 import { resolveLandingLocaleFromRequest } from '@/lib/landing-locale-server';
+import { buildContentSecurityPolicy, generateNonce, NONCE_HEADER } from '@/lib/security/csp';
 
 import { ebookRegistry } from '../content/ebooks/index';
 
@@ -274,7 +275,16 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    const extraHeaders: Record<string, string> = { 'x-request-id': correlationId };
+    // CSP com nonce por requisicao (ver src/lib/security/csp.ts). O header vai na
+    // requisicao, de onde o Next le o nonce para os proprios scripts inline, e na
+    // resposta, que e o que o navegador aplica.
+    const nonce = generateNonce();
+    const csp = buildContentSecurityPolicy(nonce, process.env.NODE_ENV === 'development');
+    const extraHeaders: Record<string, string> = {
+      'x-request-id': correlationId,
+      [NONCE_HEADER]: nonce,
+      'content-security-policy': csp,
+    };
     if (isPublicLandingPath(pathname)) {
       extraHeaders['x-landing-locale'] = resolveLandingLocaleFromRequest(request);
     }
@@ -285,6 +295,7 @@ export async function proxy(request: NextRequest) {
       nextWithStripped(request, extraHeaders, rewriteTo),
       correlationId,
     );
+    res.headers.set('Content-Security-Policy', csp);
     // A URL de acesso ao ebook carrega o token: nenhum Referer pode vaza-lo.
     if (pathname.startsWith('/ebooks/acesso/')) {
       res.headers.set('Referrer-Policy', 'no-referrer');

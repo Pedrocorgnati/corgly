@@ -4,32 +4,11 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-// unsafe-eval necessário para Next.js HMR em dev; removido em produção.
-// unsafe-inline removido em produção — Next.js 15 não requer scripts inline.
-// Se um terceiro exigir inline, use nonce ou hash em vez de unsafe-inline.
-const scriptSrc = isDev
-  ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-  : "script-src 'self'";
-
-const ContentSecurityPolicy = [
-  "default-src 'self'",
-  scriptSrc,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "media-src 'self' blob:",
-  "font-src 'self' https://fonts.gstatic.com",
-  // wss para Hocuspocus (module-7) + Stripe
-  "connect-src 'self' wss://collab.corgly.app https://api.stripe.com",
-  // YouTube para embeds (module-8) + Stripe
-  "frame-src 'self' https://www.youtube.com https://js.stripe.com https://hooks.stripe.com",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join('; ');
-
+// O Content-Security-Policy NAO mora aqui: ele precisa de um nonce novo por
+// requisicao e e montado no proxy (src/lib/security/csp.ts). Um CSP estatico
+// neste arquivo seria enviado junto e o navegador aplicaria os dois, ou seja,
+// o `script-src 'self'` daqui voltaria a bloquear os scripts inline do Next.
 const securityHeaders = [
-  { key: 'Content-Security-Policy', value: ContentSecurityPolicy },
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },

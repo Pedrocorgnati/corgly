@@ -3,6 +3,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { headers } from 'next/headers';
+import { NONCE_HEADER } from '@/lib/security/csp';
 import { buildAlternates } from '@/lib/seo/metadata';
 import { SITE_URL } from '@/lib/constants/landing';
 import { AppThemeProvider } from '@/components/shared/app-theme-provider';
@@ -94,6 +96,8 @@ export default async function RootLayout({
   // segmento [locale] na URL).
   const locale = await getLocale();
   const tSkip = await getTranslations('skipNav');
+  // Nonce do CSP gerado pelo proxy para esta requisicao.
+  const nonce = (await headers()).get(NONCE_HEADER) ?? undefined;
 
   return (
     // suppressHydrationWarning: next-themes injeta a classe de tema no <html> antes da hydration
@@ -107,7 +111,7 @@ export default async function RootLayout({
           {tSkip('label')}
         </a>
         <NextIntlClientProvider>
-          <AppThemeProvider>
+          <AppThemeProvider nonce={nonce}>
             <AuthProvider>
               <LandingLocaleProvider initialLocale={locale as Locale}>
                 <TooltipProvider>
