@@ -9,9 +9,12 @@
 // REQUISICAO e o aplica aos proprios scripts; por isso o proxy repassa o header
 // na requisicao e tambem o devolve na resposta.
 //
-// `'strict-dynamic'`: script carregado por um script com nonce herda a
-// confianca (chunks do Next, Stripe.js), entao a lista de hosts nao precisa
-// crescer a cada dependencia.
+// Sem `'strict-dynamic'` de proposito: com ele o navegador ignora `'self'` e a
+// lista de hosts, e passa a bloquear o `/cdn-cgi/.../email-decode.min.js` que a
+// Cloudflare injeta sem nonce (Email Obfuscation). Os e-mails do rodape ficavam
+// como "[email protected]". Os chunks do Next sao same-origin e passam por
+// `'self'`; script externo carregado em runtime precisa do host declarado aqui
+// (Turnstile do LeadForm em challenges.cloudflare.com).
 //
 // Requisito: so pagina renderizada por requisicao recebe nonce. Pagina
 // pre-renderizada no build sai com scripts sem nonce e seria bloqueada; hoje o
@@ -29,8 +32,8 @@ export function generateNonce(): string {
 export function buildContentSecurityPolicy(nonce: string, isDev: boolean): string {
   // unsafe-eval so em dev: o HMR do Next avalia codigo em runtime.
   const scriptSrc = isDev
-    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`
-    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    ? `script-src 'self' 'nonce-${nonce}' https://challenges.cloudflare.com 'unsafe-eval'`
+    : `script-src 'self' 'nonce-${nonce}' https://challenges.cloudflare.com`;
 
   return [
     "default-src 'self'",

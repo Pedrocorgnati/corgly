@@ -615,11 +615,14 @@ describe('proxy: CSP com nonce por requisicao nas paginas', () => {
 
   const nonceOf = (csp: string | null) => /'nonce-([^']+)'/.exec(csp ?? '')?.[1];
 
-  it('pagina recebe script-src com nonce e strict-dynamic, sem unsafe-inline', async () => {
+  it('pagina recebe script-src com self e nonce, sem unsafe-inline nem strict-dynamic', async () => {
     const res = await proxy(req('/ebooks'));
     const csp = res.headers.get('Content-Security-Policy');
-    expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
+    expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' https:\/\/challenges\.cloudflare\.com/);
     expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    // strict-dynamic faria o navegador ignorar 'self' e bloquear o
+    // email-decode.min.js que a Cloudflare injeta sem nonce.
+    expect(csp).not.toMatch(/script-src[^;]*'strict-dynamic'/);
     expect(csp).toContain("frame-ancestors 'none'");
   });
 
