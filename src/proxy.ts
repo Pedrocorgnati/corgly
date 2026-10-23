@@ -6,6 +6,8 @@ import { checkRateLimit, RATE_LIMITS, type RateLimitConfig } from '@/lib/rate-li
 import { UserRole } from '@/lib/constants/enums';
 import { resolveLandingLocaleFromRequest } from '@/lib/landing-locale-server';
 
+import { ebookRegistry } from '../content/ebooks/index';
+
 const PUBLIC_API_PATHS = [
   '/api/v1/auth/register',
   '/api/v1/auth/login',
@@ -81,6 +83,22 @@ const MFA_ALLOWLIST_PREFIXES = [
   '/api/',
 ];
 
+// Pagina de venda de ebook: `/ebooks/{slug}`. Slug fora do catalogo precisa de
+// 404 de verdade, e a pagina sozinha nao consegue: o `loading.tsx` da raiz
+// comeca o streaming com 200 antes do `notFound()` (soft-404). O proxy decide
+// antes do stream e reescreve para um caminho sem rota, que o Next responde com
+// o not-found da raiz e status 404. O catalogo e fixo no build, entao o Set e
+// montado uma vez. Slug reservado (`acesso`) nunca esta no registro.
+const EBOOK_SALE_PATH = /^\/ebooks\/([^/]+)\/?$/;
+const EBOOK_SALE_SLUGS: ReadonlySet<string> = new Set(ebookRegistry.map((entry) => entry.slug));
+// Pasta com `_` e privada no App Router: nunca vira rota.
+const EBOOK_NOT_FOUND_PATH = '/_ebook-nao-encontrado';
+
+function isUnknownEbookSalePath(pathname: string): boolean {
+  const match = EBOOK_SALE_PATH.exec(pathname);
+  return match !== null && !EBOOK_SALE_SLUGS.has(match[1]);
+}
+
 function getClientIp(request: NextRequest): string {
   return (
     request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
@@ -119,6 +137,7 @@ function stripInternalHeaders(request: NextRequest): NextRequest {
 function nextWithStripped(
   request: NextRequest & { _strippedHeaders?: Headers },
   extraHeaders?: Record<string, string>,
+  rewriteTo?: URL,
 ): NextResponse {
   const base = request._strippedHeaders ?? new Headers(request.headers);
   // Copia entrada a entrada, nao por `new Headers(base)`: sob o vitest, copiar de
@@ -132,7 +151,9 @@ function nextWithStripped(
       merged.set(k, v);
     }
   }
-  return NextResponse.next({ request: { headers: merged } });
+  return rewriteTo
+    ? NextResponse.rewrite(rewriteTo, { request: { headers: merged } })
+    : NextResponse.next({ request: { headers: merged } });
 }
 
 /**
@@ -257,7 +278,13 @@ export async function proxy(request: NextRequest) {
     if (isPublicLandingPath(pathname)) {
       extraHeaders['x-landing-locale'] = resolveLandingLocaleFromRequest(request);
     }
-    const res = addSecurityHeaders(nextWithStripped(request, extraHeaders), correlationId);
+    const rewriteTo = isUnknownEbookSalePath(pathname)
+      ? new URL(EBOOK_NOT_FOUND_PATH, request.url)
+      : undefined;
+    const res = addSecurityHeaders(
+      nextWithStripped(request, extraHeaders, rewriteTo),
+      correlationId,
+    );
     // A URL de acesso ao ebook carrega o token: nenhum Referer pode vaza-lo.
     if (pathname.startsWith('/ebooks/acesso/')) {
       res.headers.set('Referrer-Policy', 'no-referrer');

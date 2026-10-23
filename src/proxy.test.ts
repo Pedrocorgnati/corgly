@@ -573,3 +573,37 @@ describe('proxy: /api/v1/webhooks/stripe/ebooks', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('proxy: pagina de venda de ebook com slug fora do catalogo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const rewriteOf = (res: Response) => res.headers.get('x-middleware-rewrite');
+
+  it.each([
+    '/ebooks/brazilian-portuguese-for-english-speakers',
+    '/ebooks/slug-inexistente-404',
+    '/ebooks/slug-inexistente-404/',
+    // Reservado: nunca esta no registro, entao tambem sai 404.
+    '/ebooks/acesso',
+  ])('%s reescreve para caminho sem rota (404 real antes do stream)', async (path) => {
+    const res = await proxy(req(path));
+    expect(new URL(rewriteOf(res) ?? '').pathname).toBe('/_ebook-nao-encontrado');
+    // O not-found continua recebendo o locale da landing e os headers de seguranca.
+    expect(forwarded(res, 'x-landing-locale')).not.toBeNull();
+    expect(res.headers.get('X-Frame-Options')).toBe('DENY');
+  });
+
+  it.each([
+    '/ebooks',
+    '/ebooks/portugues-brasileno-para-hispanohablantes',
+    '/ebooks/portoghese-brasiliano-per-italofoni',
+    '/ebooks/portoghese-brasiliano-per-italofoni/sucesso',
+    '/ebooks/acesso/token-qualquer',
+  ])('%s segue sem reescrita', async (path) => {
+    const res = await proxy(req(path));
+    expect(rewriteOf(res)).toBeNull();
+    expect(res.headers.get('x-middleware-next')).toBe('1');
+  });
+});
